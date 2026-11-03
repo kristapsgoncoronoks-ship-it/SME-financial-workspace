@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-03",
+  "status": "Implemented and locally qualified; delivered-source hosted CI and human/Lead review pending at publication",
+  "baseline_source": "4f2a360ef78d9d6cdcbcf7b04cb8359bf681de3a",
+  "baseline_PR": 101,
+  "baseline_all_13_mandatory_contexts": "success on attempt1",
+  "candidate_branch": "fix/uv-rustls-maintenance-20261103",
+  "candidate_commit": null,
+  "platform": "linux/amd64 actual qualification only",
+  "targeted_advisories": [
+    "GHSA-c8m5-c952-6cm4",
+    "GHSA-h2v8-394m-p7vv",
+    "GHSA-vp88-798v-h67f",
+    "GHSA-w44r-93j7-qv28"
+  ],
+  "installer": {
+    "old_uv": "0.13.1",
+    "old_actual_rustls": "0.23.45",
+    "new_uv": "0.13.7",
+    "new_actual_rustls": "0.23.46",
+    "source_commit": "316c827e058c16b71d5c507a20729c2995a7bcce",
+    "index": "sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490",
+    "amd64_manifest": "sha256:c7db1d63057f268a8b6da8af9077850a60461f98d23db23c676a82089a050c91",
+    "actual_OCI_uv_sha256": "92a78f0a49090f868df7396e0ca6aa1af6b90995269ebc2178d361a66caac3c9",
+    "release_archive_uv_sha256": "500c0ec54518b2a53380783586b75a79907d937d741ebb04236d90a50ed5ab26",
+    "OCI_and_archive_binaries_equal": false,
+    "difference": "Independent Docker build without self-update versus release build with self-update; no machine-code equivalence claim",
+    "core_license_bytes_unchanged": true,
+    "actual_old_new_Cargo_package_triples": [
+      563,
+      547
+    ],
+    "unchanged_package_triples": 417,
+    "app_install_flags_prefix_CA_no_download_policy_preserved": true,
+    "execution_role": "builder only; final payload/provenance changes still qualified independently"
+  },
+  "attestation": {
+    "index_cryptographically_verified": true,
+    "verifier": "Official GitHub CLI 2.103.3 in task-private path; original globalCLI unchanged",
+    "verifier_archive": "Official asset SHA256 and published checksums both match",
+    "policy": "Normal Sigstore/TUF, expected authenticated repo/source/signer/mainref/hostedrunner; no custom roots or skip flags",
+    "verified_Rekor_timestamp": "2026-11-03T02:44:07Z",
+    "same_bundle_as_initially_unverified_publisher_phase": true,
+    "separate_amd64_attestation_claimed": false,
+    "machine_code_reproducibility_claimed": false
+  },
+  "permission_fix": {
+    "inherited_public_parent": "/usr/local/share/licenses",
+    "old_mode": "0644",
+    "new_mode": "0755",
+    "exact_public_parent_added_to_existing_build_and_runtime_chmod": true,
+    "private_storage_mode": "0700 unchanged",
+    "other_file_modes_UID_and_final_XML_guard_preserved": true,
+    "named_capdrop_builder_notice_reads": 3,
+    "named_UID10001_XML_provenance_reads": 4,
+    "original_empty_glob_observation_preserved": true
+  },
+  "local_qualification": {
+    "initial_existing_focused_cases": 196,
+    "final_existing_image_contract_cases": 102,
+    "backend_collection_unchanged": 5447,
+    "new_pin_mirroring_tests_added": false,
+    "complete_final_comparison_checks": 26,
+    "actual_native_groups": 6,
+    "existing_XML_finance_cases_passed": 32,
+    "actual_TLS_fixture_groups_on_initial_image": 5,
+    "TLS_reuse_binding": "Exact same final executable bytes and installation invocation; not falsely described as rerun",
+    "installer_failures": "UnknownIssuer/503 exit2, no distribution/code installed; empty lock/directories recorded; existing sentinel preserved",
+    "installer_recovery_and_repeat_exit": 0,
+    "final_native_and_fixture_cleanup": true,
+    "CVE_exploit_or_resource_exhaustion_reproducer": false,
+    "counts": {
+      "backend": {
+        "physical_distributions": 64,
+        "duplicate_normalized_names": 0,
+        "app_python_files": 436,
+        "original_interpreter_other_native_files": 77
+      },
+      "backend-build": {
+        "physical_distributions": 64,
+        "duplicate_normalized_names": 0,
+        "app_python_files": 0,
+        "original_interpreter_other_native_files": 77
+      }
+    },
+    "ASGI": "Actual default entrypoint, UID10001 live/ready; normal143 with complete shutdown markers, no OOM/timeout",
+    "ELF": "pyexpat needs libexpat.so.1; ElementTree uses coherent CAPI",
+    "final_storage_stages": 11,
+    "final_S3_groups": 6,
+    "final_S3_status": "passed",
+    "final_S3_cleanup": true
+  },
+  "source_audits": {
+    "Python_dependencies": 78,
+    "Python_advisories": 0,
+    "npm_dependencies": 188,
+    "npm_advisories": 0
+  },
+  "final_image_audit": {
+    "run": "e9410cd3492a46b3817e6b5890662346",
+    "passed": true,
+    "roles": 10,
+    "saved_report_hashes": 20,
+    "selected_HIGH_CRITICAL_rows": 0,
+    "full_remaining_IDs": 4,
+    "full_remaining_role_rows": 5,
+    "all_remaining_substantive_records_and_ratings_retained": true,
+    "alternate_provider_HIGH_rating_entries": 1,
+    "unscored_xsys_rows": 2,
+    "APK_and_application_inventory_unchanged": true,
+    "no_new_advisory_claim_from_full_inventory": true,
+    "images": {
+      "backend": {
+        "image_id": "sha256:ca436bca2d0d5693001fc551f97ed69d16f0cc19635fdf397daab22aeb56ff3a",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "backend.cdx.json": "4f8a4bd745e58fedeb5c3800b9cfa5f91a2e573419be79c51758d33029ddc22a",
+          "backend.audit.json": "bd1c54c425da454ff3f7b549056f28c771d1d453eb1d9a62dcd5ce4200de9acb"
+        }
+      },
+      "frontend": {
+        "image_id": "sha256:4fb587e89e0cf80e52376f4382476b729567467a9aecd0cf5dc3af6790e3f443",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "frontend.cdx.json": "9d34d857125d3b28387c8f6a1face2764606e0f623a0985569aa75f0efece412",
+          "frontend.audit.json": "e0a794b8843e880ee28a7d93e90468c8c62a9163ba29ee800f79b3c4e4ecaad0"
+        }
+      },
+      "postgres": {
+        "image_id": "sha256:2c1d5e2a4cfc14c13a2d4d33825c1913f4470c8c0cd111ecf83912dac1ddc910",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "postgres.cdx.json": "5bbce87e14b0894ba19182c325558c3980ed305d7e262c4f802a113ce6831cbd",
+          "postgres.audit.json": "7211ae7b4198b6aaaf4b65050b999d1c172b06e9c8421a2a24a90877963034bc"
+        }
+      },
+      "pgbouncer": {
+        "image_id": "sha256:575c5944b60fd5d378f867f2173fe4b41a9c77044dbf7256892a4521d1e1cd29",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "pgbouncer.cdx.json": "8934b6e5c3f696d2fc2e63aa652925121d2c4fe6e41f261c0b3bff34c022f74b",
+          "pgbouncer.audit.json": "8f3caa53c264a256995a27029153608e3e388a2af72ae3d6bb63953ac428816f"
+        }
+      },
+      "backend-build": {
+        "image_id": "sha256:a51ac1fa80332643f03e52081ffa2f97ceb8d03967034d0a4dc45bf96ffd7343",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "backend-build.cdx.json": "8e2867f447ac50581884c3e1afec9cb805f6841e9d82da16b9354237da76807e",
+          "backend-build.audit.json": "55f4c93f9abcff8c45cc32f7d66b38b586164b6f08770567be5a091ad6ec38bf"
+        }
+      },
+      "frontend-build": {
+        "image_id": "sha256:60a95a10ec9057bd900e6a670dd38becc5aa97df1834f6dc9455b46e88c47cb0",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "frontend-build.cdx.json": "8ca8c9747e4848b1fbf8ce431c1d402dc8401dc3d01eb814143499d6cca54749",
+          "frontend-build.audit.json": "2f7f62e0247ff5e4aeded5727fdd9a2c161cf6557f6e2cfcfed3a3f311ce789f"
+        }
+      },
+      "frontend-compiler-build": {
+        "image_id": "sha256:bba5b5c58ccb547fbee614a0a76b45e95076842a284177f6e308829d7b671150",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "frontend-compiler-build.cdx.json": "c21f471ca7ddd4f8ddb5805b74db8e47b0daf6689e3a0dae894f8ad2551fa558",
+          "frontend-compiler-build.audit.json": "a73e3fb942f4467390d7d0084e5968c124f0999c1cb00cd77c99ddb55da14424"
+        }
+      },
+      "postgres-build": {
+        "image_id": "sha256:85181f6ec48a74a2230695b25459b4c613ee1dbf0c293b0f9ff0bd100598db75",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "postgres-build.cdx.json": "815f7940a66a0a81ecd38d96dcd769a41a4ecaaf265ae5efdfffdd454556b335",
+          "postgres-build.audit.json": "37c09f8022c7860ce8ecc196232d1886cd60798f85dc713170285067faf09024"
+        }
+      },
+      "pgbouncer-build": {
+        "image_id": "sha256:2fc3e0c860fd6bb3c6200ee1b2354e21a2c161de2c92ec0b65393a11ea3fc05c",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "pgbouncer-build.cdx.json": "3a9897338fd275719d2d5d06462165c136ed316f4a6896bb118591ccf2fd9324",
+          "pgbouncer-build.audit.json": "ad0cf73bc691b934047da5034c83465c18083ae3affd3150753181073943910a"
+        }
+      },
+      "service-5a078d834314cc77": {
+        "image_id": "sha256:2755bcf766f77f221f39e056864948fb4d1862381831ed0b347226e4bc1a43a9",
+        "platform": "linux/amd64",
+        "saved_evidence_sha256": {
+          "service-5a078d834314cc77.cdx.json": "f4e3d7479c912c4df10533c3eddb5a5449d8bf3b9c95be0dbfcf9e8280d0a128",
+          "service-5a078d834314cc77.audit.json": "eaa9bde7cba40344d4440ffe2c57f38c711fe5503306f853f6edc2486ab60d3f"
+        }
+      }
+    }
+  },
+  "source_sha256": {
+    "backend/Dockerfile": "15d918effbd1208ef0cb0706b38438f4d3d8156f47aad8e257ff80b859c639c2",
+    "backend/build-licenses/uv/SOURCE.json": "2779d387ef53f6d7699b6d5aaeaeb85da93e13fa0d02eb8df7d9138b3f6adf31",
+    "backend/build-licenses/uv/LICENSE-MIT": "860e3d7a86b84e6a7012c7a635fc64df475cebc6cce34dfeb73a5982ec58176c",
+    "backend/build-licenses/uv/LICENSE-APACHE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "backend/requirements.txt": "2171375185d890f54aceddcaf0f9922821f3a0af6bda52a14278db4551286f46",
+    "backend/requirements-dev.txt": "9f28e747611280e4d0dcdca8fbb4b87c4cb5f69e00cb127d1392ae9a0996163b",
+    "backend/scripts/build_system_expat.py": "41c60fe80aac78da63ee1f567b620410e7fb013705feeef23c057bf96530df4d",
+    "backend/scripts/verify_system_expat.py": "cbc9796fa82c742dc190719ceef3d41b9482c00e4f336b504eb910898ede94ca",
+    "scripts/image_audit.py": "f30149c211a37e61790ee3376450d43513183df7cb1ef3285517dc7d48b2ff36",
+    "scripts/check_storage_volume.py": "fd3f6decfd03b94cf778ec6f50e9f1e074da6f3f96c35bc0c13ddf8acebff18d",
+    "scripts/check_s3_storage.py": "dd272b96470b40f161af8e3c00a0ac41aceeb7b27fe33fc73dd58cad3227a2cf",
+    ".github/workflows/ci.yml": "acb1533abee29d7d0576990c6732d8e6fd44f44fe8496515db637efdf7d4514e",
+    ".github/workflows/security-supply-chain.yml": "7506d441f001723331d511bb9ac4a672fb462c4da77fa2b72bafe7afd603b57e"
+  },
+  "hosted_CI": "Pending publication; completed actual results will be bound in delivered draft PR and external ci/ receipts",
+  "human_Lead_approval": "pending",
+  "no_main_merge_deployment_production_migration_provider_or_settings_action": true,
+  "remaining_backlog": [
+    "Three global-npm IDs and x/sys in two PostgreSQL roles",
+    "Existing guarded undici maintenance and compatible parent boundaries",
+    "CI cache/footprint proposals and finance/UI/owner/provider/accountant decisions"
+  ],
+  "evidence_root": "/workspace/artifacts/uv-rustls-maintenance-2026-11-03"
+}

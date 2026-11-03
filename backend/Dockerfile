@@ -8,7 +8,7 @@ WORKDIR /app
 # vendored dependencies remain vulnerable even in its latest upstream release.
 # Remove that unused installer before dependency processing, not after its use.
 # uv is MIT/Apache-2.0 licensed; its executable remains in the audited build stage.
-COPY --from=ghcr.io/astral-sh/uv:0.13.1@sha256:4a1f3666816dafadd20ceb71eac9a7d56d7ef30279f7d64048519ab901ada336 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 /uv /usr/local/bin/uv
 RUN rm -rf /usr/local/lib/python3.14/site-packages/pip \
         /usr/local/lib/python3.14/site-packages/pip-*.dist-info \
         /usr/local/lib/python3.14/ensurepip/_bundled \
@@ -23,7 +23,7 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
     apk add --no-cache --upgrade build-base pkgconf \
         'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
         'libexpat>=2.10.0-r0' 'expat-dev>=2.10.0-r0' \
-    && chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses/python-system-expat \
+    && chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses /usr/local/share/licenses/python-system-expat \
     && python -I -B /usr/local/share/python-system-expat/build_system_expat.py
 
 COPY requirements.txt .
@@ -76,7 +76,7 @@ COPY . .
 # Run as an unprivileged user. Preserve the shared-volume UID/GID contract.
 # Docker copies the target owner/mode into an empty named volume; existing
 # nonempty volumes keep their operator-managed ownership.
-RUN chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses/python-system-expat \
+RUN chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses /usr/local/share/licenses/python-system-expat \
     && addgroup -g 10001 appuser && adduser -D -u 10001 -G appuser appuser \
     && mkdir -p /app/var/storage \
     && chmod 0700 /app/var/storage \
