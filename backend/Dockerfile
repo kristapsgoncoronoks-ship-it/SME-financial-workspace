@@ -17,9 +17,14 @@ RUN rm -rf /usr/local/lib/python3.14/site-packages/pip \
 # Build toolchain only lives in this stage (not shipped in the final image).
 # Require fixed Alpine libc/utilities and zlib before dependency processing;
 # the matching runtime floors below retain the same supported release/ABI.
+COPY --chmod=0644 scripts/build_system_expat.py scripts/verify_system_expat.py /usr/local/share/python-system-expat/
+COPY --chmod=0644 build-licenses/python-system-expat/README.md build-licenses/python-system-expat/EXPAT-COPYING /usr/local/share/licenses/python-system-expat/
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
-    apk add --no-cache --upgrade build-base \
-        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1'
+    apk add --no-cache --upgrade build-base pkgconf \
+        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
+        'libexpat>=2.10.0-r0' 'expat-dev>=2.10.0-r0' \
+    && chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses/python-system-expat \
+    && python -I -B /usr/local/share/python-system-expat/build_system_expat.py
 
 COPY requirements.txt .
 # Optional public CA bundle for corporate build proxies; never stored in the image.
@@ -47,6 +52,7 @@ WORKDIR /app
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
     apk add --no-cache --upgrade \
         'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
+        'libexpat>=2.10.0-r0' \
         tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-osd \
         font-dejavu tini tzdata gcompat libstdc++ \
     && mkdir -p /usr/share/fonts/truetype \
@@ -58,6 +64,10 @@ RUN rm -rf /usr/local/lib/python3.14/site-packages/pip \
         /usr/local/lib/python3.14/site-packages/pip-*.dist-info \
         /usr/local/lib/python3.14/ensurepip/_bundled \
         /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14
+COPY --from=build /opt/python-system-expat/lib-dynload/ /usr/local/lib/python3.14/lib-dynload/
+COPY --from=build /opt/python-system-expat/provenance/ /usr/local/share/licenses/python-system-expat/
+COPY --chmod=0644 scripts/verify_system_expat.py /usr/local/share/python-system-expat/verify_system_expat.py
+COPY --chmod=0644 build-licenses/python-system-expat/README.md build-licenses/python-system-expat/EXPAT-COPYING /usr/local/share/licenses/python-system-expat/
 COPY --from=build /opt/backend/ /usr/local/
 COPY requirements.txt .
 
@@ -66,11 +76,15 @@ COPY . .
 # Run as an unprivileged user. Preserve the shared-volume UID/GID contract.
 # Docker copies the target owner/mode into an empty named volume; existing
 # nonempty volumes keep their operator-managed ownership.
-RUN addgroup -g 10001 appuser && adduser -D -u 10001 -G appuser appuser \
+RUN chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses/python-system-expat \
+    && addgroup -g 10001 appuser && adduser -D -u 10001 -G appuser appuser \
     && mkdir -p /app/var/storage \
     && chmod 0700 /app/var/storage \
     && chown -R appuser:appuser /app
 USER appuser
+
+# Verify the fully assembled prefix and paired extensions with runtime permissions.
+RUN python -I -B /usr/local/share/python-system-expat/verify_system_expat.py
 
 EXPOSE 8000
 

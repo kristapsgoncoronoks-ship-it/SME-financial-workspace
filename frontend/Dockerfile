@@ -95,7 +95,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
     apk add --no-cache --upgrade \
         'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'libxpm>=3.5.20-r0' \
-        libexpat 'libx11>=1.8.14-r0' 'brotli-libs>=1.2.1-r0' 'curl>=8.23.0-r0' 'libcurl>=8.23.0-r0' \
+        'libexpat>=2.10.0-r0' 'libx11>=1.8.14-r0' 'brotli-libs>=1.2.1-r0' 'curl>=8.23.0-r0' 'libcurl>=8.23.0-r0' \
     && sed -i -e 's|^[[:space:]]*pid[[:space:]][^;]*;|pid /tmp/nginx.pid;|' -e '/^user /d' /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /var/cache/nginx
 USER nginx

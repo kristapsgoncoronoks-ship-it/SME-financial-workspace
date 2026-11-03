@@ -12,7 +12,7 @@ zero-setup dev/test) · React 19 + Vite + TypeScript + Tailwind SPA · Docker.
 
 **Scale of the codebase (verified against this tree):** 119 database tables
 (155 Alembic revisions, single head), 67 model modules, 128 service modules,
-50 route modules, 69 SPA pages, 5341 collected backend tests, 10 CI jobs.
+50 route modules, 69 SPA pages, 5447 collected backend tests, 10 CI jobs.
 
 Direct non-production PostgreSQL startup creates the four tenant-safe optional
 project/issuer links using dialect-specific development metadata. This convenience

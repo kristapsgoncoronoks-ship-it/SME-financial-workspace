@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-03",
+  "status": "Implemented and locally qualified; delivered-head hosted CI and human/Lead approval pending at publication",
+  "baseline_source": "c904bc77829a73a23eab7d520145f89a4d0e834b",
+  "candidate_branch": "fix/gosu-helper-maintenance-20261103",
+  "candidate_commit": null,
+  "platform": "linux/amd64; current Alpine v3.24 x86_64 packages",
+  "targeted_advisory_ids": [
+    "CVE-2026-61801",
+    "CVE-2026-113351",
+    "CVE-2026-115506",
+    "CVE-2026-117610",
+    "CVE-2026-118370"
+  ],
+  "gosu": {
+    "version": "1.20",
+    "moby_sys_user": "0.4.1",
+    "source_commit": "29b939aa5bd4dc588af765b8248f6e39150d2565",
+    "archive_sha256": "2b70da8a5480fafedc16bb1fc91b572f064d03df736cbd91a616af2f1b66ab51",
+    "source_commit_signed": false,
+    "actual_buildinfo_guard": true,
+    "postgres_binary_entrypoint_UID70_PGDATA_preserved": true,
+    "actual_runtime_group_checks_passed": 9
+  },
+  "python_system_expat": {
+    "python_version_unchanged": "3.14.8",
+    "python_source_sha256": "c2215904f02b175596dc49351585104f4bc20341e1c47378b26a2c274360ce73",
+    "configuration": "Original pinned interpreter configuration plus --with-system-expat",
+    "rebuilt_extensions": [
+      "pyexpat",
+      "_elementtree"
+    ],
+    "minimum_expat": "2.10.0",
+    "APK_floor": "2.10.0-r0",
+    "same_interpreter_and_other_native_files_hash_checked": true,
+    "verify_staged_and_installed_in_fresh_processes": true,
+    "runtime_verifier_after_all_COPY_and_USER10001": true,
+    "atomicity": "Per-file replacement within a Docker RUN; failed verification restores originals and fails the build; no live two-file transaction claim",
+    "source_checksum_ABI_and_checked_make_negative_controls": true,
+    "CVE_specific_exploit_reproducer_executed": false
+  },
+  "preserved_intermediate_failures": [
+    "Initial full image audit blocked by fresh Expat advisories",
+    "Single-extension prototype correctly incompatible with original ElementTree CAPI",
+    "Final nonroot build reveals public helper directory0644; exact two public directories corrected to0755"
+  ],
+  "focused_qualification": {
+    "passed": 196,
+    "seconds": 28.06,
+    "backend_collected": 5447,
+    "original_image_audit_cases_preserved": 90,
+    "gosu_cases": 35,
+    "new_image_floor_controls": 12,
+    "system_expat_cases": 59,
+    "ruff_and_format_passed": true,
+    "whole_hosted_backend_pending": true
+  },
+  "application_dependency_audits": {
+    "Python_dependencies": 78,
+    "Python_advisories": 0,
+    "npm_dependencies": 188,
+    "npm_advisories": 0
+  },
+  "image_audit": {
+    "run": "12fc55e8d4d6414b87c8bbe5b751f872",
+    "passed": true,
+    "roles": 10,
+    "reports": 20,
+    "selected_HIGH_CRITICAL_rows": 0,
+    "full_inventory_advisory_ids": 8,
+    "full_inventory_role_rows": 9,
+    "all_provider_ratings_preserved": true,
+    "alternate_provider_HIGH_rating_entries": 1,
+    "unscored_rows": 2,
+    "bundled_parser_fix_not_inferred_from_scanner_absence": true,
+    "images": {
+      "backend": {
+        "image_id": "sha256:e6559575bde99a00cae4e869eec0e74348a51f035c9ecd0c5f8afc1d62cb2b93",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "backend.cdx.json": "372b969ac3a6af4818a81b04576ed2f73e199a428036da535f5abd2f1158461a",
+          "backend.audit.json": "ef9ab65b4f0ca24f38013704620bf1501c17d2bf3f344d11894551526bcb1403"
+        }
+      },
+      "frontend": {
+        "image_id": "sha256:4fb587e89e0cf80e52376f4382476b729567467a9aecd0cf5dc3af6790e3f443",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "frontend.cdx.json": "90fbed45e06ff9d3c82a21f58eb66718dcd064a2ee6fa89a814c51c5ff4fe836",
+          "frontend.audit.json": "7c720ddc7c83f13b00015492f871e9c9aee1f19fede69a272eabfff9ea6ac234"
+        }
+      },
+      "postgres": {
+        "image_id": "sha256:2c1d5e2a4cfc14c13a2d4d33825c1913f4470c8c0cd111ecf83912dac1ddc910",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "postgres.cdx.json": "328e42a6e8b84a1e75a5b8a7b0610358da6c57e92077b3cfa048e6b7f4f78519",
+          "postgres.audit.json": "f6510802ca567eb98b5cbf4169c64caa1f9499bd1f85ab9cc0a44401b697093f"
+        }
+      },
+      "pgbouncer": {
+        "image_id": "sha256:575c5944b60fd5d378f867f2173fe4b41a9c77044dbf7256892a4521d1e1cd29",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "pgbouncer.cdx.json": "705e9dd6d89e1baed027ac4536811712f97db82750e0d756588e024f8bc0514d",
+          "pgbouncer.audit.json": "ea2428683a5fcc7af698ccf6d89d2e9965273f218c5d7f3111cadbaf78486302"
+        }
+      },
+      "backend-build": {
+        "image_id": "sha256:b5b51c4e0677dfb99b9ab7b6eca2c7cbc18872eff989f4793170e30a79f0603b",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "backend-build.cdx.json": "af91a5c3276ab74d8b84669089515fc71089c1d0940731091d01e6531fd2ff7c",
+          "backend-build.audit.json": "edff7cf65ded4d9a3210487b604aa38cf27706867460c554e91824f6adffc0e0"
+        }
+      },
+      "frontend-build": {
+        "image_id": "sha256:60a95a10ec9057bd900e6a670dd38becc5aa97df1834f6dc9455b46e88c47cb0",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "frontend-build.cdx.json": "a72ef41091f3452d76150a30e66c9e3900672d3e34853070644979015fefc703",
+          "frontend-build.audit.json": "c9c1bbceecea78486d965cd22e415ade7686830629749ef8d144ed9fecbff1a7"
+        }
+      },
+      "frontend-compiler-build": {
+        "image_id": "sha256:bba5b5c58ccb547fbee614a0a76b45e95076842a284177f6e308829d7b671150",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "frontend-compiler-build.cdx.json": "35d3deaba0cd4571483fb2bd67114fe9663bcd71a7350de630fcf34b088666bc",
+          "frontend-compiler-build.audit.json": "0c6ae539e68eef9677e7771117237760b99be88af68bd9e6bd5b7dad5b34fc0f"
+        }
+      },
+      "postgres-build": {
+        "image_id": "sha256:85181f6ec48a74a2230695b25459b4c613ee1dbf0c293b0f9ff0bd100598db75",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "postgres-build.cdx.json": "309fe790867a162d1b677c3e7d908f34c43510d6731e630a7442cb85e4151fb7",
+          "postgres-build.audit.json": "89fe5756156a101352ea978069646484c733ffcef19fd073195a71872e105c24"
+        }
+      },
+      "pgbouncer-build": {
+        "image_id": "sha256:2fc3e0c860fd6bb3c6200ee1b2354e21a2c161de2c92ec0b65393a11ea3fc05c",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "pgbouncer-build.cdx.json": "ce0b3e3551d67774f4918c94e93fdf5902a8967e9e6567cfbd2872be44e0ff64",
+          "pgbouncer-build.audit.json": "ee979805ca0d566c71e9ce79b4cd52dbe1ac0acbc6f10d5682c8d0738e4180c5"
+        }
+      },
+      "service-5a078d834314cc77": {
+        "image_id": "sha256:2755bcf766f77f221f39e056864948fb4d1862381831ed0b347226e4bc1a43a9",
+        "platform": "linux/amd64",
+        "evidence_sha256": {
+          "service-5a078d834314cc77.cdx.json": "008a369fe832cee7e54a5715ffc66335bdd4773a59ae6e1d896eeb368ad8e9f3",
+          "service-5a078d834314cc77.audit.json": "990e4635e360a17ed6a0f4d2282f6b0551528510028345e43d7511c9faa5926b"
+        }
+      }
+    }
+  },
+  "actual_storage": {
+    "shared_volume_stages_passed": 11,
+    "native_S3_status": "passed",
+    "native_S3_groups": 6,
+    "native_S3_cleanup": true
+  },
+  "final_application_native_status": {
+    "paired_builder_and_runtime_verifiers": "passed",
+    "runtime_UID": 10001,
+    "existing_XML_invoice_camt_SEPA_FacturX_cases": 32,
+    "skipped": 0,
+    "ordinary_OCR_PDF_compression_timezone_ECB_XML": "passed",
+    "default_entrypoint_live_ready_graceful_shutdown": "passed; unchanged Uvicorn explicitly re-raises SIGTERM, tini exit143, all shutdown markers and no OOM",
+    "frontend_UID": 101,
+    "frontend_production_readonly_TLS_static_proxy": "passed; verified certificate/hostname, root-only key refused, 0440 accepted",
+    "qualification_scope": "Final actual images; prior setup and incorrect-harness failures remain preserved separately",
+    "provider_or_accountant_acceptance_claimed": false
+  },
+  "source_sha256": {
+    "backend/Dockerfile": "d4c7c0cb0b308616654e34bcb012ca234c80876ba1db96a92ad3274dbf3d6a2a",
+    "backend/scripts/build_system_expat.py": "41c60fe80aac78da63ee1f567b620410e7fb013705feeef23c057bf96530df4d",
+    "backend/scripts/verify_system_expat.py": "cbc9796fa82c742dc190719ceef3d41b9482c00e4f336b504eb910898ede94ca",
+    "backend/tests/test_gosu_image_contract.py": "bdd367850e70095207d703a359b0f3e445a52062fcabefc5a1d806cb4ad9ef91",
+    "backend/tests/test_system_expat_contract.py": "534cb45f1427332010fba70a9dbe6385747e55a9fd92581c0d03ac21e5231556",
+    "backend/tests/test_image_audit.py": "8f407104ec3156a02747449c7b03a0d9e3d5fdb9fcb6e633ccd4b1e137c9cd51",
+    "backend/build-licenses/python-system-expat/README.md": "4fd0dae7cfd0aa6246599cf70af785c4f58cca55fcfe7e8d1f209ec6d9deb7ff",
+    "backend/build-licenses/python-system-expat/EXPAT-COPYING": "31b15de82aa19a845156169a17a5488bf597e561b2c318d159ed583139b25e87",
+    "frontend/Dockerfile": "63bb4bf8144f334d74152529a0bf8e76b690c3eeeb603f4344f5d2ee56f938a0",
+    "deploy/postgres/Dockerfile": "d0db2ffed82851405c162ff8ec9d7a445386834e6d3ba00ba7ce1b19b1a3db90",
+    "deploy/postgres/verify-gosu-buildinfo.awk": "0223f7d272ae93bed8af6f74b90c24364fbd99feb213e2dfbad3ed35e5c04f31",
+    "deploy/pgbouncer/Dockerfile": "9b27ddbf489c2d61616ceeab0a16d1f502651cc5fed0b18a3bb799becd8f20a5"
+  },
+  "hosted_CI": {
+    "status": "Pending publication; final receipts will be attached to draft PR and external ci/ evidence",
+    "existing_gates_or_permissions_changed": false
+  },
+  "human_Lead_approval": "pending; AI agents do not supply this approval",
+  "production_actions": {
+    "main_merged": false,
+    "deployed": false,
+    "provider_actions": false,
+    "settings_changed": false,
+    "production_migrations": false
+  },
+  "remaining_assignments": [
+    "Unsupported fixed npm/uv parents and retained x/sys inventory",
+    "CI-IMAGE-CACHE-01 proposal",
+    "PERF-RUNTIME-DEV-01 proposal",
+    "RB04/RB05/EX21 owner decisions and financial/UI backlog",
+    "Human/provider/accountant acceptance and release controls"
+  ],
+  "evidence_root": "/workspace/artifacts/gosu-helper-maintenance-2026-11-03"
+}
