@@ -1,5 +1,46 @@
 # Engineering backlog
 
+## Current security development — 3 November 2026
+
+[Current repair, actual findings and evidence boundaries](security/GOSU-EXPAT-MAINTENANCE-2026-11-03.md).
+PR #100 at c904bc7 completed all mandatory CI on 1 November; its original source and
+reports remain. The new helper/Expat candidate must receive its own qualification.
+
+| Assignment | Current engineering contract |
+| --- | --- |
+| Gosu/Moby helper | Published gosu 1.20 links fixed moby/sys/user 0.4.1. Verify real binary metadata, source/hash/time/license and false-upgrade controls; preserve existing compiler, PG16 initialization, UID 70 and baseline-created volume data. Local source/build/runtime proof is recorded; fresh candidate CI remains separate. |
+| Expat OS packages | Fresh scanning finds four new IDs 113351/115506/117610/118370 across three old roles, with six selected HIGH rows. Require official Alpine 2.10.0-r0 at each affected existing seam and inspect full inventory, not only filtered counts. Preserve original blocked run. |
+| PYEXPAT-VENDOR-01 | Direct inspection/source review proves the stock Python 3.14.8 bundled 2.8.5 copy is separately unfixed; published 3.14.10 also lacks all four fixes. The implemented same-release/configuration build pairs pyexpat AND ElementTree against fixed system Expat and preserves interpreter/ABI/provenance. Actual paired imports, CAPI/linkage, 32 existing application cases, OCR/PDF, health/shutdown and storage pass locally; fresh delivered-source CI and human review remain separate. An APK-only update or scanner absence is insufficient. Remove this maintained overlay only after a published parent directly proves fixed coherent XML behavior and complete qualification. |
+
+The current local candidate passes 196 focused cases, actual collection of 5,447
+backend cases, all ten image roles/twenty reports and the native database, XML,
+application, TLS and storage checks. Five targeted IDs disappear from full SBOMs;
+eight other IDs/nine rows remain, including one alternate-provider HIGH rating
+and two unscored rows. Source/negative-control evidence and the failed intermediate
+scan remain preserved. This local status does not replace delivered-commit CI,
+human/Lead review or release controls.
+
+The additional measured cache/footprint assignments below remain proposals.
+Existing RB04/RB05/EX21 decisions, EX19 recovery, CI-DEV-LOAD-01, B00/F10/readiness,
+remaining npm/uv/x/sys inventory and human/provider/accountant acceptance stay open.
+No role policy, production migration, merge, deployment or unsupported major is
+introduced by this security work.
+
+## Additional measured follow-ups — 1 November 2026
+
+These are logged, unapplied assignments from source `c904bc7`; they do not
+qualify a different binary, implement an optimization or accept remaining risk.
+
+| Order / assignment | Finding and engineering prompt |
+| --- | --- |
+| Next supported security repair: gosu 1.20 | Verify immutable official source `29b939aa5bd4dc588af765b8248f6e39150d2565` / archive SHA256 `2b70da8a5480fafedc16bb1fc91b572f064d03df736cbd91a616af2f1b66ab51`, release timestamp and module/license provenance. The inspected source moves moby/sys/user to 0.4.1 without a required Go/base change; source availability is not a qualified helper binary. Implement the reviewed source/hash/semver/time/license-path and actual binary-metadata guards, add false-upgrade controls, and prove privilege dropping, actual PostgreSQL initialization/restart/existing volumes plus full image/CI evidence. Retain unchanged x/sys 0.1.0 Windows-specific inventory and platform limits; no suppression or automatic vulnerable rollback. |
+| CI-IMAGE-CACHE-01 | Saved prior/current hosted gates each download the Trivy database in 20/20 invocations, versus 1/20 in the local run using existing cache support. Use a fresh run/attempt-owned cache directory at the existing audit step, preserving normal refresh checks, all ten targets/twenty reports, database metadata, failure controls and cleanup. No cross-run stale/offline fallback or skip-update flag. Measure actual request/bytes/time/resource differences before claiming a benefit; do not infer identical DB bytes from a shared tag. |
+| PERF-RUNTIME-DEV-01 (modest disk-only candidate) | One bounded actual-image probe finds five test distributions (pytest, pytest-asyncio, iniconfig, pluggy, Pygments) totaling 6,141,952 logical bytes (~5.86 MiB). Ruff/mypy/pre-commit are already absent; retain real runtime PyYAML, packaging, HTTPX and Prometheus, OCR/fonts and metadata. Before a minimal runtime/dev requirement split, preserve the documented in-container pytest smoke and one authoritative version per package, teach base-graph auditing/cache keys to read bounded recursive includes safely, and prove source/combined dev graphs and all real image behaviors. No compressed-layer, RAM or latency gain has been measured; keep this lower priority than supported security repairs. |
+
+Detailed source, bytes, hashes and unapplied proposals are in the 1 November
+Alpine review artifacts. Fresh complete qualification remains mandatory for any
+implementation. The current candidate source stays unchanged while CI runs.
+
 ## Follow-up assignments from qualified source 42cb534 — 1 November 2026
 
 These are source-backed assignments, not new risk acceptance. Preserve

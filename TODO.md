@@ -1,5 +1,23 @@
 # TODO — Task Board
 
+**Gosu and complete Expat repair — 3 November 2026:** update the actual linked
+privilege-drop dependency, then address four newly reported Expat advisories in
+three OS-image roles and the separately bundled Python copy. An OS-only floor
+and the latest released Python parent do not repair that vendor boundary. Keep
+both XML extensions coherent using the same released interpreter source and
+supported system-Expat configuration. [Findings, scope and qualification](docs/security/GOSU-EXPAT-MAINTENANCE-2026-11-03.md).
+Local qualification passes 196 focused cases, ten image roles/twenty reports,
+actual XML/application/TLS and database/storage checks. Eight other advisory IDs /
+nine role rows remain visible with every rating. Fresh delivered-commit CI and
+human/Lead review remain required. No main merge or deployment.
+
+**PR #100 qualification completed:** source `c904bc7` passed core 41311302821 and
+supply 41311302754 on attempt 1: 5,067 backend passes / 274 skips, 949 functional
+and 13 visual browser passes, all ten image identities/twenty saved hashes and
+all six native S3 groups. Every mandatory child and both result-only summaries
+succeed. New 3 November advisories are separate dated findings, preserved as a
+failed intermediate image gate; old green checks do not qualify this new source.
+
 **Alpine maintenance candidate — 1 November 2026:** require publisher-supported
 fixed musl/musl-utils, zlib and libxpm before dependency processing/runtime
 validation across seven affected image roles. Keep bases, users, package metadata,

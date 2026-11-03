@@ -534,13 +534,32 @@ def test_readable_summary_escapes_metadata_and_explicitly_counts_preview_rows():
 # These are the seven affected outputs from the preserved full image inventories,
 # not all Alpine images. Keep package admission independent of scanner severity.
 ALPINE_MAINTENANCE = {
-    "backend-build": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3", "zlib": "1.3.2-r1"},
-    "backend": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3", "zlib": "1.3.2-r1"},
+    "backend-build": {
+        "musl": "1.2.6-r3",
+        "musl-utils": "1.2.6-r3",
+        "zlib": "1.3.2-r1",
+        "libexpat": "2.10.0-r0",
+    },
+    "backend": {
+        "musl": "1.2.6-r3",
+        "musl-utils": "1.2.6-r3",
+        "zlib": "1.3.2-r1",
+        "libexpat": "2.10.0-r0",
+    },
     "postgres-build": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3", "zlib": "1.3.2-r1"},
     "postgres": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3", "zlib": "1.3.2-r1"},
-    "pgbouncer-build": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3"},
+    "pgbouncer-build": {
+        "musl": "1.2.6-r3",
+        "musl-utils": "1.2.6-r3",
+        "libexpat": "2.10.0-r0",
+    },
     "pgbouncer": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3", "zlib": "1.3.2-r1"},
-    "frontend": {"musl": "1.2.6-r3", "musl-utils": "1.2.6-r3", "libxpm": "3.5.20-r0"},
+    "frontend": {
+        "musl": "1.2.6-r3",
+        "musl-utils": "1.2.6-r3",
+        "libxpm": "3.5.20-r0",
+        "libexpat": "2.10.0-r0",
+    },
 }
 ALPINE_FIRST_USE = {
     "backend-build": ("uv", "pip", "install"),
@@ -658,7 +677,8 @@ def test_affected_alpine_stages_require_maintenance_before_dependency_or_runtime
 
 def _maintenance_dockerfile(install=None, *, before="", after="", stage="build"):
     install = install or (
-        "apk add --no-cache --upgrade 'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1'"
+        "apk add --no-cache --upgrade 'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' "
+        "'libexpat>=2.10.0-r0'"
     )
     return (
         f"FROM synthetic AS {stage}\n{before}"
@@ -682,6 +702,29 @@ def test_alpine_admission_rejects_missing_or_inherited_vulnerable_package_constr
     }[mutation]
     with pytest.raises(AssertionError, match=re.escape(f"require {package}>=")):
         _assert_alpine_admission(text.replace(token, replacement), "backend-build")
+
+
+@pytest.mark.parametrize("role", ["backend", "backend-build", "frontend", "pgbouncer-build"])
+@pytest.mark.parametrize("mutation", ["missing", "unversioned", "old-release"])
+def test_libexpat_admission_refuses_missing_unversioned_or_below_fixed_floor(role, mutation):
+    stage = audit.BUILD_OUTPUTS[role][1]
+    packages = " ".join(
+        f"'{package}>={minimum}'" for package, minimum in ALPINE_MAINTENANCE[role].items()
+    )
+    text = f"FROM synthetic AS {stage}\nRUN apk add --no-cache --upgrade {packages}\n"
+    if role == "pgbouncer-build":
+        text += "RUN curl --fail https://example.test/source\n"
+    elif role == "backend-build":
+        text += "RUN uv pip install -r requirements.txt\n"
+    _assert_alpine_admission(text, role)
+    token = "'libexpat>=2.10.0-r0'"
+    replacement = {
+        "missing": "",
+        "unversioned": "libexpat",
+        "old-release": "'libexpat>=2.9.0-r0'",
+    }[mutation]
+    with pytest.raises(AssertionError, match="require libexpat>=2.10.0-r0"):
+        _assert_alpine_admission(text.replace(token, replacement), role)
 
 
 def test_alpine_admission_requires_upgrade_policy_even_when_floors_are_present():
@@ -748,9 +791,12 @@ def test_alpine_admission_rejects_wrong_order_decoys_and_fail_open_install(text)
 @pytest.mark.parametrize(
     "install",
     [
-        "apk add 'zlib>=1.3.2-r1' --upgrade 'musl-utils>=1.2.6-r3' 'musl>=1.2.6-r3'",
-        'apk add --upgrade "musl>=1.2.6-r4" "musl-utils>=1.2.6-r4" "zlib>=1.3.2-r2"',
-        "set -eu; apk add --upgrade 'musl>=1.2.7-r0' 'musl-utils>=1.2.7-r0' 'zlib>=1.3.3-r0'; true",
+        "apk add 'zlib>=1.3.2-r1' --upgrade 'musl-utils>=1.2.6-r3' 'musl>=1.2.6-r3' "
+        "'libexpat>=2.10.0-r0'",
+        'apk add --upgrade "musl>=1.2.6-r4" "musl-utils>=1.2.6-r4" "zlib>=1.3.2-r2" '
+        '"libexpat>=2.10.1-r0"',
+        "set -eu; apk add --upgrade 'musl>=1.2.7-r0' 'musl-utils>=1.2.7-r0' 'zlib>=1.3.3-r0' "
+        "'libexpat>=2.11.0-r0'; true",
     ],
     ids=["reordered", "newer-revisions-double-quotes", "newer-release-errexit"],
 )
