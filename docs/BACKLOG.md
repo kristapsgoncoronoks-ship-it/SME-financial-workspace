@@ -1,6 +1,30 @@
 # Engineering backlog
 
-## Current security development — 3 November 2026
+## Current uv / rustls development — 3 November 2026
+
+[Current implementation and evidence boundaries](security/UV-RUSTLS-MAINTENANCE-2026-11-03.md).
+PR #101 source `4f2a360` completed all thirteen mandatory CI contexts on attempt 1;
+new source requires its own qualification. The preliminary uv image inventory
+removes all four rustls IDs, retains every remaining rating and matches complete
+APK/application inventories. Final permission-corrected images also pass fresh
+ten-role/twenty-report auditing, native/application and storage qualification;
+the signed index attestation verifies in a separate supplement. Four other IDs /
+five rows remain with every rating. Delivered-source CI and human review remain
+separate from local proof.
+
+| Assignment | Current engineering contract |
+| --- | --- |
+| uv / rustls parent | Use published uv 0.13.7 with actual OCI rustls 0.23.46, immutable source/index/amd64/binary bindings and unchanged MIT/Apache notices. The OCI and release-archive executables are distinct builds. Preserve installer flags/CA/prefix/no-download behavior, compare actual installed distributions and dependency metadata, and qualify final native/image/storage/CI outcomes. Unverified attestation claims stay explicitly unverified. |
+| Public provenance traversal | Inherited `/usr/local/share/licenses` mode 0644 hid existing notices from a cap-drop probe. Set only that public parent to 0755 in both existing chmod seams. Prove exact notice/provenance reads without accepting empty globs; retain existing file modes and private storage 0700. Preserve first-candidate and corrected-image evidence separately. |
+| Residual inventory | Keep three npm IDs plus x/sys in two PG roles, all provider ratings, the alternate HIGH and two unscored rows visible. Investigate supported parent or compatible, separately guarded maintenance; never force an internal major, delete metadata or declare unscored safe. |
+
+The preceding candidate's 5,173 backend passes / 274 skips, 949 functional /
+13 visual and native PostgreSQL/image/storage checks are completed dated evidence.
+They do not qualify this new installer or close owner/release, RB04/RB05/EX21,
+EX19 recovery, B00/F10/readiness, UI/finance/provider/accountant acceptance.
+Existing cache/footprint proposals remain unapplied. No main merge or deployment.
+
+## Preceding gosu / Expat development — 3 November 2026
 
 [Current repair, actual findings and evidence boundaries](security/GOSU-EXPAT-MAINTENANCE-2026-11-03.md).
 PR #100 at c904bc7 completed all mandatory CI on 1 November; its original source and

@@ -1,5 +1,23 @@
 # TODO — Task Board
 
+**uv / rustls maintenance — 3 November 2026:** upgrade the actual builder
+installer to digest-pinned uv 0.13.7 with fixed rustls 0.23.46. Preserve the
+application graph, verified TLS, fixed XML pair and all security/storage gates.
+An inherited public license-parent permission issue receives an exact 0755
+correction; private storage remains 0700. [Repair and qualification](docs/security/UV-RUSTLS-MAINTENANCE-2026-11-03.md).
+Final local image/native/storage checks pass; all four rustls IDs disappear from
+full inventory, leaving four other IDs/five rows with all ratings retained.
+Fresh delivered-source CI remains required. No main merge or deployment;
+human/Lead review remains required.
+
+**PR #101 qualification completed:** source `4f2a360` passed core 41650624105 and
+supply 41650624091 on attempt 1, all thirteen mandatory contexts successful:
+5,173 backend / 274 skips, 949 functional and 13 visual passes, 37 migration /
+three SQLite-only skips, 14 bootstrap, 249 ordinary PG and ten connected journeys.
+Ten image identities/twenty report hashes and all six S3 groups verify. Eight
+other IDs/nine role rows remain at that source; this updates the earlier pending
+note without qualifying the new uv candidate or approving a production release.
+
 **Gosu and complete Expat repair — 3 November 2026:** update the actual linked
 privilege-drop dependency, then address four newly reported Expat advisories in
 three OS-image roles and the separately bundled Python copy. An OS-only floor
