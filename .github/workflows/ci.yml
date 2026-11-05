@@ -186,6 +186,7 @@ jobs:
           tests/test_job_lease_migration.py
           tests/test_image_reading_migration.py
           tests/test_expense_item_parent_migration.py
+          tests/test_expense_item_parent_migration_pg.py
           tests/test_expense_report_children_migration.py
       - name: Development PostgreSQL bootstrap contracts
         env:

@@ -1749,7 +1749,9 @@
         "integration_checks": 83,
         "integrated_ci": "pending",
         "focused_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-children160/",
-        "integration_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-graph-qualification/"
+        "integration_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-graph-qualification/",
+        "hosted_first_failure": "9a47efa: two historical159 fixtures attempted index removal under valid160 dependents; no product/migration change",
+        "historical_fixture_correction": "Actual159 private UUID database;31 affected native and40 discovery controls pass, zero skips; fresh full CI pending"
       }
     },
     {

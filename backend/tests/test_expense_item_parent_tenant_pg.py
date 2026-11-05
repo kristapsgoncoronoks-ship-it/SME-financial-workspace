@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from uuid import uuid4
@@ -59,9 +60,10 @@ async def _snapshot(db, ids):
     }
 
 
-@pytest_asyncio.fixture
-async def parent_pg():
-    engine = create_async_engine(PG_URL)
+@asynccontextmanager
+async def parent_family(database_url):
+    """Seed a rollback-only family in the explicitly selected database."""
+    engine = create_async_engine(database_url)
     ids = {
         f"{kind}_{tenant}": str(uuid4())
         for tenant in ("a", "b")
@@ -168,6 +170,12 @@ async def parent_pg():
         await engine.dispose()
 
 
+@pytest_asyncio.fixture
+async def parent_pg():
+    async with parent_family(PG_URL) as family:
+        yield family
+
+
 @pytest.mark.parametrize("operation", ["insert", "report_update", "org_update"])
 async def test_native_constraint_refuses_both_directions_of_wrong_tenant_pair(parent_pg, operation):
     _, db, ids = parent_pg
@@ -249,41 +257,6 @@ async def test_native_report_cascade_detaches_only_optional_item_id(parent_pg):
         )
     ).one()
     assert other == (ids["org_b"], ids["item_b"])
-
-
-async def test_native_migration_roundtrip_preserves_all_existing_rows_and_links(parent_pg):
-    _, db, ids = parent_pg
-    await _scope(db, "")
-    before = await _snapshot(db, ids)
-    await db.run_sync(_run_migration, "downgrade")
-    await db.run_sync(_run_migration, "upgrade")
-    assert await _snapshot(db, ids) == before
-
-
-async def test_native_preflight_sees_other_tenants_and_refuses_without_ddl_or_repair(parent_pg):
-    _, db, ids = parent_pg
-    await _scope(db, "")
-    await db.run_sync(_run_migration, "downgrade")
-    await _scope(db, ids["org_b"])
-    await db.execute(
-        update(ExpenseItem.__table__)
-        .where(ExpenseItem.id == ids["item_b"])
-        .values(report_id=ids["report_a"])
-    )
-    await _scope(db, "")
-    before = await _snapshot(db, ids)
-    with pytest.raises(RuntimeError, match="missing_parent=0, wrong_tenant=1") as caught:
-        await db.run_sync(_run_migration, "upgrade")
-    assert all(value not in str(caught.value) for value in ids.values())
-    assert await _snapshot(db, ids) == before
-    indexes = await db.run_sync(
-        lambda connection: inspect(connection).get_indexes("expense_reports")
-    )
-    assert all(index["name"] != migration.TARGET_INDEX for index in indexes)
-    fks = await db.run_sync(
-        lambda connection: inspect(connection).get_foreign_keys("expense_items")
-    )
-    assert any(fk["constrained_columns"] == ["report_id"] for fk in fks)
 
 
 @pytest.mark.parametrize("operation", ["upgrade", "downgrade"])
