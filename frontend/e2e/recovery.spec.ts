@@ -1026,17 +1026,18 @@ test("rebates: the form never asks for a EUR amount", async ({ page }) => {
   await expect(page.getByText("There is no euro field", { exact: false })).toBeVisible();
 });
 
-test("rebates: the close boundary is stated and no preview is offered", async ({ page }) => {
+test("rebates: preview is read-only and the close retains the write boundary", async ({ page }) => {
   await openRebates(page);
 
   await expect(
     page.getByText("Recording a rebate does not change any figure until the close runs"),
   ).toBeVisible();
   await expect(
-    page.getByText("no preview of the result", { exact: false }),
+    page.getByText("read-only preview below shows the current calculation", { exact: false }),
   ).toBeVisible();
-  // Nothing that claims to apply, merge or preview the effect now.
-  await expect(page.getByRole("button", { name: /merge|apply|preview/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Preview rebate effect", exact: true })).toBeVisible();
+  // Preview reads the canonical plan; the page cannot apply or merge it.
+  await expect(page.getByRole("button", { name: /merge|apply/i })).toHaveCount(0);
 });
 
 test("rebates: recording posts the document, never a converted total", async ({ page }) => {

@@ -325,7 +325,7 @@ test("credit command resolves a lost response without another legal write", asyn
     return route.fulfill({ status: 503, json: { detail: "Synthetic lost response after commit" } });
   });
   await page.route(`**/api/v1/issued/${VOID_INVOICE.id}/credit-commands/*`, route => { checks++; return route.fulfill({ json: cn }); });
-  await page.route("**/api/v1/issued", route => route.fulfill({ json: { items: committed ? [{ ...VOID_INVOICE, credited_total: "121.00" }, WRITEOFF_INVOICE, cn] : [VOID_INVOICE, WRITEOFF_INVOICE], total: committed ? 3 : 2 } }));
+  await page.route(/\/api\/v1\/issued(?:\?.*)?$/, route => route.fulfill({ json: { items: committed ? [{ ...VOID_INVOICE, credited_total: "121.00" }, WRITEOFF_INVOICE, cn] : [VOID_INVOICE, WRITEOFF_INVOICE], total: committed ? 3 : 2 } }));
   page.on("dialog", dialog => dialog.accept());
   await page.goto("/issue");
   const row = page.locator("tr", { hasText: VOID_INVOICE.number as string });

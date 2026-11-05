@@ -14,8 +14,8 @@ recompute of `fuel_transactions.net_eur_eff` is a CLOSE stage
 (`close.run_close` → `rebate.merge_period`), because an already-validated
 transaction's derived figure is product data the ENGINE owns and a web request
 must not mutate it (`BA_fleet_fuel.md` §3.H, the engine ↔ app write boundary).
-There is therefore no "merge now" verb here, by design — recording a rebate and
-then closing the period is the whole flow.
+There is therefore no "merge now" verb here, by design. The read-only preview
+observes the same planner; monthly close independently re-plans before applying.
 
 It also cannot state the euro. `RebateIn` has no `amount_eur` field: the server
 resolves it through `fx.to_eur` at the document's own date and REFUSES when the
@@ -46,7 +46,9 @@ THE PRICE BASIS
 -----------------
 A rebate is a component of the NET EUR/L, final basis (§3.G G1: *"VAT excluded,
 rebates applied"*). This surface serves the rebate DOCUMENT rather than a price,
-so it states no €/L of its own; the basis is stated where the price is served
+so it states no €/L of its own. Preview amounts are per-transaction NET EUR
+totals, with VAT excluded and the proposed rebate included. The €/L basis is
+stated where the price is served
 (`overcharges.py`'s `price_basis`, and both WO-83 artifacts).
 """
 
@@ -57,7 +59,12 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import CurrentUser, DbSession, require_perm
 from app.core import authz
 from app.models.transport.off_invoice_rebate import VatOffInvoiceRebate
-from app.schemas.transport_rebate import RebateIn, RebateOut
+from app.schemas.transport_rebate import (
+    RebateAllocationOut,
+    RebateIn,
+    RebateOut,
+    RebatePreviewOut,
+)
 from app.services.transport import rebate as rebate_svc
 
 # Structural authorization (ADR-0024): router-level TRANSPORT_READ; the
@@ -139,3 +146,38 @@ async def record_rebate(current: CurrentUser, db: DbSession, body: RebateIn):
     await db.commit()
     await db.refresh(row)
     return _out(row)
+
+
+@router.get("/rebates/preview", response_model=RebatePreviewOut)
+async def preview_rebates(
+    current: CurrentUser,
+    db: DbSession,
+    period: str = Query(
+        min_length=7, max_length=7, description="YYYY-MM — the complete period to preview"
+    ),
+    supplier: str | None = Query(default=None, max_length=60),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=100, ge=1, le=100),
+):
+    """Observe the existing close planner without writing or applying anything.
+
+    All countries/entities of period + optional exact supplier are planned
+    before display paging. A source-limit or financial refusal returns no
+    partial summary. The engine independently re-plans when close actually runs.
+    """
+    result = await rebate_svc.preview_period(db, current.org_id, period, supplier=supplier)
+    start = (page - 1) * page_size
+    return RebatePreviewOut(
+        period=result.period,
+        supplier=supplier,
+        rebate_total_eur=result.rebate_total_eur,
+        lines_allocated=result.lines_allocated,
+        changed=result.changed,
+        source_warnings=result.source_warnings,
+        allocations=[
+            RebateAllocationOut.model_validate(a)
+            for a in result.allocations[start : start + page_size]
+        ],
+        page=page,
+        page_size=page_size,
+    )

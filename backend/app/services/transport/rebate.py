@@ -139,11 +139,11 @@ never enter the sum — the same structural argument `contract_audit` makes abou
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import PermissionError, ValidationError
@@ -161,6 +161,16 @@ _COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 # invoice states an AMOUNT, never a rate (see the module docstring).
 FX_SOURCE_EUR = "eur"
 FX_SOURCE_ECB = "ecb"
+
+# Read-only interactive capacity limits, not close-engine accounting limits.
+# Bound allocation objects, document grouping and warning inputs separately;
+# the document cap also bounds the paired fuel filter to 10,000 SQL binds.
+# Every bounded read fetches one extra row and refuses the WHOLE preview on
+# overflow; a partial source population must never produce an apparent total.
+PREVIEW_MAX_FUEL_ROWS = 20_000
+PREVIEW_MAX_REBATE_ROWS = 5_000
+PREVIEW_MAX_HISTORY_ROWS = 20_000
+PREVIEW_MAX_ACTIVE_PAIRS = 20_000
 
 
 @dataclass(frozen=True)
@@ -449,7 +459,9 @@ def _allocate(rows: list[FuelTransaction], rebate_total: Decimal) -> list[Rebate
     allocations: list[RebateAllocation] = []
     cum_qty = Decimal("0")
     cum_eur = Decimal("0.00")
-    for row in sorted(eligible, key=lambda r: r.line_seq):
+    # line_seq is unique per entity, while this allocation spans entities.
+    # Resolve previously unordered ties identically in a preview and a close.
+    for row in sorted(eligible, key=lambda r: (r.line_seq, r.id)):
         cum_qty += Decimal(row.qty)
         next_cum_eur = q2(rebate_total * cum_qty / total_qty)
         share = next_cum_eur - cum_eur
@@ -479,26 +491,28 @@ def _allocate(rows: list[FuelTransaction], rebate_total: Decimal) -> list[Rebate
     return allocations
 
 
-async def merge_period(
+def _preview_too_large() -> ValidationError:
+    return ValidationError(
+        "This rebate preview exceeds the interactive source limit. Select one "
+        "supplier, or use the existing monthly close for the complete period. "
+        "No partial preview has been calculated.",
+        code="rebate_preview_too_large",
+        status=413,
+    )
+
+
+async def _plan_period(
     db: AsyncSession,
     org_id: str,
     period: str,
     *,
     supplier: str | None = None,
-) -> MergeResult:
-    """Merge every recorded off-invoice rebate of `period` into `net_eur_eff`.
+    preview: bool = False,
+) -> tuple[MergeResult, dict[tuple[str, str], list[VatOffInvoiceRebate]]]:
+    """The shared, no-write phase of preview and monthly close.
 
-    THE ENGINE calls this (`close.run_close`), not a web request (§3.H). It is
-    idempotent by construction — the new effective net is always derived from
-    the AS-INVOICED `net_eur`, never from the column's current value — so a
-    second run finds every row already equal, writes nothing and audits nothing.
-
-    Two-phase, like `statement_ingest`: every (supplier, country) group is
-    resolved in memory first, so any refusal leaves ZERO rows changed rather
-    than a half-merged period. Money: `Decimal` throughout, one `q2`
-    (ROUND_HALF_UP) per cumulative step (§4.9). Currency: EUR only, and
-    structurally so — a rebate that could not reach EUR was refused at
-    recording (§4.14/§4.15).
+    Resolve ALL supplier/country groups before paging or writing. Preview adds
+    bounded source reads only; it never changes the financial denominator.
     """
     await _require_module(db, org_id)
     validate_period(period)
@@ -508,9 +522,15 @@ async def merge_period(
     )
     if supplier is not None:
         stmt = stmt.where(VatOffInvoiceRebate.supplier == supplier)
+    if preview:
+        stmt = stmt.limit(PREVIEW_MAX_REBATE_ROWS + 1)
     rebates = list(await db.scalars(stmt))
+    if preview and len(rebates) > PREVIEW_MAX_REBATE_ROWS:
+        raise _preview_too_large()
 
-    warnings = await missing_source_warnings(db, org_id, period=period, supplier=supplier)
+    warnings = await missing_source_warnings(
+        db, org_id, period=period, supplier=supplier, _preview=preview
+    )
 
     if not rebates:
         return MergeResult(
@@ -520,22 +540,42 @@ async def merge_period(
             changed=0,
             allocations=(),
             source_warnings=warnings,
-        )
+        ), {}
 
     groups: dict[tuple[str, str], list[VatOffInvoiceRebate]] = {}
     for r in rebates:
         groups.setdefault((r.supplier, r.country), []).append(r)
+
+    preview_rows: dict[tuple[str, str], list[FuelTransaction]] = {}
+    if preview:
+        # One bounded read rather than a round trip for every source group.
+        # Canonical scope + recorded pairs selects exactly the union of the
+        # close engine's per-group populations, including zero-litre rows.
+        rows = list(
+            await db.scalars(
+                queries.fuel_transactions(org_id, period=period, supplier=supplier)
+                .where(tuple_(FuelTransaction.supplier, FuelTransaction.country).in_(list(groups)))
+                .limit(PREVIEW_MAX_FUEL_ROWS + 1)
+            )
+        )
+        if len(rows) > PREVIEW_MAX_FUEL_ROWS:
+            raise _preview_too_large()
+        for row in rows:
+            preview_rows.setdefault((row.supplier, row.country), []).append(row)
 
     # Phase 1 — resolve every group before writing anything.
     planned: list[RebateAllocation] = []
     total_eur = Decimal("0.00")
     for (sup, ctry), group in sorted(groups.items()):
         group_total = q2(sum((Decimal(r.amount_eur) for r in group), Decimal("0")))
-        rows = list(
-            await db.scalars(
-                queries.fuel_transactions(org_id, supplier=sup, country=ctry, period=period)
+        if preview:
+            rows = preview_rows.get((sup, ctry), [])
+        else:
+            rows = list(
+                await db.scalars(
+                    queries.fuel_transactions(org_id, supplier=sup, country=ctry, period=period)
+                )
             )
-        )
         if not rows:
             raise ValidationError(
                 f"A rebate is recorded for {sup}/{ctry} {period} but no fuel "
@@ -544,6 +584,43 @@ async def merge_period(
             )
         planned.extend(_allocate(rows, group_total))
         total_eur += group_total
+
+    return MergeResult(
+        period=period,
+        rebate_total_eur=q2(total_eur),
+        lines_allocated=len(planned),
+        changed=sum(a.old_net_eur_eff != a.new_net_eur_eff for a in planned),
+        allocations=tuple(planned),
+        source_warnings=warnings,
+    ), groups
+
+
+async def preview_period(
+    db: AsyncSession, org_id: str, period: str, *, supplier: str | None = None
+) -> MergeResult:
+    """A bounded, no-write observation, never authority for a later close."""
+    result, _groups = await _plan_period(db, org_id, period, supplier=supplier, preview=True)
+    return result
+
+
+async def merge_period(
+    db: AsyncSession,
+    org_id: str,
+    period: str,
+    *,
+    supplier: str | None = None,
+) -> MergeResult:
+    """Re-plan current sources and merge them, only inside the close engine.
+
+    The as-invoiced net, Decimal cumulative-cent allocation, all-groups-before-
+    write refusals and idempotent no-audit rerun behavior remain the same. A
+    prior web preview is never an input. Interactive preview limits do not
+    constrain monthly close.
+    """
+    result, groups = await _plan_period(db, org_id, period, supplier=supplier)
+    planned = result.allocations
+    if not planned:
+        return result
 
     # Phase 2 — write only the rows whose figure actually moves.
     by_id = {a.fuel_transaction_id: a for a in planned}
@@ -573,14 +650,7 @@ async def merge_period(
         )
     await db.flush()
 
-    return MergeResult(
-        period=period,
-        rebate_total_eur=q2(total_eur),
-        lines_allocated=len(planned),
-        changed=changed,
-        allocations=tuple(planned),
-        source_warnings=warnings,
-    )
+    return replace(result, changed=changed)
 
 
 async def missing_source_warnings(
@@ -589,6 +659,7 @@ async def missing_source_warnings(
     *,
     period: str,
     supplier: str | None = None,
+    _preview: bool = False,
 ) -> tuple[str, ...]:
     """R50's second half — "the adjusted file was silently replaced by the raw
     one", stated as a warning per §2.5's "Expected rebate" rationale.
@@ -619,10 +690,18 @@ async def missing_source_warnings(
     ).where(VatOffInvoiceRebate.org_id == org_id)
     if supplier is not None:
         hist_stmt = hist_stmt.where(VatOffInvoiceRebate.supplier == supplier)
+    if _preview:
+        hist_stmt = hist_stmt.where(VatOffInvoiceRebate.period <= period).limit(
+            PREVIEW_MAX_HISTORY_ROWS + 1
+        )
+
+    history = list(await db.execute(hist_stmt))
+    if _preview and len(history) > PREVIEW_MAX_HISTORY_ROWS:
+        raise _preview_too_large()
 
     expected: dict[tuple[str, str], str] = {}
     present: set[tuple[str, str]] = set()
-    for sup, ctry, per in await db.execute(hist_stmt):
+    for sup, ctry, per in history:
         if per == period:
             present.add((sup, ctry))
         elif per < period:
@@ -639,7 +718,12 @@ async def missing_source_warnings(
     active_stmt = queries.fuel_transactions(
         org_id, period=period, supplier=supplier
     ).with_only_columns(FuelTransaction.supplier, FuelTransaction.country)
-    active = {(s, c) for s, c in await db.execute(active_stmt)}
+    if _preview:
+        active_stmt = active_stmt.distinct().limit(PREVIEW_MAX_ACTIVE_PAIRS + 1)
+    active_rows = list(await db.execute(active_stmt))
+    if _preview and len(active_rows) > PREVIEW_MAX_ACTIVE_PAIRS:
+        raise _preview_too_large()
+    active = {(s, c) for s, c in active_rows}
 
     return tuple(
         f"off-invoice rebate source missing: {sup}/{ctry} has fuel activity in "
@@ -659,6 +743,7 @@ __all__ = [
     "list_rebates",
     "merge_period",
     "missing_source_warnings",
+    "preview_period",
     "record_rebate",
     "validate_period",
 ]
