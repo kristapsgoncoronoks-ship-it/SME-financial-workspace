@@ -300,14 +300,27 @@ async def _webhook_deliver(db, payload: dict, job: Job) -> dict:
 @jobs.handler(email_intake.EXTRACT_KIND)
 async def _email_extract(db, payload: dict, job: Job) -> dict:
     """Parse one queued inbound email attachment off the API tier (ADR-0009)."""
-    return await email_intake.extract_inbound(db, payload["inbound_id"])
+    claim = jobs.capture_publication_claim(job)
+    return await email_intake.extract_inbound(
+        db,
+        payload["inbound_id"],
+        requested_profile_id=payload.get("reading_profile_id"),
+        publication_claim=claim,
+    )
 
 
 @jobs.handler(extraction.UPLOAD_EXTRACT_KIND)
 async def _upload_extract(db, payload: dict, job: Job) -> dict:
     """Parse one queued UI direct upload off the API tier (Stage B). Keeps
     CPU-heavy OCR out of the web request path."""
-    return await extraction.extract_upload(db, payload["run_id"], payload.get("attempt_seq", 0))
+    claim = jobs.capture_publication_claim(job)
+    return await extraction.extract_upload(
+        db,
+        payload["run_id"],
+        payload.get("attempt_seq", 0),
+        requested_profile_id=payload.get("reading_profile_id"),
+        publication_claim=claim,
+    )
 
 
 @jobs.handler("capture.region_ocr")

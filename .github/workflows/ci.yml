@@ -229,6 +229,7 @@ jobs:
           tests/test_capture_region_pg.py
           tests/test_capture_region_locks_pg.py
           tests/test_document_registry_pg.py
+          tests/test_document_pagination_pg.py
           tests/test_capture_retry_pg.py
           tests/test_capture_authorization_pg.py
           tests/test_capture_download_access_pg.py

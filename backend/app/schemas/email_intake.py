@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import settings
+from app.schemas.capture_reading import ReadingObservationSummary
 from app.schemas.image_reading import ImageReadingPreparation
 from app.schemas.invoice import InvoiceCreate, ParsedInvoiceDraft
 from app.services.filesec import MAX_INBOUND_ATTACHMENTS
@@ -119,6 +120,7 @@ class InboundInvoiceDetail(InboundInvoiceOut):
     draft: ParsedInvoiceDraft | None = None
     has_file: bool = False
     reading_preparation: ImageReadingPreparation | None = None
+    reading_observation: ReadingObservationSummary | None = None
 
 
 class InboundListOut(BaseModel):

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.email_intake import EmailIntake, InboundInvoice
 from app.models.organization import Organization
+from app.schemas.capture_reading import PROFILE_ID
 from app.services import capture_failures, documents, filesec, jobs
 from app.services.parser import parse_invoice_file
 
@@ -163,7 +164,7 @@ async def process_attachment(
     await jobs.enqueue(
         db,
         EXTRACT_KIND,
-        {"inbound_id": row.id},
+        {"inbound_id": row.id, "reading_profile_id": PROFILE_ID},
         org_id=org_id,
         idempotency_key=f"extract:{row.id}",
         commit=False,
@@ -181,19 +182,26 @@ def _extraction_base(row: InboundInvoice) -> tuple:
         row.size,
         row.draft_json,
         row.reading_preparation_json,
+        row.reading_observation_json,
         row.failure_seq,
         row.invoice_id,
         row.updated_at,
     )
 
 
-async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
+async def extract_inbound(
+    db: AsyncSession,
+    inbound_id: str,
+    *,
+    requested_profile_id: str | None = None,
+    publication_claim: jobs.CapturePublicationClaim | None = None,
+) -> dict:
     """Worker-side extraction of one queued inbound attachment (idempotent).
 
     Loads the stored bytes, runs the deterministic-first parser, and updates the
     review-inbox row to `pending` (a draft awaits review) or `failed` (with the
     reason). Runs in the job's tenant scope, off the API tier."""
-    from app.services import image_ocr
+    from app.services import capture_reading, image_ocr
 
     row = await db.scalar(
         select(InboundInvoice)
@@ -210,6 +218,7 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
     draft = None
     error = failure_code = failure_reason = None
     reading_preparation = None
+    observation = capture_reading.Collector(requested_profile_id)
     try:
         content = await documents.load_capture(documents.EMAIL_ATTACHMENTS, org_id, source_sha)
     except capture_failures.CaptureError as exc:
@@ -222,9 +231,10 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
 
     if content is not None:
         try:
-            draft = await image_ocr.run_reading(
-                parse_invoice_file, filename or "attachment", content
-            )
+            with capture_reading.collect(requested_profile_id) as observation:
+                draft = await image_ocr.run_reading(
+                    parse_invoice_file, filename or "attachment", content
+                )
         except ValueError as exc:
             error, failure_code = str(exc), capture_failures.code_for(exc)
             reading_preparation = image_ocr.preparation_for_error(exc)
@@ -232,6 +242,11 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
     # Parse without holding a document row lock, then join the same publication
     # boundary as confirm/discard/delete. Refresh the identity-map instance:
     # taking a lock alone must not leave the pre-parse status in memory.
+    if publication_claim is not None and not await jobs.lock_publication_claim(
+        db, publication_claim
+    ):
+        await db.rollback()
+        return {"skipped": "job lease lost"}
     row = await db.scalar(
         select(InboundInvoice)
         .where(InboundInvoice.id == inbound_id, InboundInvoice.org_id == org_id)
@@ -256,6 +271,14 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
         row.failure_seq = (row.failure_seq or 0) + 1
     row.reading_preparation_json = (
         reading_preparation.model_dump_json() if reading_preparation is not None else None
+    )
+    await capture_reading.publish(
+        db,
+        row,
+        observation,
+        channel="inbound",
+        success=draft is not None,
+        failure_code=failure_code if draft is None else None,
     )
     await db.commit()
     if failure_reason is not None:

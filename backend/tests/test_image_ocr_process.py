@@ -21,6 +21,12 @@ from app.schemas.image_reading import ImageReadingPreparation, preparation_warni
 from app.services import capture_failures, filesec, image_ocr
 
 
+@pytest.fixture(autouse=True)
+def isolated_admission(monkeypatch, tmp_path):
+    # Independent controlled native fixtures must not contend with another test.
+    monkeypatch.setattr(image_ocr, "_SLOT_DIRECTORY", tmp_path / "native-admission")
+
+
 @pytest.fixture
 def local_image_reader(monkeypatch):
     """Run the actual child operation locally for controlled library spies.

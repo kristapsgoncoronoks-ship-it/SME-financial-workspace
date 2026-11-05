@@ -8,6 +8,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from app.core import bank_id
 from app.models.invoice import InvoiceStatus
+from app.schemas.capture_reading import ReadingObservationSummary
 from app.schemas.dimensions import DimensionFields
 from app.schemas.image_reading import ImageReadingPreparation
 from app.schemas.received_vat import ReceivedVatBreakdown
@@ -448,6 +449,7 @@ class ExtractionResult(BaseModel):
     draft: ParsedInvoiceDraft | None = None
     error: str | None = None
     reading_preparation: ImageReadingPreparation | None = None
+    reading_observation: ReadingObservationSummary | None = None
     # WO-X — how far along the parse is, so a long capture can be told apart
     # from a stuck one. `stage` is a code from `capture_progress.STAGES`, or
     # None for a run recorded before the contract existed. `percent` is present
@@ -525,5 +527,6 @@ class ExtractionRunOut(BaseModel):
     warning_count: int
     note: str | None = None
     reading_preparation: ImageReadingPreparation | None = None
+    reading_observation: ReadingObservationSummary | None = None
     created_at: datetime
     fields: list[FieldProvenanceOut] = []

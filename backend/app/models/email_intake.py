@@ -27,7 +27,10 @@ class InboundInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     same extraction engine into a draft a user confirms into an Invoice."""
 
     __tablename__ = "inbound_invoices"
-    __table_args__ = (Index("ix_inbound_invoices_org_message", "org_id", "message_id"),)
+    __table_args__ = (
+        Index("ix_inbound_invoices_org_message", "org_id", "message_id"),
+        Index("uq_inbound_invoices_org_id", "org_id", "id", unique=True),
+    )
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
@@ -53,6 +56,7 @@ class InboundInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )  # detected type / parse path
     draft_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # ParsedInvoiceDraft JSON
     reading_preparation_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reading_observation_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     # H-1: the CLASSIFIED cause when the row is `failed`/`rejected` — a stable
     # code from `capture_failures.KINDS`. `error` above keeps the raw message.

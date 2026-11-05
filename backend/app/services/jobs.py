@@ -112,6 +112,47 @@ def _lease_update(lease: _Lease) -> Update:
     )
 
 
+@dataclass(frozen=True)
+class CapturePublicationClaim:
+    """Actual immutable claimant identity, never reconstructed after native I/O."""
+
+    job_id: str
+    org_id: str
+    worker_id: str
+    attempts: int
+    token: str | None
+
+
+def capture_publication_claim(job: Job) -> CapturePublicationClaim:
+    """Capture handlers call this immediately on entry, before their first await."""
+    if job.status != jobmodel.RUNNING or job.locked_by is None:
+        raise ValueError("A capture publication claim requires an actual running job")
+    return CapturePublicationClaim(job.id, job.org_id, job.locked_by, job.attempts, job.lease_token)
+
+
+async def lock_publication_claim(db: AsyncSession, claim: CapturePublicationClaim) -> bool:
+    """Lock a still-owned capture job BEFORE its source; caller owns commit.
+
+    Reclaim, retry and heartbeat lock only jobs. The fresh matching predicate is
+    reevaluated after a PostgreSQL row wait. No pending domain facts may flush
+    before this authority check, and no job/owner changes are made here.
+    """
+    with db.no_autoflush:
+        owned = await db.scalar(
+            select(Job.id)
+            .where(
+                Job.id == claim.job_id,
+                Job.org_id == claim.org_id,
+                Job.status == jobmodel.RUNNING,
+                Job.locked_by == claim.worker_id,
+                Job.attempts == claim.attempts,
+                Job.lease_token == claim.token,
+            )
+            .with_for_update()
+        )
+    return owned is not None
+
+
 _HANDLERS: dict[str, _Registered] = {}
 
 
