@@ -507,3 +507,23 @@ test("a total beyond the supported batch range remains selected but cannot be po
   await expect(selected(page, rows[1])).toBeChecked();
   expect(wire.posts).toHaveLength(0);
 });
+
+for (const width of [320, 1280]) {
+  test(`populated eligible payout facts and native selection stay contained at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 });
+    const rows = [report(1, "999999999999.99", { title: "Synthetic depot visit with a long claim title", employee_name: "Synthetic claimant with a long display name" }), report(2, "36.99", { title: "Synthetic foreign-currency claim", currency: "USD", total_eur: "33.33" })];
+    const wire = await setup(page, rows);
+    const region = page.getByRole("region", { name: "Eligible expense reports", exact: true });
+    await region.focus(); await page.keyboard.press("Tab");
+    await expect(selected(page, rows[0])).toBeFocused(); await page.keyboard.press("Space");
+    await expect(selected(page, rows[0])).toBeChecked();
+    await expect(create(page)).toContainText("€999,999,999,999.99");
+    await expect(region).toContainText(/US\$\s*36\.99/); await expect(region).toContainText("€33.33");
+    await region.focus();
+    if (await region.evaluate(e => e.scrollWidth > e.clientWidth)) { await page.keyboard.press("ArrowRight"); await expect.poll(() => region.evaluate(e => e.scrollLeft)).toBeGreaterThan(0); }
+    const bounds = await page.evaluate(() => ({ width: innerWidth, root: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+    expect(bounds.root).toBeLessThanOrEqual(width); expect(bounds.body).toBeLessThanOrEqual(width);
+    expect(wire.posts).toEqual([]);
+    await info.attach("eligible-payout-reflow", { body: JSON.stringify({ bounds, scope: "Synthetic Chromium populated eligible table and native selection/local scrolling; no payout write or physical-device/full accessibility acceptance." }), contentType: "application/json" });
+  });
+}

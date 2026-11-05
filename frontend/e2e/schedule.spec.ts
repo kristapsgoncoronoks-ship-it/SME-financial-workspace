@@ -8,7 +8,7 @@ const ASSIGNMENT = {
   id: "asg-1", project_id: "proj-1", project_code: "JOB-7", project_name: "Won contract",
   assignee_user_id: "user-1", assignee_email: "someone@test.io",
   starts_at: "2026-10-20T09:00:17Z", ends_at: "2026-10-20T17:00:21Z", all_day: false,
-  status: "planned", note: "Bring the signed contract", revision: 1, time_zone: "Europe/Riga",
+  created_by: "someone@test.io", remind_hours_before: null as number | null, status: "planned", note: "Bring the signed contract", revision: 1, time_zone: "Europe/Riga",
   notify_assignee: true, reminders_enabled: true, client_notice_enabled: null as boolean | null,
   client_notice_hours_before: null as number | null, notification_status: "queued",
 };
@@ -19,10 +19,11 @@ interface State {
   failReads: boolean; conflict: boolean; feedFailures: number; regenerated: number;
   lostCreateResponse: boolean; holdCreate: boolean; delayedCreate?: Route; identityB: boolean;
   beforeRead?: () => Promise<void>;
+  receipts: Record<string, { payload: Record<string, unknown>; result: { assignment: Row; overlaps: Row[] } }>;
 }
 async function open(page: Page, opts: { planner?: boolean; memberStatus?: number; rows?: Row[] } = {}) {
   const planner = opts.planner ?? true;
-  const state: State = { rows: structuredClone(opts.rows ?? [ASSIGNMENT]), creates: [], patches: [], transitions: [], listRequests: [], memberStatus: opts.memberStatus ?? 200, failReads: false, conflict: false, feedFailures: 0, regenerated: 0, lostCreateResponse: false, holdCreate: false, identityB: false };
+  const state: State = { rows: structuredClone(opts.rows ?? [ASSIGNMENT]), creates: [], patches: [], transitions: [], listRequests: [], memberStatus: opts.memberStatus ?? 200, failReads: false, conflict: false, feedFailures: 0, regenerated: 0, lostCreateResponse: false, holdCreate: false, identityB: false, receipts: {} };
   await page.addInitScript(() => localStorage.setItem("invoiceiq_token", "e2e-token"));
   await page.clock.setFixedTime(new Date("2026-10-21T09:00:00Z"));
   const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -38,6 +39,7 @@ async function open(page: Page, opts: { planner?: boolean; memberStatus?: number
         const body = route.request().postDataJSON(); state.creates.push(body);
         const row: Row = { ...ASSIGNMENT, ...body, id: `asg-new-${state.creates.length}`, assignee_email: body.assignee_user_id === "user-2" ? "crew@test.io" : "someone@test.io", notification_status: body.notify_assignee ? "queued" : "off" };
         state.rows.push(row);
+        state.receipts[route.request().headers()["idempotency-key"]] = { payload: body, result: { assignment: row, overlaps: body.note === "Overlap example" ? [ASSIGNMENT] : [] } };
         if (state.lostCreateResponse) return route.abort("failed");
         if (state.holdCreate) { state.delayedCreate = route; return; }
         return route.fulfill(json({ assignment: row, overlaps: body.note === "Overlap example" ? [ASSIGNMENT] : [] }, 201));
@@ -47,6 +49,14 @@ async function open(page: Page, opts: { planner?: boolean; memberStatus?: number
       if (state.failReads) return route.fulfill(json({ detail: "Read temporarily unavailable" }, 503));
       const start = Date.parse(url.searchParams.get("start") ?? ""), end = Date.parse(url.searchParams.get("end") ?? "");
       return route.fulfill(json(state.rows.filter((row) => Date.parse(row.starts_at) < end && Date.parse(row.ends_at) > start && (!url.searchParams.get("assignee_user_id") || row.assignee_user_id === url.searchParams.get("assignee_user_id")) && (!url.searchParams.get("project_id") || row.project_id === url.searchParams.get("project_id")))));
+    }
+    if (path.startsWith("/schedule/commands/") && method === "GET") {
+      const key = path.slice("/schedule/commands/".length), receipt = state.receipts[key];
+      return route.fulfill(receipt ? json({ id: "planning-receipt", org_id: ORG.id, actor_user_id: "user-1", command_key: key, status: "committed", operation: "assignment_created", target_id: receipt.result.assignment.id, ...receipt }) : json({ detail: "No committed assignment is visible" }, 404));
+    }
+    if (path.startsWith("/schedule/assignments/asg-new-") && method === "GET") {
+      const row = state.rows.find((value) => path.endsWith(value.id));
+      return route.fulfill(state.failReads ? json({ detail: "Read temporarily unavailable" }, 503) : row ? json(row) : json({ detail: "Assignment missing" }, 404));
     }
     if (path === "/schedule/assignments/asg-1" && method === "PATCH") {
       const body = route.request().postDataJSON(); state.patches.push(body);
@@ -75,6 +85,37 @@ async function open(page: Page, opts: { planner?: boolean; memberStatus?: number
 }
 const card = (page: Page) => page.locator('[data-assignment-id="asg-1"]').first();
 async function editor(page: Page) { await page.getByRole("button", { name: "New assignment", exact: true }).click(); return page.getByRole("form", { name: "Assignment editor" }); }
+
+for (const [width, fontSize] of [[390, 16], [390, 32], [1280, 16]]) {
+  test(`native reverse-Tab reveals New assignment below the sticky header at ${width}px/${fontSize}px text`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    await open(page); await page.goto("/schedule");
+    await page.evaluate((size) => { document.documentElement.style.fontSize = `${size}px`; }, fontSize);
+    const calendar = page.getByRole("tab", { name: "Calendar", exact: true });
+    await calendar.click();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("region", { name: "Weekly calendar", exact: true })).toBeFocused();
+    await page.mouse.wheel(0, 700);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    const create = page.getByRole("button", { name: "New assignment", exact: true });
+    let reached = false;
+    for (let index = 0; index < 10; index++) {
+      await page.keyboard.press("Shift+Tab");
+      if (await create.evaluate((element) => element === document.activeElement)) { reached = true; break; }
+    }
+    expect(reached, "native reverse-Tab reaches the existing create action").toBe(true);
+    const bounds = await create.boundingBox();
+    const header = await page.locator("header.sticky").boundingBox();
+    const measurements = { width, fontSize, button: bounds, header, scrollY: await page.evaluate(() => window.scrollY) };
+    await testInfo.attach("native-reverse-tab-bounds", { body: JSON.stringify(measurements), contentType: "application/json" });
+    await page.screenshot({ path: testInfo.outputPath("native-reverse-tab.png") });
+    expect(bounds!.y, "the focused button and its ring clear the sticky header").toBeGreaterThanOrEqual(header!.y + header!.height + 3);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(844);
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("form", { name: "Assignment editor" })).toBeVisible();
+  });
+}
 
 test("Board and Calendar share records and filters; keyboard changes the view", async ({ page }, testInfo) => {
   const state = await open(page); await page.goto("/schedule");
@@ -191,24 +232,28 @@ test("a stale edit cannot overwrite another planner until explicitly reloaded", 
 test("a committed save with failed readback offers GET recovery without duplicate creation", async ({ page }) => {
   const state = await open(page); await page.goto("/schedule"); const form = await editor(page); state.failReads = true;
   await form.getByRole("button", { name: "Save assignment", exact: true }).click();
-  await expect(page.getByText(/Assignment saved, but the work plan could not reload/)).toBeVisible();
-  await expect(page.getByRole("form", { name: "Assignment editor" })).toHaveCount(0); expect(state.creates).toHaveLength(1);
-  state.failReads = false; await page.getByRole("button", { name: "Refresh plan", exact: true }).click();
+  const check = page.getByRole("button", { name: "Check assignment outcome", exact: true });
+  await expect(check).toBeEnabled();
+  await expect(form.getByRole("button", { name: "Save assignment", exact: true })).toBeDisabled();
+  expect(state.creates).toHaveLength(1);
+  state.failReads = false; await check.click();
+  await expect(page.getByRole("form", { name: "Assignment editor" })).toHaveCount(0);
   await expect(page.locator('[data-assignment-id="asg-new-1"]')).toBeVisible(); expect(state.creates).toHaveLength(1);
 });
 
-test("a lost create response retains the draft and only offers read recovery", async ({ page }) => {
+test("a lost keyed create response retains the frozen draft and only checks its original receipt", async ({ page }) => {
   const state = await open(page); state.lostCreateResponse = true; await page.goto("/schedule");
   const form = await editor(page); await form.getByLabel("Work details").fill("Uncertain saved work");
   await form.getByRole("button", { name: "Save assignment", exact: true }).click();
-  await expect(page.getByText(/The save outcome is unconfirmed/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check assignment outcome", exact: true })).toBeEnabled();
   await expect(form.getByLabel("Work details")).toHaveValue("Uncertain saved work");
   await expect(form.getByRole("button", { name: "Save assignment", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "New assignment", exact: true })).toBeDisabled();
-  await form.getByRole("button", { name: "Check saved plan", exact: true }).click();
+  await page.getByRole("button", { name: "Check assignment outcome", exact: true }).click();
   await expect(page.locator('[data-assignment-id="asg-new-1"]').getByText("Uncertain saved work")).toBeVisible();
   expect(state.creates).toHaveLength(1);
-  await expect(form.getByRole("button", { name: "Save assignment", exact: true })).toBeDisabled();
+  await expect(form).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "New assignment", exact: true })).toBeEnabled();
 });
 
 for (const status of [201, 500]) {
@@ -225,7 +270,7 @@ for (const status of [201, 500]) {
     await expect(page.getByText("Owner B", { exact: true })).toBeVisible();
     await expect(page.getByRole("form", { name: "Assignment editor" })).toHaveCount(0);
     await expect(page.getByText("No assignments in this week", { exact: true })).toBeVisible();
-    await state.delayedCreate!.fulfill({ status, contentType: "application/json", body: JSON.stringify(status === 201 ? { assignment: { ...ASSIGNMENT, id: "PRIVATE-old-save" }, overlaps: [ASSIGNMENT] } : { detail: "PRIVATE workspace A failure" }) });
+    await state.delayedCreate!.fulfill({ status, contentType: "application/json", body: JSON.stringify(status === 201 ? { assignment: { ...ASSIGNMENT, id: "PRIVATE-old-save" }, overlaps: [ASSIGNMENT] } : { detail: "PRIVATE workspace A failure" }) }).catch(() => undefined);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     await expect(page.getByText(/PRIVATE|scheduling overlap|Assignment saved\./)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "New assignment", exact: true })).toBeEnabled();

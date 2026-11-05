@@ -164,6 +164,16 @@ for (const [width, fontSize] of [[320, 16], [390, 16], [390, 32], [1024, 16], [1
     for (const [regionName, text, action] of [["Manual cost entries", COST_LABEL, "Remove"], ["Project documents", DOCUMENT, "Download"], ["Project offers", OFFER_TITLE, "accepted"], ["Invoicing plan entries", PLAN_LABEL, "Remove"]]) {
       const region = page.getByRole("region", { name: regionName, exact: true });
       await expect(region.getByRole("table")).toHaveCount(1);
+      await expect(region.getByRole("table", { name: regionName, exact: true })).toHaveCount(1);
+      const columns: Record<string, string[]> = {
+        "Manual cost entries": ["Label", "Category", "Amount (EUR)", "Actions"],
+        "Project documents": ["Document", "Type", "Uploaded", "Actions"],
+        "Project offers": ["Offer", "Title", "Total (EUR)", "Status", "Actions"],
+        "Invoicing plan entries": ["Instalment", "Amount (EUR)", "Actions"],
+      };
+      await expect(region.getByRole("columnheader")).toHaveText(columns[regionName]);
+      for (const header of await region.getByRole("columnheader").all()) await expect(header).toHaveAttribute("scope", "col");
+      expect(await region.locator("tbody tr").first().locator("td").count()).toBe(columns[regionName].length);
       await expect(region.getByText(text, { exact: true })).toHaveText(text);
       await readableText(region.getByText(text, { exact: true }), region.getByRole("table"));
       if (regionName !== "Project documents") {
@@ -282,17 +292,24 @@ test("the enlarged manual-cost form submits one unchanged payload and disables w
 
 test("the enlarged final-invoice controls preserve one labelled draft request and server refusal", async ({ page }, testInfo) => {
   const write = held();
-  const expected = { method: "POST", path: `/masters/projects/${PROJECT.id}/final-invoice-draft`, body: { adjustments: [{ label: "Extra work agreed at handover", amount: "500.01" }] } };
+  const expected = { method: "POST", path: `/masters/projects/${PROJECT.id}/final-invoice-draft`, body: { adjustments: [{ label: "Extra work agreed at handover", amount: "500.01" }, { label: "Agreed discount", amount: "-10.009" }] } };
   observed.get(page)!.expected = [expected];
   await fixture(page, { write: async () => { await write.promise; return { status: 409, body: { detail: "A recorded acceptance is required for this final invoice" } }; } });
   await open(page);
   const final = card(page, "Acceptance & final invoice");
   await reachable(final.getByRole("button", { name: "+ Adjustment", exact: true }), page);
   await final.getByRole("button", { name: "+ Adjustment", exact: true }).press("Enter");
-  const label = final.getByRole("textbox", { name: "Adjustment label — e.g. extra work agreed on site", exact: true });
-  const amount = final.getByRole("textbox", { name: "±0.00", exact: true });
+  const label = final.getByRole("textbox", { name: "Adjustment 1 description", exact: true });
+  const amount = final.getByRole("textbox", { name: "Adjustment 1 amount (EUR)", exact: true });
   await reachable(label, page); await label.fill("Extra work agreed at handover");
   await reachable(amount, page); await amount.fill("500.01");
+  await final.getByRole("button", { name: "+ Adjustment", exact: true }).press("Enter");
+  const second = final.getByRole("group", { name: "Final invoice adjustment 2", exact: true });
+  await second.getByRole("textbox", { name: "Adjustment 2 description", exact: true }).fill("Agreed discount");
+  const secondAmount = second.getByRole("textbox", { name: "Adjustment 2 amount (EUR)", exact: true });
+  await reachable(secondAmount, page); await secondAmount.fill("-10.009");
+  await page.keyboard.press("Tab");
+  await expect(second.getByRole("button", { name: "Remove adjustment 2", exact: true })).toBeFocused();
   const prepare = final.getByRole("button", { name: "Prepare final invoice", exact: true });
   await reachable(prepare, page); await prepare.press("Enter");
   await expect.poll(() => observed.get(page)!.writes).toEqual([expected]);
@@ -304,6 +321,7 @@ test("the enlarged final-invoice controls preserve one labelled draft request an
   await expect(prepare).toBeEnabled();
   await expect(label).toHaveValue("Extra work agreed at handover");
   await expect(amount).toHaveValue("500.01");
+  await expect(secondAmount).toHaveValue("-10.009");
   await expect(page).toHaveURL(new RegExp(`/projects/${PROJECT.id}$`));
   await fitsPage(page);
 });

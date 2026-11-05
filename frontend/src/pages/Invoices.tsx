@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { AccountingExport } from "../components/AccountingExport";
@@ -10,6 +10,7 @@ import type { BulkDeleteResult, Invoice, InvoiceList, InvoiceStatus } from "../l
 
 const STATUSES: (InvoiceStatus | "")[] = ["", "pending", "paid", "overdue", "draft"];
 const PAGE_SIZE = 20;
+const SEARCH_SETTLE_MS = 250;
 
 // Mirrors `bulk.MAX_BATCH` server-side. Duplicated with a comment naming its
 // source rather than fetched: if they drift the server still refuses, and this
@@ -54,16 +55,31 @@ export default function Invoices() {
   const workflowState = searchParams.get("workflow_state") ?? "";
   const [status, setStatus] = useState<string>(searchParams.get("status") ?? "");
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+  const [settledQ, setSettledQ] = useState(q);
   const [page, setPage] = useState(1);
 
+  useEffect(() => {
+    if (q === settledQ) return;
+    const timer = window.setTimeout(() => {
+      setSettledQ(q);
+      setPage(1);
+    }, SEARCH_SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [q, settledQ]);
+
+  const applySearch = (value: string) => {
+    setSettledQ(value);
+    setPage(1);
+  };
+
   const query = useQuery<InvoiceList>({
-    queryKey: ["invoices", status, q, page, workflowState],
-    queryFn: async () => {
+    queryKey: ["invoices", status, settledQ, page, workflowState],
+    queryFn: async ({ signal }) => {
       const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
       if (status) params.set("status", status);
-      if (q) params.set("q", q);
+      if (settledQ) params.set("q", settledQ);
       if (workflowState) params.set("workflow_state", workflowState);
-      return (await api.get(`/invoices?${params.toString()}`)).data;
+      return (await api.get(`/invoices?${params.toString()}`, { signal })).data;
     },
   });
   const { data } = query;
@@ -145,7 +161,13 @@ export default function Invoices() {
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
-              setPage(1);
+              if (!e.target.value) applySearch("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                applySearch(q);
+              }
             }}
           />
         </div>
@@ -156,7 +178,7 @@ export default function Invoices() {
             value={status}
             onChange={(e) => {
               setStatus(e.target.value);
-              setPage(1);
+              applySearch(q);
             }}
           >
             {STATUSES.map((s) => (
@@ -176,7 +198,7 @@ export default function Invoices() {
               onClick={() => {
                 searchParams.delete("workflow_state");
                 setSearchParams(searchParams, { replace: true });
-                setPage(1);
+                applySearch(q);
               }}
             >
               ×
