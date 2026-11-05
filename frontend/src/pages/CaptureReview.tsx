@@ -251,9 +251,11 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
   const scope = `${cacheIdentity}:${runId}`;
   const live = useRef(scope);
   useEffect(() => { live.current = scope; return () => { live.current = ""; }; }, [scope]);
+  const [reviewEpoch, setReviewEpoch] = useState<string>(() => crypto.randomUUID());
+  const liveReview = useRef(reviewEpoch);
   // A lazy destination can leave this page mounted after the browser has
   // navigated. Do not continue a held save into final creation in that gap.
-  const active = () => live.current === scope && window.location.pathname === pathname;
+  const active = (epoch = reviewEpoch) => live.current === scope && liveReview.current === epoch && window.location.pathname === pathname;
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [draft, setDraft] = useState<InvoiceCreate | null>(null);
@@ -267,8 +269,8 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
 
   // Poll the capture while the worker parses it (queued → running → parsed|failed).
   const poll = useQuery<ExtractionResult>({
-    queryKey: ["captures", user?.id, org?.id, runId, "run"],
-    queryFn: async () => (await api.get(`/invoices/upload/${runId}`)).data,
+    queryKey: ["captures", user?.id, org?.id, runId, "run", reviewEpoch],
+    queryFn: async ({ signal }) => (await api.get(`/invoices/upload/${runId}`, { signal })).data,
     refetchInterval: (q) => {
       const s = q.state.data?.status;
       return s === "queued" || s === "running" || s === undefined ? 1500 : false;
@@ -279,15 +281,15 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
   // The LIVE provenance rows — including reviewed values recorded earlier, so a
   // reload never loses sight of a correction.
   const fields = useQuery<FieldProvenance[]>({
-    queryKey: ["captures", user?.id, org?.id, runId, "fields"],
-    queryFn: async () => (await api.get(`/invoices/captures/${runId}/fields`)).data,
+    queryKey: ["captures", user?.id, org?.id, runId, "fields", reviewEpoch],
+    queryFn: async ({ signal }) => (await api.get(`/invoices/captures/${runId}/fields`, { signal })).data,
     enabled: parsed,
   });
 
   // The fingerprint belongs to this exact saved draft. Background reads never
   // replace a local draft or advance its write precondition.
   const snapshot = useQuery<RegionHistory>({
-    queryKey: ["capture-regions", cacheIdentity, runId], enabled: parsed, retry: false,
+    queryKey: ["capture-regions", cacheIdentity, runId, reviewEpoch], enabled: parsed, retry: false,
     queryFn: async ({ signal }) => savedReview((await api.get(`/invoices/captures/${runId}/region-reads`, { signal })).data),
   });
 
@@ -295,7 +297,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
   // fingerprint. Mixing an old parse with a newer fields read would create a
   // draft that no server revision ever contained.
   useEffect(() => {
-    if (draft || !parsed || !snapshot.data || !fields.data) return;
+    if (draft || !parsed || !snapshot.isSuccess || !fields.isSuccess || !snapshot.data || !fields.data) return;
     try {
       const verified = savedReview(snapshot.data);
       setDraft(reviewDraft(verified, runId));
@@ -304,7 +306,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
       setReviewConflict(true);
       setError("The saved review could not be verified. Reload it before changing or confirming this capture.");
     }
-  }, [draft, parsed, snapshot.data, fields.data, runId]);
+  }, [draft, parsed, snapshot.data, snapshot.isSuccess, fields.data, fields.isSuccess, runId]);
 
   // Duplicate candidates for the CURRENT (possibly corrected) invoice number.
   // The draft carries a vendor NAME; resolve it against the vendor master so the
@@ -411,8 +413,8 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
   };
   const pending = corrections();
 
-  function writeError(e: unknown) {
-    if (!active()) return;
+  function writeError(e: unknown, epoch = reviewEpoch) {
+    if (!active(epoch)) return;
     const conflict = axios.isAxiosError(e) && e.response?.status === 409;
     const uncertain = axios.isAxiosError(e) && (!e.response || e.response.status >= 500);
     if (conflict || uncertain) setReviewConflict(true);
@@ -422,75 +424,88 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
       : apiError(e));
   }
 
-  async function recordCorrections(fix: Correction[], fingerprint: string) {
+  async function recordCorrections(fix: Correction[], fingerprint: string, epoch: string) {
     const response = await api.post<FieldProvenance[]>(`/invoices/captures/${runId}/review`, {
       fields: fix, expected_review_fingerprint: fingerprint,
     });
-    if (!active()) throw new Error("This capture is no longer open.");
+    if (!active(epoch)) throw new Error("This capture review is no longer open.");
     const nextFingerprint = response.headers["x-capture-review-fingerprint"];
     if (typeof nextFingerprint !== "string" || !/^[0-9a-f]{64}$/.test(nextFingerprint) || !Array.isArray(response.data)) {
       setReviewConflict(true);
       throw new Error("The corrections were accepted, but their saved revision could not be verified. Reload the saved review before continuing.");
     }
     setReviewFingerprint(nextFingerprint);
-    qc.setQueryData(["captures", user?.id, org?.id, runId, "fields"], response.data);
+    qc.setQueryData(["captures", user?.id, org?.id, runId, "fields", epoch], response.data);
     setDraft((current) => current ? reviewedDraft(current, response.data) : current);
     return { fingerprint: nextFingerprint, fields: response.data };
   }
 
   const saveCorrections = useMutation({
-    mutationFn: async () => {
-      if (!active() || !reviewFingerprint || reviewConflict) throw new Error("Reload the saved review before recording corrections.");
-      return recordCorrections(corrections(), reviewFingerprint);
+    mutationFn: async (epoch: string) => {
+      if (!active(epoch) || !reviewFingerprint || reviewConflict) throw new Error("Reload the saved review before recording corrections.");
+      return recordCorrections(corrections(), reviewFingerprint, epoch);
     },
-    onSuccess: () => {
-      if (!active()) return;
+    onSuccess: (_data, epoch) => {
+      if (!active(epoch)) return;
       setError(null);
       setNotice("Corrections recorded — the original capture is kept alongside them.");
       qc.invalidateQueries({ queryKey: ["captures", "queue"] });
     },
-    onError: writeError,
+    onError: (e, epoch) => writeError(e, epoch),
   });
 
   const confirm = useMutation({
-    mutationFn: async () => {
-      if (!active() || !draft || !reviewFingerprint || reviewConflict) throw new Error("Reload the saved review before confirming this capture.");
+    mutationFn: async (epoch: string) => {
+      if (!active(epoch) || !draft || !reviewFingerprint || reviewConflict) throw new Error("Reload the saved review before confirming this capture.");
       let fingerprint = reviewFingerprint;
       let submitted = { ...draft, line_items: draft.line_items.map((line) => ({ ...line })) };
       // Record any unsaved corrections first so the provenance trail matches
       // what is about to be saved, then create the invoice from the draft.
       const fix = corrections();
       if (fix.length > 0) {
-        const saved = await recordCorrections(fix, fingerprint);
+        const saved = await recordCorrections(fix, fingerprint, epoch);
         fingerprint = saved.fingerprint;
         submitted = reviewedDraft(submitted, saved.fields);
       }
-      if (!active()) throw new Error("This capture is no longer open.");
+      if (!active(epoch)) throw new Error("This capture review is no longer open.");
       return (await api.post<InvoiceDetail>("/invoices", { ...submitted, extraction_run_id: runId, capture_review_fingerprint: fingerprint }))
         .data;
     },
-    onSuccess: (inv) => {
-      if (!active()) return;
+    onSuccess: (inv, epoch) => {
+      if (!active(epoch)) return;
       qc.invalidateQueries({ queryKey: ["captures", "queue"] });
       navigate(`/invoices/${inv.id}`);
     },
-    onError: (e) => {
-      if (!active()) return;
+    onError: (e, epoch) => {
+      if (!active(epoch)) return;
       setDupeAck(false);
-      writeError(e);
+      writeError(e, epoch);
     },
   });
 
   const retry = useMutation({
-    mutationFn: async () => (await api.post(`/invoices/upload/${runId}/retry`, {})).data,
-    onSuccess: () => {
-      if (!active()) return;
+    mutationFn: async (epoch: string) => {
+      if (!active(epoch)) throw new Error("This capture review is no longer open.");
+      return (await api.post(`/invoices/upload/${runId}/retry`, {})).data;
+    },
+    onSuccess: (_data, epoch) => {
+      if (!active(epoch)) return;
+      // Old requests may still finish, but their cache keys and callbacks
+      // belong to the retired review. The new epoch starts with fresh reads.
+      liveReview.current = crypto.randomUUID();
+      setReviewEpoch(liveReview.current);
+      void qc.cancelQueries({ queryKey: ["captures", user?.id, org?.id, runId, "run", epoch], exact: true });
+      void qc.cancelQueries({ queryKey: ["captures", user?.id, org?.id, runId, "fields", epoch], exact: true });
+      void qc.cancelQueries({ queryKey: ["capture-regions", cacheIdentity, runId, epoch], exact: true });
+      confirm.reset(); saveCorrections.reset();
       setError(null);
+      setNotice(null); setDupeAck(false); setLoadingReview(false); setRegionBusy(false);
       setDraft(null);
       setReviewFingerprint(null); setReviewConflict(false);
       qc.invalidateQueries({ queryKey: ["captures", user?.id, org?.id, runId] });
+      qc.invalidateQueries({ queryKey: ["capture-regions", cacheIdentity, runId] });
     },
-    onError: (e) => { if (active()) setError(apiError(e)); },
+    onError: (e, epoch) => { if (active(epoch)) setError(apiError(e)); },
   });
 
   const hasRequiredFields = !!draft && !!draft.vendor_name?.trim() && !!draft.invoice_number.trim() && !!draft.issue_date;
@@ -500,7 +515,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
   const onConfirmClick = () => {
     if (regionBusy || confirm.isPending || saveCorrections.isPending || loadingReview || reviewConflict || snapshot.isError || !reviewFingerprint) return;
     if ((dupes.data?.exact.length ?? 0) > 0) setDupeAck(true);
-    else confirm.mutate();
+    else confirm.mutate(reviewEpoch);
   };
 
   async function reloadRegionApplication() {
@@ -621,7 +636,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
           <ErrorState
             title="We couldn’t read this document"
             description={run.error || "The file could not be parsed."}
-            onRetry={() => retry.mutate()}
+            onRetry={() => retry.mutate(reviewEpoch)}
             retryLabel={retry.isPending ? "Re-queuing…" : "Retry extraction"}
           />
         </div>
@@ -795,7 +810,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <CapturePagePane runId={runId} filename={run.draft?.draft.source_filename ?? null} fallback={<OriginalSourcePane runId={runId} filename={run.draft?.draft.source_filename ?? null} />}
           region={draft && fields.data && hasPerm("invoice.write") ? { draft, fields: fields.data, disabled: confirm.isPending || saveCorrections.isPending || regionBusy || poll.isError || fields.isError || !reviewFingerprint || loadingReview || reviewConflict,
-            dirty: pending.length > 0, onBusyChange: setRegionBusy, onApplied: reloadRegionApplication } : undefined} />
+            dirty: pending.length > 0, onBusyChange: (busy) => { if (active()) setRegionBusy(busy); }, onApplied: reloadRegionApplication } : undefined} />
 
         <fieldset disabled={!hasPerm("invoice.write") || regionBusy || confirm.isPending || saveCorrections.isPending || poll.isError || fields.isError || reviewBlocked} className="min-w-0 space-y-6">
           {!hasPerm("invoice.write") && <p className="text-sm text-slate-500">Read-only access. You can inspect the original and captured values; recording changes requires invoice editing permission.</p>}
@@ -868,7 +883,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
                   size="sm"
                   disabled={pending.length === 0 || saveCorrections.isPending || regionBusy}
                   loading={saveCorrections.isPending}
-                  onClick={() => saveCorrections.mutate()}
+                  onClick={() => saveCorrections.mutate(reviewEpoch)}
                 >
                   Save corrections
                 </Button>
@@ -993,7 +1008,7 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
       <ConfirmDialog
         open={dupeAck}
         onClose={() => setDupeAck(false)}
-        onConfirm={() => { if (!regionBusy && !saveCorrections.isPending && !reviewBlocked) confirm.mutate(); }}
+        onConfirm={() => { if (!regionBusy && !saveCorrections.isPending && !reviewBlocked) confirm.mutate(reviewEpoch); }}
         title="Possible duplicate invoice"
         confirmLabel="Create anyway"
         tone="danger"
