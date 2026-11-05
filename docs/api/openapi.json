@@ -20885,6 +20885,55 @@
         "title": "ReadinessOut",
         "type": "object"
       },
+      "RebateAllocationOut": {
+        "description": "Per-transaction NET EUR totals; no browser FX or price calculation.",
+        "properties": {
+          "country": {
+            "title": "Country",
+            "type": "string"
+          },
+          "fuel_transaction_id": {
+            "title": "Fuel Transaction Id",
+            "type": "string"
+          },
+          "net_eur": {
+            "title": "Net Eur",
+            "type": "string"
+          },
+          "new_net_eur_eff": {
+            "title": "New Net Eur Eff",
+            "type": "string"
+          },
+          "old_net_eur_eff": {
+            "title": "Old Net Eur Eff",
+            "type": "string"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "string"
+          },
+          "share_eur": {
+            "title": "Share Eur",
+            "type": "string"
+          },
+          "supplier": {
+            "title": "Supplier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fuel_transaction_id",
+          "supplier",
+          "country",
+          "qty",
+          "net_eur",
+          "share_eur",
+          "old_net_eur_eff",
+          "new_net_eur_eff"
+        ],
+        "title": "RebateAllocationOut",
+        "type": "object"
+      },
       "RebateIn": {
         "description": "One recorded off-invoice rebate document \u2014 \u00a74.2's canonical *\"SEPARATE\nrebate invoice per country\"*.\n\n`period` is the fuel period the rebate ADJUSTS (`FuelTransaction.period`),\nwhile `rebate_date` is the rebate document's own date and is what the FX\nconversion is audited against. They are deliberately separate: a rebate\ninvoice for March routinely carries an April date.",
         "properties": {
@@ -21081,6 +21130,73 @@
           "amount_eur"
         ],
         "title": "RebateOut",
+        "type": "object"
+      },
+      "RebatePreviewOut": {
+        "description": "Whole-scope observed summary with only its allocation display paged.\n\n`changed` is the number that WOULD change at observation time. This is not\na saved plan or an apply token; monthly close re-reads its own sources.",
+        "properties": {
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/RebateAllocationOut"
+            },
+            "title": "Allocations",
+            "type": "array"
+          },
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          },
+          "lines_allocated": {
+            "title": "Lines Allocated",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "rebate_total_eur": {
+            "title": "Rebate Total Eur",
+            "type": "string"
+          },
+          "source_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Warnings",
+            "type": "array"
+          },
+          "supplier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier"
+          }
+        },
+        "required": [
+          "period",
+          "supplier",
+          "rebate_total_eur",
+          "lines_allocated",
+          "changed",
+          "source_warnings",
+          "allocations",
+          "page",
+          "page_size"
+        ],
+        "title": "RebatePreviewOut",
         "type": "object"
       },
       "ReceiptAllocationOut": {
@@ -50735,11 +50851,14 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "Complete frozen claim evidence ZIP"
           },
           "422": {
             "content": {
@@ -53602,6 +53721,98 @@
           }
         ],
         "summary": "Record Rebate",
+        "tags": [
+          "transport"
+        ]
+      }
+    },
+    "/api/v1/transport/rebates/preview": {
+      "get": {
+        "description": "Observe the existing close planner without writing or applying anything.\n\nAll countries/entities of period + optional exact supplier are planned\nbefore display paging. A source-limit or financial refusal returns no\npartial summary. The engine independently re-plans when close actually runs.",
+        "operationId": "preview_rebates_api_v1_transport_rebates_preview_get",
+        "parameters": [
+          {
+            "description": "YYYY-MM \u2014 the complete period to preview",
+            "in": "query",
+            "name": "period",
+            "required": true,
+            "schema": {
+              "description": "YYYY-MM \u2014 the complete period to preview",
+              "maxLength": 7,
+              "minLength": 7,
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "supplier",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Supplier"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebatePreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Rebates",
         "tags": [
           "transport"
         ]
