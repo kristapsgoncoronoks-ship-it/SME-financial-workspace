@@ -25,7 +25,7 @@ from dataclasses import field as dc_field
 from decimal import Decimal
 
 from app.schemas.image_reading import ImageReadingPreparation
-from app.schemas.invoice import InvoiceCreate, ParsedInvoiceDraft
+from app.schemas.invoice import FieldProvenance, InvoiceCreate, ParsedInvoiceDraft
 from app.services import capture_failures
 from app.services.capture_failures import CaptureError
 
@@ -184,19 +184,32 @@ def _header_captures(
     return out
 
 
-def _line_captures(draft: InvoiceCreate, *, method: str, provider: str) -> list[FieldCapture]:
-    """Line-item provenance (E1.2) for providers whose underlying parser emits a
-    draft, not per-cell presence data (PDF text/OCR, e-invoice XML, image OCR).
+def _line_captures(
+    draft: InvoiceCreate,
+    *,
+    method: str,
+    provider: str,
+    provenance: list[FieldProvenance] | None = None,
+) -> list[FieldCapture]:
+    """Line-item provenance (E1.2), honoring actual parser cell evidence.
 
-    Per line, per field: description/quantity/unit_price/amount are present by
+    Without per-cell evidence, description/quantity/unit_price/amount are present by
     construction → `extracted` with the method's confidence (None = exact for the
     structured e-invoice path, 0.85 text-layer, 0.55 OCR). `category` is never
     read by these parsers → `defaulted` (confidence None — a fill, not a
     probabilistic read). `tax_rate` 0 is the parsers' fill value → `defaulted`;
     a non-zero rate was read/inferred from the document → `extracted`. The line
     flag rule (`_line_flag`) applies — see its docstring for why `defaulted`
-    line fields don't flag."""
+    line fields don't flag. PDF/image text parsers provide explicit evidence:
+    fills and derived values have no invented original or method confidence.
+    E-invoice and legacy draft-only callers retain their existing behavior.
+    """
     conf = _CONFIDENCE.get(method)
+    recorded = {
+        (field.line_index, field.field): field
+        for field in provenance or []
+        if field.line_index is not None
+    }
     out: list[FieldCapture] = []
     for i, li in enumerate(draft.line_items):
         amount = li.amount if li.amount is not None else (li.quantity * li.unit_price)
@@ -219,6 +232,11 @@ def _line_captures(draft: InvoiceCreate, *, method: str, provider: str) -> list[
         )
         for name in _LINE_FIELDS:
             v, status = values[name]
+            evidence = recorded.get((i, name))
+            original = v
+            if evidence is not None:
+                status = evidence.status
+                original = evidence.original_value
             if v in (None, ""):
                 status = "missing"
             field_conf = conf if status == "extracted" else None
@@ -226,7 +244,7 @@ def _line_captures(draft: InvoiceCreate, *, method: str, provider: str) -> list[
                 FieldCapture(
                     field=name,
                     status=status,
-                    original=v,
+                    original=original,
                     normalized=v,
                     confidence=field_conf,
                     provider=provider,
@@ -285,7 +303,9 @@ class PdfProvider(ExtractionProvider):
                 if parsed.method in ("text-layer", "ocr")
                 else frozenset(),
             )
-            + _line_captures(parsed.draft, method=parsed.method, provider=prov),
+            + _line_captures(
+                parsed.draft, method=parsed.method, provider=prov, provenance=parsed.fields
+            ),
         )
 
 
@@ -422,7 +442,9 @@ class ImageProvider(ExtractionProvider):
                     if field.line_index is None and field.status == "defaulted"
                 ),
             )
-            + _line_captures(parsed.draft, method="ocr", provider=self.name),
+            + _line_captures(
+                parsed.draft, method="ocr", provider=self.name, provenance=parsed.fields
+            ),
         )
 
 
