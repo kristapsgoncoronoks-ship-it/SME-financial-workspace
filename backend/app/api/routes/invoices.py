@@ -37,6 +37,7 @@ from app.models.organization import Organization
 from app.models.vendor import Vendor
 from app.schemas.ap_payment import SupplierPaymentOut, SupplierPaymentRecord
 from app.schemas.capture_pages import CapturePages
+from app.schemas.image_reading import load_preparation
 from app.schemas.invoice import (
     BatchUploadAccepted,
     BatchUploadOutcome,
@@ -1161,6 +1162,7 @@ async def invoice_extraction(invoice_id: str, current: CurrentUser, db: DbSessio
     for run in runs:
         fields = await extraction.fields_for_run(db, current.org_id, run.id)
         run_out = ExtractionRunOut.model_validate(run)
+        run_out.reading_preparation = load_preparation(run.reading_preparation_json)
         run_out.fields = [FieldProvenanceOut.model_validate(f) for f in fields]
         out.append(run_out)
     return out
@@ -1751,6 +1753,7 @@ async def upload_status(run_id: str, current: CurrentUser, db: DbSession):
         method=(run.method if run.method not in (None, "pending") else None),
         draft=draft,
         error=(run.note if run.status == "failed" else None),
+        reading_preparation=load_preparation(run.reading_preparation_json),
         # WO-X — what the parser is doing right now. `percent` is derived here
         # and never stored, so it cannot come to disagree with the counts it is
         # computed from.
@@ -1804,6 +1807,7 @@ async def retry_upload(
     run.note = None
     run.failure_code = None
     run.draft_json = None
+    run.reading_preparation_json = None
     run.field_count = 0
     run.warning_count = 0
     # WO-X: progress belongs to ONE attempt. Left at `done` from the previous

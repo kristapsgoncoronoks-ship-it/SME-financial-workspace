@@ -12,7 +12,6 @@ import logging
 from dataclasses import dataclass
 from typing import cast
 
-from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import CursorResult, case, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -453,6 +452,7 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
         capture_pages,
         capture_progress,
         documents,
+        image_ocr,
     )
     from app.services.parser import parse_invoice_file
 
@@ -479,6 +479,7 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
     failure_code = None
     reason = None
     prepared = None
+    reading_preparation = None
     if read_failure is not None:
         failure_note = str(read_failure)
         failure_code = read_failure.code
@@ -491,13 +492,14 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
         sink = _progress_sink(db, run)
         token = capture_progress.install(sink)
         try:
-            draft = await run_in_threadpool(
+            draft = await image_ocr.run_reading(
                 parse_invoice_file, run.source_filename or "upload", content
             )
         except Exception as exc:  # noqa: BLE001 — deterministic parser failure
             failure_note = str(exc)[:2000] or exc.__class__.__name__
             failure_code = capture_failures.code_for(exc)
             reason = exc.__class__.__name__
+            reading_preparation = image_ocr.preparation_for_error(exc)
         finally:
             sink.close()
             capture_progress.uninstall(token)
@@ -522,6 +524,9 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
         run.failure_code = failure_code
         run.failure_seq = (run.failure_seq or 0) + 1
         run.stage = capture_progress.DONE
+        run.reading_preparation_json = (
+            reading_preparation.model_dump_json() if reading_preparation is not None else None
+        )
         await db.commit()
         return {"status": "failed", "reason": reason}
 
@@ -536,6 +541,11 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
     run.warning_count = len(draft.warnings)
     run.note = draft.warnings[0] if draft.warnings else None
     run.draft_json = draft.model_dump_json()
+    run.reading_preparation_json = (
+        draft.reading_preparation.model_dump_json()
+        if draft.reading_preparation is not None
+        else None
+    )
     run.stage = capture_progress.DONE
     await record_fields(db, org_id, run.id, draft.fields, commit=False)
     await capture_memory.observe_fields(

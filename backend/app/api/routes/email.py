@@ -27,6 +27,7 @@ from app.schemas.email_intake import (
     InboundListOut,
     InboundResult,
 )
+from app.schemas.image_reading import load_preparation
 from app.schemas.invoice import InvoiceDetailOut, ParsedInvoiceDraft
 from app.services import access, audit, documents, email_intake, filesec, inbound_health, modules
 from app.services.email_providers import mailgun
@@ -478,6 +479,7 @@ async def get_inbound(inbound_id: str, current: CurrentUser, db: DbSession):
             draft = None
     detail = InboundInvoiceDetail.model_validate(row)
     detail.draft = draft
+    detail.reading_preparation = load_preparation(row.reading_preparation_json)
     # A rejected (quarantined) attachment carries a sha256 for the audit trail but
     # its bytes were never retained — so it has no downloadable file.
     detail.has_file = row.status != "rejected" and row.sha256 is not None

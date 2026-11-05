@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from dataclasses import field as dc_field
 from decimal import Decimal
 
+from app.schemas.image_reading import ImageReadingPreparation
 from app.schemas.invoice import InvoiceCreate, ParsedInvoiceDraft
 from app.services import capture_failures
 from app.services.capture_failures import CaptureError
@@ -97,6 +98,7 @@ class ProviderResult:
     provider: str
     warnings: list[str] = dc_field(default_factory=list)
     fields: list[FieldCapture] = dc_field(default_factory=list)
+    reading_preparation: ImageReadingPreparation | None = None
 
 
 class ExtractionProvider(ABC):
@@ -398,39 +400,18 @@ class ImageProvider(ExtractionProvider):
         return filename.lower().endswith((".png", ".jpg", ".jpeg"))
 
     def extract(self, filename: str, content: bytes) -> ProviderResult:
-        import io
+        from app.services import image_ocr, pdf_ocr
 
-        try:
-            import pytesseract
-            from PIL import Image
-        except Exception as exc:  # noqa: BLE001 - report as a clean parse failure
-            raise CaptureError(
-                capture_failures.CAPTURE_UNAVAILABLE,
-                f"Image OCR is not installed on the server: {exc}",
-            )
-        from app.services import pdf_ocr
-
-        try:
-            with Image.open(io.BytesIO(content)) as image:
-                data = pdf_ocr.ocr_image_to_data(pytesseract, image)
-                text = pdf_ocr._reconstruct_lines(data)
-        except pytesseract.TesseractError as exc:
-            raise CaptureError(
-                capture_failures.UNREADABLE_SCAN, f"Could not OCR the image: {exc}"
-            ) from exc
-        except pdf_ocr.OcrTimedOut as exc:
-            raise CaptureError(capture_failures.PROCESSING_TIMEOUT, str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001 - unreadable image
-            raise CaptureError(
-                capture_failures.UNREADABLE_SCAN, f"Could not OCR the image: {exc}"
-            ) from exc
+        reading = image_ocr.read(content)
+        text = reading.text
 
         parsed = pdf_ocr.parse_invoice_text(text, filename, "ocr")
         return ProviderResult(
             method="ocr",
             draft=parsed.draft,
             provider=self.name,
-            warnings=list(parsed.warnings),
+            warnings=[*parsed.warnings, *reading.warnings],
+            reading_preparation=reading.preparation,
             fields=_header_captures(
                 parsed.draft,
                 method="ocr",
@@ -510,5 +491,9 @@ def to_draft(result: ProviderResult) -> ParsedInvoiceDraft:
         for c in result.fields
     ]
     return ParsedInvoiceDraft(
-        draft=result.draft, warnings=result.warnings, method=result.method, fields=fields
+        draft=result.draft,
+        warnings=result.warnings,
+        method=result.method,
+        fields=fields,
+        reading_preparation=result.reading_preparation,
     )

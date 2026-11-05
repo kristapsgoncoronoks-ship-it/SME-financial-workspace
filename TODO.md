@@ -1,5 +1,13 @@
 # TODO — Task Board
 
+**5 November current status:** PR105 `9efcd1c` and PR106 `37b826b` pass all13
+required CI contexts. The [current OCR/workflow wave](docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
+has scoped local/native/connected qualification; newly delivered source needs
+fresh CI. Continue the [execution inventory](docs/plan/BACKLOG-COMPLETION-2026-11-05.json),
+including isolated tenant-link/parser/workflow/resource follow-ups. Owner/legal/
+provider/corpus/restore acceptance is not inferred. No main merge or deployment.
+
+
 **Active backlog completion — 5 November 2026:** continue through the
 [execution plan](docs/plan/BACKLOG-COMPLETION-2026-11-05.md) and
 [197-row inventory](docs/plan/BACKLOG-COMPLETION-2026-11-05.json). Reimbursement

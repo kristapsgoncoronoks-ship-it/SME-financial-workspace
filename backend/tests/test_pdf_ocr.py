@@ -21,6 +21,8 @@ from reportlab.lib.pagesizes import A4  # noqa: E402
 from reportlab.lib.utils import ImageReader  # noqa: E402
 from reportlab.pdfgen import canvas  # noqa: E402
 
+from tests.test_image_ocr_process import local_image_reader as local_image_reader  # noqa: E402
+
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 _LINES = [
@@ -191,7 +193,7 @@ def test_pdf_provider_maps_ocr_timeout_to_capture_outcome(monkeypatch):
     assert capture_failures.code_for(caught.value) == capture_failures.PROCESSING_TIMEOUT
 
 
-def test_image_provider_passes_timeout_and_classifies_it(monkeypatch):
+def test_image_provider_passes_timeout_and_classifies_it(monkeypatch, local_image_reader):
     import pytesseract
 
     from app.core.config import settings
@@ -213,7 +215,7 @@ def test_image_provider_passes_timeout_and_classifies_it(monkeypatch):
     assert caught.value.code == capture_failures.PROCESSING_TIMEOUT
 
 
-def test_image_provider_engine_error_stays_unreadable_scan(monkeypatch):
+def test_image_provider_engine_error_stays_unreadable_scan(monkeypatch, local_image_reader):
     import pytesseract
 
     from app.services import capture_failures, extraction_provider
@@ -231,7 +233,7 @@ def test_image_provider_engine_error_stays_unreadable_scan(monkeypatch):
     assert caught.value.code == capture_failures.UNREADABLE_SCAN
 
 
-def test_receipt_image_ocr_is_bounded_too(monkeypatch):
+def test_receipt_image_ocr_is_bounded_too(monkeypatch, local_image_reader):
     """`receipt_ocr._text_from` had its own unbounded `image_to_data` call
     (the archive's patch missed it) — it goes through the same bounded seam."""
     import pytesseract

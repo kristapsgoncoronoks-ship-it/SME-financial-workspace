@@ -32,6 +32,7 @@ from tests.test_migrations import BACKEND_DIR, _run_alembic
 MERGE = "f0b2d4e6a8c1"
 PLANNING_COMMANDS = "8d1f3a5c7e90"
 JOB_LEASE = "b2e4f6a8c0d3"
+IMAGE_READING = "c3f5a7b9d1e4"
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -403,12 +404,16 @@ def snapshot(connection):
     }
 
 
-def _records_before_job_lease(records):
+def _records_before_additive_heads(records):
     expected = deepcopy(records)
     for job in expected["jobs"]:
         # This migration adds exactly one nullable column and infers no past
         # lease identities. Keep every other field/value in the comparison.
         assert job.pop("lease_token") is None
+    for run in expected["extraction_runs"]:
+        # Historical image preparation is deliberately unknown. These tests
+        # may remove only the newly added NULL, never measured provenance.
+        assert run.pop("reading_preparation_json") is None
     return expected
 
 
@@ -457,14 +462,15 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert graph.get_heads() == [JOB_LEASE]
+    assert graph.get_heads() == [IMAGE_READING]
+    assert graph.get_revision(IMAGE_READING).down_revision == JOB_LEASE
     assert graph.get_revision(JOB_LEASE).down_revision == PLANNING_COMMANDS
     assert graph.get_revision(PLANNING_COMMANDS).down_revision == MERGE
     assert set(graph.get_revision(MERGE).down_revision) == PARENTS
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 157
+    assert len(revisions) == 158
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -527,9 +533,10 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     database(migration_url, index_contract)
 
     head_schema = database(migration_url, schemas)
-    # The two linear additions above this merge are an empty planning receipt
-    # table and the unused nullable job token. Compare their exact removal,
-    # then test ambiguity AT the merge. Separate tests guard populated removal.
+    # Later additive heads introduce an empty planning receipt table, the
+    # unused nullable job token and two unknown image-preparation fields.
+    # Compare only their exact removal, then test ambiguity AT the merge.
+    # Separate tests guard destructive removal of populated evidence.
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
     assert set(head_schema) - set(schema_before) == {"planning_commands"}
@@ -542,6 +549,14 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     assert lease_columns == [["lease_token", lease_type, True, None]]
     expected_marker_schema["jobs"]["columns"].remove(lease_columns[0])
     assert all(c[0] != "lease_token" for c in schema_before["jobs"]["columns"])
+    for table in ("extraction_runs", "inbound_invoices"):
+        preparation_columns = [
+            c for c in head_schema[table]["columns"] if c[0] == "reading_preparation_json"
+        ]
+        assert preparation_columns == [["reading_preparation_json", "TEXT", True, None]]
+        expected_marker_schema[table]["columns"].remove(preparation_columns[0])
+        assert all(c[0] != "reading_preparation_json" for c in schema_before[table]["columns"])
+        assert schema_before[table] == expected_marker_schema[table]
     # This includes every remaining column, index and FK; the full comparison
     # below also retains all job RLS flags, policies, roles and permissiveness.
     assert schema_before["jobs"] == expected_marker_schema["jobs"]
@@ -556,7 +571,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
                 row for row in head_schema[key] if row[0] != "planning_commands"
             ]
     assert expected_marker_schema == schema_before
-    marker_records = _records_before_job_lease(after)
+    marker_records = _records_before_additive_heads(after)
     assert database(migration_url, snapshot) == marker_records
     # An unqualified relative downgrade is ambiguous at a merge point.
     refused = _run_alembic(["downgrade", "-1"], migration_url)
@@ -727,7 +742,7 @@ def test_payment_index_interruption_refuses_without_guessing_and_recovers(
     # index in this disposable DB; production recovery remains an operator action.
     asyncio.run(native_index(False))
     migrate(migration_url, "upgrade", "head")
-    assert _records_before_job_lease(database(migration_url, snapshot)) == before
+    assert _records_before_additive_heads(database(migration_url, snapshot)) == before
     rebuilt = database(migration_url, index_state)
     assert rebuilt[0] and rebuilt[1]
     assert "(org_id, operation, target_id)" in rebuilt[2]

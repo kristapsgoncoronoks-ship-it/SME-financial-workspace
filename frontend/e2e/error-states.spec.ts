@@ -89,6 +89,7 @@ const DEFAULTS: Record<string, unknown> = {
   },
   "/expenses/transactions": [],
   "/payment-runs": [],
+  "/payment-runs/page": { items: [], total: 0 },
   "/payment-runs/payable": [],
   "/settings/validation": { ai_validation_enabled: true, human_validation_enabled: true },
 };
@@ -211,7 +212,7 @@ test("review queue: a 500 on the pending region shows an error", async ({ page }
 });
 
 test("payment runs: a 500 on the runs list shows an error", async ({ page }) => {
-  await mockApi(page, { "/payment-runs": { status: 500 } });
+  await mockApi(page, { "/payment-runs/page": { status: 500 } });
   await page.goto("/payment-runs");
 
   await expect(errorState(page, "Couldn’t load payment runs")).toBeVisible();
