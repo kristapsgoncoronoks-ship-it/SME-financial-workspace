@@ -203,11 +203,15 @@ async def persist_invoice(
     body: InvoiceCreate,
     *,
     verify_capture_identity: Callable[[], Awaitable[None]] | None = None,
+    commit: bool = True,
 ) -> tuple[Invoice, str]:
     """Create and persist an invoice from a draft (vendor resolve → line math →
     FX-to-EUR → validation). Shared by the manual create route and the email-intake
     confirm route so an emailed invoice is saved *identically* to an uploaded one.
-    Returns the refreshed invoice and its vendor name."""
+    Returns the refreshed invoice and its vendor name. ``commit=False`` lets an
+    inbound confirmation atomically commit its invoice, source link and audit
+    while retaining the source row lock; existing direct callers commit here.
+    """
     # The captured review and its final invoice share the same lock as manual
     # review and selected-region application. Refuse before resolving a vendor
     # or creating any financial/audit record.
@@ -322,7 +326,8 @@ async def persist_invoice(
                 "This capture is no longer ready to save. Reload its current result.",
                 code="capture_not_ready",
             )
-    await db.commit()
+    if commit:
+        await db.commit()
     await db.refresh(invoice, attribute_names=["line_items"])
     return invoice, vendor.name
 
@@ -982,8 +987,18 @@ async def capture_source(run_id: str, current: CurrentUser, db: DbSession, reque
     if run is None or not run.source_sha256:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Capture not found")
     sha = run.source_sha256
+    doc = await db.scalar(
+        select(Document).where(
+            Document.org_id == current.org_id,
+            Document.sha256 == sha,
+            Document.kind == documents.UPLOADS,
+        )
+    )
+    size = doc.size if doc is not None else None
     try:
-        data = await documents.load(documents.UPLOADS, current.org_id, sha)
+        data = await documents.load_verified_original(
+            documents.UPLOADS, current.org_id, sha, size=size
+        )
     except storage.StorageReadError:
         raise
     except storage.StorageError:
@@ -1003,7 +1018,7 @@ async def capture_source(run_id: str, current: CurrentUser, db: DbSession, reque
             Document.kind == documents.UPLOADS,
         )
     )
-    if storage.sha256_hex(data) != sha or (doc is not None and len(data) != doc.size):
+    if doc is not None and len(data) != doc.size:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "Original document integrity could not be verified. Restore the original before retrying.",
