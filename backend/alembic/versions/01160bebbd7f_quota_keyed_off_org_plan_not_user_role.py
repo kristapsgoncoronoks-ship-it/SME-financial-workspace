@@ -54,9 +54,9 @@ def downgrade() -> None:
     sa.Column('role', sa.VARCHAR(length=20), nullable=False),
     sa.Column('monthly_invoice_limit', sa.INTEGER(), nullable=False),
     sa.Column('monthly_upload_limit', sa.INTEGER(), nullable=False),
-    sa.Column('id', sa.CHAR(length=36), nullable=False),
-    sa.Column('created_at', sa.DATETIME(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DATETIME(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('id', app.models.base.GUID(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('role', name=op.f('uq_role_policy_role'))
     )
