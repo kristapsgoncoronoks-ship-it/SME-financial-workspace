@@ -19,9 +19,12 @@ interface Wire {
   hold: { entered: boolean; release: () => void; wait: Promise<void> } | null;
   offline: boolean;
   identity: { user: typeof USER; org: typeof ORG };
+  recordHold: { wait: Promise<void> } | null;
+  recordRefusal: { status: number; code: string; detail: string } | null;
+  registryFailure: boolean;
 }
 async function setup(page: Page, count = 1, role = "owner", enabled = true): Promise<Wire> {
-  const wire: Wire = { rows: Array.from({ length: count }, (_, index) => allocation(index + 1)), total: `${count}.00`, changed: count, warnings: [], reads: [], writes: [], refusal: null, mutate: null, hold: null, offline: false, identity: { user: { ...USER, role }, org: ORG } };
+  const wire: Wire = { rows: Array.from({ length: count }, (_, index) => allocation(index + 1)), total: `${count}.00`, changed: count, warnings: [], reads: [], writes: [], refusal: null, mutate: null, hold: null, offline: false, identity: { user: { ...USER, role }, org: ORG }, recordHold: null, recordRefusal: null, registryFailure: false };
   const json = (value: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(value) });
   await page.addInitScript(() => { if (!localStorage.getItem("invoiceiq_token")) localStorage.setItem("invoiceiq_token", "rebate-preview-synthetic-token"); });
   await page.route("**/api/v1/**", async (route) => {
@@ -39,8 +42,10 @@ async function setup(page: Page, count = 1, role = "owner", enabled = true): Pro
       const body = { period: url.searchParams.get("period"), supplier: url.searchParams.get("supplier"), rebate_total_eur: wire.total, lines_allocated: wire.rows.length, changed: wire.changed, source_warnings: wire.warnings, allocations: wire.rows.slice((requestedPage - 1) * size, requestedPage * size), page: requestedPage, page_size: size };
       return route.fulfill(json(wire.mutate ? wire.mutate(body) : body));
     }
-    if (path === "/transport/rebates" && method === "GET") return route.fulfill(json([]));
+    if (path === "/transport/rebates" && method === "GET") return route.fulfill(json(wire.registryFailure ? { detail: "Synthetic registry read unavailable" } : [], wire.registryFailure ? 503 : 200));
     if (path === "/transport/rebates" && method === "POST") {
+      if (wire.recordHold) await wire.recordHold.wait;
+      if (wire.recordRefusal) return route.fulfill(json({ code: wire.recordRefusal.code, detail: wire.recordRefusal.detail }, wire.recordRefusal.status));
       const body = request.postDataJSON(); wire.total = "2.00";
       return route.fulfill(json({ id: "synthetic-source", ...body, amount_eur: body.amount_local, fx_source: "eur", fx_rate: null, fx_ecb_rate: null, fx_ecb_date: null }));
     }
@@ -55,6 +60,18 @@ async function preview(page: Page, period = "2026-05", supplier = "CARDNET") {
   await form.getByRole("button", { name: "Preview rebate effect", exact: true }).click();
 }
 const table = (page: Page) => page.getByRole("table", { name: "Read-only rebate allocations", exact: true });
+
+async function fillRecording(page: Page) {
+  await page.getByLabel("Supplier").fill(" CARDNET ");
+  await page.getByLabel("Country").fill("lv");
+  await page.getByLabel("Period adjusted").fill("2026-05");
+  await page.getByLabel("Document date").fill("2026-06-10");
+  await page.getByLabel("Document number").fill(" SYN-RECORD-001 ");
+  await page.getByLabel("Issued by").fill(" Synthetic issuer ");
+  await page.getByLabel("Currency").fill("eur");
+  await page.getByLabel("Amount on the document").fill("0008600.00");
+  await page.getByLabel("Note", { exact: true }).fill(" Synthetic note ");
+}
 
 test("canonical preview reads an explicit scope and shows server amounts without applying or writing", async ({ page }) => {
   const wire = await setup(page);
@@ -316,5 +333,149 @@ test("a replacement account and company cannot reuse the previous preview cache 
   await expect(table(page).getByText("synthetic-fuel-1", { exact: true })).toHaveCount(0);
   expect(wire.reads.at(-1)!.headers["x-expected-user-id"]).toBe("replacement-owner");
   expect(wire.reads.at(-1)!.headers["x-expected-org-id"]).toBe("replacement-org");
+  expect(wire.writes).toEqual([]);
+});
+
+test("recording a rebate with Enter submits its existing exact typed payload once", async ({ page }) => {
+  const wire = await setup(page);
+  await page.goto("/rebates");
+  await expect(page.getByRole("heading", { name: "Record a rebate document", exact: true })).toBeVisible();
+  await fillRecording(page);
+  await page.getByLabel("Note", { exact: true }).press("Enter");
+  await expect.poll(() => wire.writes.length).toBe(1);
+  expect(wire.writes[0]).toEqual({ method: "POST", path: "/transport/rebates", body: {
+    supplier: "CARDNET", country: "LV", period: "2026-05", source_ref: "SYN-RECORD-001",
+    source_party: "Synthetic issuer", rebate_date: "2026-06-10", currency: "EUR",
+    amount_local: "0008600.00", note: "Synthetic note",
+  } });
+  expect(wire.writes[0].body).not.toHaveProperty("amount_eur");
+  expect(wire.reads).toEqual([]);
+});
+
+test("recording required controls belong to one native form and native validation focuses the missing field", async ({ page }) => {
+  const wire = await setup(page);
+  await page.goto("/rebates");
+  const form = page.getByRole("form", { name: "Record a rebate document", exact: true });
+  await expect(form).toBeVisible();
+  await expect(form.locator("input[required]")).toHaveCount(8);
+  await expect(page.getByLabel("Note", { exact: true })).not.toHaveAttribute("required");
+  // Existing callers keep their previous aria-only required contract unless
+  // they deliberately opt in; preview retains its own readiness safeguards.
+  const legacyRequired = page.getByRole("form", { name: "Rebate preview", exact: true }).getByRole("textbox", { name: "Preview period", exact: true });
+  await expect(legacyRequired).toHaveAttribute("aria-required", "true");
+  await expect(legacyRequired).not.toHaveAttribute("required");
+  expect(await form.evaluate((element) => { (element as HTMLFormElement).requestSubmit(); return (element as HTMLFormElement).checkValidity(); })).toBe(false);
+  await expect(page.getByLabel("Supplier")).toBeFocused();
+  await page.getByLabel("Supplier").fill("CARDNET");
+  await form.evaluate((element) => (element as HTMLFormElement).requestSubmit());
+  await expect(page.getByLabel("Country")).toBeFocused();
+  await expect(page.getByRole("button", { name: "Record rebate", exact: true })).toBeDisabled();
+  await expect(page.locator("form form")).toHaveCount(0);
+  expect(wire.writes).toEqual([]);
+});
+
+test("legacy required DateInput retains its aria-only behavior without the native opt-in", async ({ page }) => {
+  const wire = await setup(page);
+  await page.goto("/design/expenses");
+  await expect(page.getByRole("heading", { name: "Expenses", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "New expense", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "New expense", exact: true });
+  await expect(dialog).toBeVisible();
+  const date = dialog.getByLabel("Date", { exact: false });
+  await expect(date).toHaveAttribute("aria-required", "true");
+  await expect(date).not.toHaveAttribute("required");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(wire.writes).toEqual([]);
+});
+
+test("native submission preserves every existing recording readiness guard", async ({ page }) => {
+  const wire = await setup(page);
+  await page.goto("/rebates");
+  const form = page.getByRole("form", { name: "Record a rebate document", exact: true });
+  await expect(form).toBeVisible();
+  for (const [label, invalid] of [["Period adjusted", "2026-13"], ["Amount on the document", "1,00"], ["Document number", " "], ["Country", "L"], ["Currency", "EU"]]) {
+    await fillRecording(page); await page.getByLabel(label).fill(invalid);
+    await expect(page.getByRole("button", { name: "Record rebate", exact: true })).toBeDisabled();
+    await form.evaluate((element) => (element as HTMLFormElement).requestSubmit());
+    expect(wire.writes).toEqual([]);
+  }
+});
+
+test("held recording ignores repeated Enter and native requestSubmit while retaining the pending guard", async ({ page }) => {
+  const wire = await setup(page);
+  let release = () => {}; const wait = new Promise<void>((resolve) => { release = resolve; });
+  wire.recordHold = { wait };
+  try {
+    await page.goto("/rebates"); await fillRecording(page);
+    await page.getByLabel("Note", { exact: true }).press("Enter");
+    await expect.poll(() => wire.writes.length).toBe(1);
+    const button = page.getByRole("button", { name: "Record rebate", exact: true });
+    await expect(button).toBeDisabled(); await expect(button).toHaveAttribute("aria-busy", "true");
+    await page.getByLabel("Note", { exact: true }).press("Enter");
+    await page.getByRole("form", { name: "Record a rebate document", exact: true }).evaluate((element) => (element as HTMLFormElement).requestSubmit());
+    expect(wire.writes).toHaveLength(1);
+    wire.recordHold = null; release();
+    await expect(page.getByText("No transaction figure has changed yet", { exact: false })).toBeVisible();
+    expect(wire.writes).toHaveLength(1);
+  } finally { release(); }
+});
+
+test("keyboard recording preserves FX refusal and typed inputs without claiming success", async ({ page }) => {
+  const wire = await setup(page);
+  wire.recordRefusal = { status: 422, code: "fx_rate_unavailable", detail: "No ECB rate is available for PLN on 2026-06-10" };
+  await page.goto("/rebates"); await fillRecording(page);
+  await page.getByLabel("Currency").fill("pln");
+  await page.getByLabel("Note", { exact: true }).press("Enter");
+  await expect(page.getByText("nothing was recorded", { exact: false })).toBeVisible();
+  await expect(page.getByText("No transaction figure has changed yet", { exact: false })).toHaveCount(0);
+  await expect(page.getByLabel("Amount on the document")).toHaveValue("0008600.00");
+  expect(wire.writes).toHaveLength(1);
+  expect(wire.writes[0].body).toMatchObject({ amount_local: "0008600.00", currency: "PLN" });
+});
+
+test("committed keyboard recording stays visible when only the registry readback fails", async ({ page }) => {
+  const wire = await setup(page);
+  await page.goto("/rebates"); await fillRecording(page);
+  wire.registryFailure = true;
+  await page.getByLabel("Note", { exact: true }).press("Enter");
+  await expect(page.getByText("No transaction figure has changed yet", { exact: false })).toBeVisible();
+  await expect(page.getByText("Couldn’t load the recorded rebates", { exact: true })).toBeVisible();
+  wire.registryFailure = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByText("Couldn’t load the recorded rebates", { exact: true })).toHaveCount(0);
+  expect(wire.writes).toHaveLength(1);
+});
+
+test("recording and preview remain separate forms and dirty preview scope is preserved", async ({ page }) => {
+  const wire = await setup(page);
+  await page.goto("/rebates"); await preview(page);
+  await expect(table(page)).toBeVisible();
+  const previewForm = page.getByRole("form", { name: "Rebate preview", exact: true });
+  await previewForm.getByRole("textbox", { name: "Preview period", exact: true }).fill("2026-06");
+  await expect(table(page)).toHaveCount(0);
+  await fillRecording(page); await page.getByLabel("Note", { exact: true }).press("Enter");
+  await expect(page.getByText("No transaction figure has changed yet", { exact: false })).toBeVisible();
+  await expect(previewForm.getByRole("textbox", { name: "Preview period", exact: true })).toHaveValue("2026-06");
+  await expect(table(page)).toHaveCount(0);
+  expect(wire.reads).toHaveLength(1);
+  await previewForm.getByRole("button", { name: "Preview rebate effect", exact: true }).click();
+  await expect(table(page)).toBeVisible();
+  expect(new URLSearchParams(wire.reads.at(-1)!.query).get("period")).toBe("2026-06");
+  expect(wire.writes).toHaveLength(1);
+  await expect(page.locator("form form")).toHaveCount(0);
+});
+
+test("the native recording form contains all required controls at narrow and enlarged viewports", async ({ page }) => {
+  const wire = await setup(page);
+  for (const [width, textSize] of [[390, 32], [320, 16], [1280, 16]]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/rebates");
+    const form = page.getByRole("form", { name: "Record a rebate document", exact: true });
+    await expect(form).toBeVisible();
+    await page.addStyleTag({ content: `html { font-size: ${textSize}px; }` });
+    const geometry = await form.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth }));
+    expect(geometry.scroll).toBeLessThanOrEqual(geometry.width + 1);
+    await expect(form.locator("input[required]")).toHaveCount(8);
+  }
   expect(wire.writes).toEqual([]);
 });

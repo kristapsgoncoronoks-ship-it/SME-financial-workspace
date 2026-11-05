@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.dimensions import DimensionFields
+from app.schemas.image_reading import ImageReadingPreparation
 
 Category = Literal["travel", "meals", "accommodation", "transport", "supplies", "software", "other"]
 PaymentMethod = Literal["personal", "company_card"]
@@ -289,6 +290,8 @@ class ReceiptScanOut(BaseModel):
     currency: str | None = None
     method: str  # text-layer | ocr
     text_preview: str = ""
+    reading_preparation: ImageReadingPreparation | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ApprovalStepOut(BaseModel):

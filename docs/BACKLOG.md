@@ -2,11 +2,14 @@
 
 ## Active backlog completion — 5 November 2026
 
-[Current implementation, evidence and remaining dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)
-and the [197-row execution inventory](plan/BACKLOG-COMPLETION-2026-11-05.json)
-are the current entry points. Work continues through actionable items; local
-passes are awaiting integrated/delivered-source qualification. Owner decisions,
-external acceptance, review and deployment remain separately tracked.
+[Current implementation and dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)
+and the [197-row baseline plus15 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
+are the current entry points. PR1059efcd1c and PR10637b826b passed all13 required
+actual PR contexts. [The current OCR/workflow wave](plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
+has local/native/connected qualification and needs fresh hosted CI. Tenant-link,
+parser, recurring-notice and concurrent resource follow-ups continue separately.
+Owner/provider/legal/corpus/hardware/release dependencies remain explicit. No
+main merge or deployment; older dated statements below are historical.
 
 ## Current uv / rustls development — 3 November 2026
 

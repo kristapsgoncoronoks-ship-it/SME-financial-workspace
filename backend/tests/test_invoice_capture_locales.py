@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 
 from app.services import extraction_provider, pdf_ocr
+from tests.test_image_ocr_process import local_image_reader as local_image_reader
 
 
 @pytest.mark.parametrize("percent", ["21.00%", "21,00 %", "21%"])
@@ -171,7 +172,9 @@ def _image_bytes():
     return out.getvalue()
 
 
-def test_image_invoice_reconstructs_visual_rows_using_bounded_word_data(monkeypatch):
+def test_image_invoice_reconstructs_visual_rows_using_bounded_word_data(
+    monkeypatch, local_image_reader
+):
     tesseract = pytest.importorskip("pytesseract")
     from app.core.config import settings
 

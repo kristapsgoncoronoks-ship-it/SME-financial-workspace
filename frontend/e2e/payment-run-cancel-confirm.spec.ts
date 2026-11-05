@@ -68,7 +68,7 @@ async function mockApi(page: Page, patch: Partial<typeof OPEN_RUN> = {}): Promis
     if (path === "/auth/organizations") return route.fulfill(json([{ org_id: ORG.id, name: ORG.name, current: true }]));
     if (path === "/modules") return route.fulfill(json([]));
     if (path === "/payment-runs/payable" && method === "GET") return route.fulfill(json([]));
-    if (path === "/payment-runs" && method === "GET") { wire.reads++; return route.fulfill(json([wire.run])); }
+    if ((path === "/payment-runs" || path === "/payment-runs/page") && method === "GET") { wire.reads++; return route.fulfill(json(path.endsWith("/page") ? { items: [wire.run], total: 1 } : [wire.run])); }
     if (path === `/payment-runs/${OPEN_RUN.id}` && method === "DELETE") {
       calls.push("cancel");
       if (wire.conflict) {

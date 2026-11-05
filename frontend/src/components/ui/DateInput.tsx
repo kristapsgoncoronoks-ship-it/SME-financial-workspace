@@ -9,6 +9,9 @@ export interface DateInputProps {
   hint?: ReactNode;
   error?: ReactNode;
   required?: boolean;
+  /** Native required validation only for an already-required field; opt-in
+   * so legacy callers keep their existing aria-only validation behavior. */
+  nativeValidation?: boolean;
   disabled?: boolean;
   /** ISO min/max bounds, e.g. a filing-deadline cap. */
   min?: string;
@@ -25,7 +28,7 @@ export interface DateInputProps {
  * unambiguously regardless of the user's locale display.
  */
 export function DateInput({
-  label, value, onValueChange, hint, error, required, disabled, min, max, name, className,
+  label, value, onValueChange, hint, error, required, nativeValidation = false, disabled, min, max, name, className,
 }: DateInputProps) {
   return (
     <FormField label={label} hint={hint} error={error} required={required} className={className}>
@@ -34,6 +37,7 @@ export function DateInput({
           {...f}
           name={name}
           type="date"
+          required={nativeValidation && required}
           value={value}
           min={min}
           max={max}

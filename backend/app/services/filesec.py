@@ -116,6 +116,10 @@ PURPOSE_MB: dict[str, int] = {
 # limits in the existing central owner so the upload-cap structural gate stays
 # intact; these fixed output/memory limits never enlarge an accepted upload.
 RESOURCE_BYTES = {
+    "image_ocr_memory": 384 * _MB,
+    "image_ocr_temp_file": 48 * _MB,
+    "image_ocr_output": 4 * _MB,
+    "image_ocr_text": 2 * _MB,
     "project_thumbnail_input": 32 * _MB,
     "project_thumbnail": 128 * 1024,
     "capture_pages": 2 * _MB,
@@ -136,6 +140,13 @@ RESOURCE_BYTES = {
     "accounting_snapshot": 2_000_000,
     "calendar_response": 256 * 1024,
 }
+
+# Processing envelopes, independent of accepting/storing an original upload.
+# The source/raster geometry starts from the existing region-reading envelope.
+IMAGE_OCR_SOURCE_PIXELS = 40_000_000
+IMAGE_OCR_RASTER_PIXELS = 12_000_000
+IMAGE_OCR_SOURCE_EDGE = 100_000
+IMAGE_OCR_RASTER_EDGE = 20_000
 
 
 def _max_mb(purpose: str | None = None) -> int:

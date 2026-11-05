@@ -19,7 +19,7 @@ from app.models.capture_field_memory import CaptureFieldMemory
 from app.models.extraction_field import ExtractionField
 from app.models.extraction_run import ExtractionRun
 from app.models.job import Job
-from app.services import capture_memory, capture_progress, extraction, jobs
+from app.services import capture_memory, capture_progress, extraction, image_ocr, jobs
 
 PG_URL = os.environ.get("RLS_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not PG_URL, reason="requires migrated non-superuser PostgreSQL")
@@ -184,7 +184,7 @@ async def test_old_worker_cannot_publish_after_new_attempt(
     """
     client, factory, org_id, run_id = capture
     reached, release = asyncio.Event(), asyncio.Event()
-    original = extraction.run_in_threadpool
+    original = image_ocr.run_reading
     calls = 0
 
     async def held_parse(*args, **kwargs):
@@ -206,7 +206,7 @@ async def test_old_worker_cannot_publish_after_new_attempt(
             raise ValueError("Synthetic current parser failure")
         return draft
 
-    monkeypatch.setattr(extraction, "run_in_threadpool", held_parse)
+    monkeypatch.setattr(image_ocr, "run_reading", held_parse)
     old = asyncio.create_task(work(factory, "synthetic-old-execution"))
     try:
         await asyncio.wait_for(reached.wait(), timeout=10)

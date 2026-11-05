@@ -11480,6 +11480,16 @@
             ],
             "title": "Percent"
           },
+          "reading_preparation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageReadingPreparation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "stage": {
             "anyOf": [
               {
@@ -11541,6 +11551,16 @@
               }
             ],
             "title": "Note"
+          },
+          "reading_preparation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageReadingPreparation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "source_filename": {
             "anyOf": [
@@ -12706,6 +12726,66 @@
         "title": "HoldCreate",
         "type": "object"
       },
+      "ImageReadingPreparation": {
+        "additionalProperties": false,
+        "properties": {
+          "preprocess_version": {
+            "const": "local-image-ocr-v1",
+            "default": "local-image-ocr-v1",
+            "title": "Preprocess Version",
+            "type": "string"
+          },
+          "raster_height": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raster Height"
+          },
+          "raster_width": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raster Width"
+          },
+          "resized": {
+            "default": false,
+            "title": "Resized",
+            "type": "boolean"
+          },
+          "source_height": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Source Height",
+            "type": "integer"
+          },
+          "source_width": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Source Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_width",
+          "source_height"
+        ],
+        "title": "ImageReadingPreparation",
+        "type": "object"
+      },
       "ImportResult": {
         "properties": {
           "imported": {
@@ -12954,6 +13034,16 @@
               }
             ],
             "title": "Method"
+          },
+          "reading_preparation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageReadingPreparation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "received_at": {
             "format": "date-time",
@@ -18601,6 +18691,16 @@
             "title": "Method",
             "type": "string"
           },
+          "reading_preparation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageReadingPreparation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "warnings": {
             "items": {
               "type": "string"
@@ -21552,6 +21652,16 @@
             "title": "Method",
             "type": "string"
           },
+          "reading_preparation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageReadingPreparation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "spend_date": {
             "anyOf": [
               {
@@ -21579,6 +21689,13 @@
               }
             ],
             "title": "Vat Amount"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -24500,6 +24617,29 @@
           "invoice_count"
         ],
         "title": "RunOut",
+        "type": "object"
+      },
+      "RunPageOut": {
+        "description": "Bounded history display; the legacy array endpoint remains compatible.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RunPageOut",
         "type": "object"
       },
       "RunPay": {
@@ -46018,6 +46158,68 @@
           }
         ],
         "summary": "Create Run",
+        "tags": [
+          "payment-runs"
+        ]
+      }
+    },
+    "/api/v1/payment-runs/page": {
+      "get": {
+        "description": "History navigation with an exact scoped total, before /{run_id}.\n\nThis display population is independent of the payable invoice selector and\nof every ID-scoped approve/pay/export/cancel command. No financial action\nconsumes the displayed page as its scope.",
+        "operationId": "list_run_page_api_v1_payment_runs_page_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Run Page",
         "tags": [
           "payment-runs"
         ]

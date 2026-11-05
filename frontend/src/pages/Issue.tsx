@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { api, apiError, downloadFile, openFile } from "../lib/api";
+import { api, apiError, downloadFile, openFile, tokenStore } from "../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { checkSavedInvoiceCommand, deliveryOutcome, hasSavedInvoiceCommand, invoiceCommand } from "../lib/invoiceCommands";
 import { ConfirmDialog, ErrorState } from "../components/ui";
@@ -24,6 +24,12 @@ const SCHEMES: { value: VatScheme; label: string }[] = [
 const emptyLine = (): IssuedLineInput => ({ description: "", quantity: "1", unit_price: "0", vat_rate: "21" });
 const ISSUED_PAGE_SIZE = 100;
 const ISSUED_READ_TIMEOUT_MS = 15_000;
+interface DraftCopyResult { id: string; buyer_name: string; lifecycle: "draft"; number: null; doc_type: "invoice" }
+interface DraftCopyOutcome {
+  userId: string; orgId: string; sourceId: string; draftId: string; buyerName: string; sourceNumber: string | null;
+}
+interface DuplicateAttempt { userId: string; orgId: string; sourceId: string; generation: number; token: string | null }
+
 
 function issuedPage(raw: string | null): number {
   if (!raw || !/^[1-9]\d*$/.test(raw)) return 1;
@@ -34,6 +40,15 @@ function issuedPage(raw: string | null): number {
 export default function Issue() {
   const qc = useQueryClient();
   const { user, org } = useAuth();
+  const [copyOutcome, setCopyOutcome] = useState<DraftCopyOutcome | null>(null);
+  const duplicateAuthority = useRef({ userId: user?.id, orgId: org?.id });
+  duplicateAuthority.current = { userId: user?.id, orgId: org?.id };
+  const duplicateOwnerActive = useRef(true);
+  useEffect(() => { duplicateOwnerActive.current = true; return () => { duplicateOwnerActive.current = false; }; }, []);
+  const ownsDuplicateAttempt = (attempt: DuplicateAttempt) => duplicateOwnerActive.current &&
+    duplicateAuthority.current.userId === attempt.userId && duplicateAuthority.current.orgId === attempt.orgId &&
+    tokenStore.generation() === attempt.generation && tokenStore.get() === attempt.token;
+  const visibleCopyOutcome = copyOutcome?.userId === user?.id && copyOutcome?.orgId === org?.id ? copyOutcome : null;
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawPage = searchParams.get("page");
@@ -113,6 +128,14 @@ export default function Issue() {
       />
 
       <RecurringSchedules onGenerated={() => qc.invalidateQueries({ queryKey: ["issued"] })} />
+
+      {visibleCopyOutcome && <div className="min-w-0 space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 [overflow-wrap:anywhere]">
+        <p role="status" aria-live="polite" aria-atomic="true" aria-label="Draft copy outcome">
+          Draft copy created for {visibleCopyOutcome.buyerName} from {visibleCopyOutcome.sourceNumber ?? "the selected invoice"}.
+        </p>
+        {list.isFetching && <p>Refreshing the invoice list…</p>}
+        <button type="button" className="btn-ghost" disabled={list.isFetching} onClick={() => { if (page === 1) void list.refetch(); else changePage(1); }}>Show latest invoices</button>
+      </div>}
 
       <div>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
@@ -197,7 +220,7 @@ export default function Issue() {
                         {inv.lifecycle !== "written_off" && (
                           <DisputeActions inv={inv} onDone={() => qc.invalidateQueries({ queryKey: ["issued"] })} />
                         )}
-                        <DuplicateAction inv={inv} onDone={() => qc.invalidateQueries({ queryKey: ["issued"] })} />
+                        <DuplicateAction inv={inv} onDone={() => qc.invalidateQueries({ queryKey: ["issued"] })} onCreated={setCopyOutcome} ownsAttempt={ownsDuplicateAttempt} />
                       </div>
                     )}
                   </td>
@@ -645,24 +668,45 @@ function DisputeActions({ inv, onDone }: { inv: IssuedInvoice; onDone: () => voi
 }
 
 // Copy any invoice into a fresh editable draft.
-function DuplicateAction({ inv, onDone }: { inv: IssuedInvoice; onDone: () => void }) {
+function DuplicateAction({ inv, onDone, onCreated, ownsAttempt }: { inv: IssuedInvoice; onDone: () => Promise<unknown>; onCreated: (outcome: DraftCopyOutcome) => void; ownsAttempt: (attempt: DuplicateAttempt) => boolean }) {
+  const { user, org, hasPerm } = useAuth();
   const [err, setErr] = useState<string | null>(null);
-  const dup = useMutation({
-    mutationFn: async () => (await api.post(`/issued/${inv.id}/duplicate`, {})).data,
-    onSuccess: onDone,
-    onError: (e) => setErr(apiError(e)),
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const canCopy = !!user?.id && !!org?.id && hasPerm("issued.write");
+  const dup = useMutation<DraftCopyResult, unknown, DuplicateAttempt>({
+    mutationFn: async (attempt) => {
+      const response = await api.post(`/issued/${attempt.sourceId}/duplicate`, {});
+      const result = response.data as Partial<DraftCopyResult> | null;
+      if (response.status !== 201 || !result || typeof result.id !== "string" || !result.id || result.id === attempt.sourceId ||
+          typeof result.buyer_name !== "string" || result.lifecycle !== "draft" || result.number !== null || result.doc_type !== "invoice") {
+        throw new Error("The copy outcome could not be verified. Check the latest invoices before copying again.");
+      }
+      return result as DraftCopyResult;
+    },
+    onSuccess: async (result, attempt) => {
+      if (!ownsAttempt(attempt)) return;
+      if (active.current) setErr(null);
+      onCreated({ userId: attempt.userId, orgId: attempt.orgId, sourceId: attempt.sourceId, draftId: result.id, buyerName: result.buyer_name, sourceNumber: inv.number });
+      await onDone();
+    },
+    onError: (error, attempt) => { if (active.current && ownsAttempt(attempt)) setErr(apiError(error)); },
+    retry: false,
   });
   return (
     <div className="flex items-center gap-1">
       <button
         className="text-xs text-slate-500 hover:underline disabled:text-slate-300"
-        disabled={dup.isPending}
-        title="Copy into a new draft"
-        onClick={() => dup.mutate()}
+        disabled={dup.isPending || !canCopy}
+        title={canCopy ? "Copy into a new draft" : "Invoice write permission is required to copy"}
+        onClick={() => {
+          if (!canCopy || dup.isPending || !user || !org) return;
+          dup.mutate({ userId: user.id, orgId: org.id, sourceId: inv.id, generation: tokenStore.generation(), token: tokenStore.get() });
+        }}
       >
         Duplicate
       </button>
-      {err && <span className="text-xs text-rose-500">{err}</span>}
+      {err && <span role="alert" className="text-xs text-rose-500">{err}</span>}
     </div>
   );
 }

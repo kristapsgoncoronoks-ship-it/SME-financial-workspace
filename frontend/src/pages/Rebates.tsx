@@ -203,11 +203,19 @@ export default function RebatesPage() {
 
       {canWrite && (
         <Card title="Record a rebate document">
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <form
+            aria-label="Record a rebate document"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (formReady && !record.isPending) record.mutate();
+            }}
+          >
             <TextInput
               label="Supplier"
               hint="The fuel-card or toll-network code"
               required
+              nativeValidation
               value={form.supplier}
               onChange={(e) => setForm({ ...form, supplier: e.target.value })}
             />
@@ -215,6 +223,7 @@ export default function RebatesPage() {
               label="Country"
               hint="ISO code, e.g. LV"
               required
+              nativeValidation
               maxLength={2}
               value={form.country}
               onChange={(e) => setForm({ ...form, country: e.target.value })}
@@ -223,6 +232,7 @@ export default function RebatesPage() {
               label="Period adjusted"
               hint="YYYY-MM — the fuel month, not the document's month"
               required
+              nativeValidation
               value={form.period}
               onChange={(e) => setForm({ ...form, period: e.target.value })}
               placeholder="2026-05"
@@ -231,12 +241,14 @@ export default function RebatesPage() {
               label="Document date"
               hint="The rebate document's own date — what the FX rate is taken at"
               required
+              nativeValidation
               value={form.rebate_date}
               onValueChange={(v) => setForm({ ...form, rebate_date: v })}
             />
             <TextInput
               label="Document number"
               required
+              nativeValidation
               value={form.source_ref}
               onChange={(e) => setForm({ ...form, source_ref: e.target.value })}
             />
@@ -244,6 +256,7 @@ export default function RebatesPage() {
               label="Issued by"
               hint="The rebate partner, often not the fuel supplier"
               required
+              nativeValidation
               value={form.source_party}
               onChange={(e) =>
                 setForm({ ...form, source_party: e.target.value })
@@ -253,6 +266,7 @@ export default function RebatesPage() {
               label="Currency"
               hint="Three-letter ISO code"
               required
+              nativeValidation
               maxLength={3}
               value={form.currency}
               onChange={(e) => setForm({ ...form, currency: e.target.value })}
@@ -261,6 +275,7 @@ export default function RebatesPage() {
               label="Amount on the document"
               hint="In the currency above"
               required
+              nativeValidation
               value={form.amount_local}
               onChange={(e) =>
                 setForm({ ...form, amount_local: e.target.value })
@@ -276,14 +291,14 @@ export default function RebatesPage() {
             />
             <div className="flex items-end">
               <Button
-                onClick={() => record.mutate()}
+                type="submit"
                 loading={record.isPending}
                 disabled={!formReady}
               >
                 Record rebate
               </Button>
             </div>
-          </div>
+          </form>
           <p className="mt-3 text-xs text-text-secondary">
             There is no euro field: the amount is stated in the currency the
             document was issued in, and the server converts it at the ECB rate

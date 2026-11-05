@@ -22,6 +22,7 @@ from app.schemas.payment_run import (
     RunDetailOut,
     RunInvoiceOut,
     RunOut,
+    RunPageOut,
     RunPay,
 )
 from app.services import audit, payment_run, sepa, webhooks
@@ -110,10 +111,15 @@ async def list_runs(
     one grouped count for the page, and a bound the SPA can page through;
     the default of 200 is above any workspace's run count seen so far, so
     the list a client sees is unchanged."""
+    return await _history_items(db, current.org_id, limit=limit, offset=offset)
+
+
+async def _history_items(db: DbSession, org_id: str, *, limit: int, offset: int) -> list[RunOut]:
+    """Shared legacy/page rows and one grouped child count, independent of size."""
     rows = list(
         await db.scalars(
             select(PaymentRun)
-            .where(PaymentRun.org_id == current.org_id)
+            .where(PaymentRun.org_id == org_id)
             .order_by(PaymentRun.created_at.desc(), PaymentRun.id)
             .offset(offset)
             .limit(limit)
@@ -124,13 +130,35 @@ async def list_runs(
         grouped = await db.execute(
             select(NotNullable(Invoice.payment_run_id), func.count())
             .where(
-                Invoice.org_id == current.org_id,
+                Invoice.org_id == org_id,
                 Invoice.payment_run_id.in_([r.id for r in rows]),
             )
             .group_by(Invoice.payment_run_id)
         )
         counts = {run_id: int(n) for run_id, n in grouped}
     return [_run_out(r, counts.get(r.id, 0)) for r in rows]
+
+
+@router.get("/page", response_model=RunPageOut)
+async def list_run_page(
+    current: CurrentUser,
+    db: DbSession,
+    limit: int = Query(default=200, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+):
+    """History navigation with an exact scoped total, before /{run_id}.
+
+    This display population is independent of the payable invoice selector and
+    of every ID-scoped approve/pay/export/cancel command. No financial action
+    consumes the displayed page as its scope.
+    """
+    total = await db.scalar(
+        select(func.count()).select_from(PaymentRun).where(PaymentRun.org_id == current.org_id)
+    )
+    return RunPageOut(
+        items=await _history_items(db, current.org_id, limit=limit, offset=offset),
+        total=total or 0,
+    )
 
 
 @router.post(
