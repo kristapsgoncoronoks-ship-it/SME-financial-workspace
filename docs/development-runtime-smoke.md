@@ -27,7 +27,9 @@ python scripts/backend_runtime_smoke.py run \
 The host freezes both image IDs and obtains the pinned uv executable from the
 audited build image. The smoke container retains UID/GID 10001, disables networking,
 mounts a hash-checked read-only copy of the source tests, and creates a temporary
-venv with access to the image's installed packages.
+venv with access to the image's installed packages. Its private `/tmp` tmpfs is
+owned by UID/GID 10001 and bounded to 1 GiB; execution is enabled for the audited
+uv binary mounted read-only there.
 Hash-locked test tools install offline from the read-only wheelhouse; existing
 runtime distributions must retain their versions and locations. Dependency checks
 and pytest failures propagate to the caller. Container and venv cleanup leave the

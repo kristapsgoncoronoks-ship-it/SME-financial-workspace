@@ -62,3 +62,39 @@ def test_smoke_inventory_refuses_a_venv_shadow_of_a_runtime_distribution(monkeyp
     monkeypatch.setattr(runtime.importlib.metadata, "distributions", lambda: installed)
     with pytest.raises(RuntimeError, match="duplicate"):
         runtime.distributions()
+
+
+@pytest.mark.parametrize("fault", [None, "missing", "incompatible", "malformed", "version"])
+def test_visible_dependency_check_covers_system_packages_and_refuses_bad_metadata(
+    monkeypatch, fault
+):
+    installed = [
+        SimpleNamespace(
+            metadata={"Name": "parent"},
+            version="1",
+            locate_file=lambda _p: "/tmp/venv/site-packages",
+            requires=["child>=2", "optional; extra == 'test'", "other; python_version < '0'"],
+        ),
+        SimpleNamespace(
+            metadata={"Name": "child"},
+            version="2",
+            locate_file=lambda _p: "/usr/local/site-packages",
+            requires=[],
+        ),
+    ]
+    if fault == "missing":
+        installed.pop()
+    elif fault == "incompatible":
+        installed[1].version = "1"
+    elif fault == "malformed":
+        installed[0].requires = ["not a valid requirement ???"]
+    elif fault == "version":
+        installed[1].version = "invalid version"
+    monkeypatch.setattr(runtime.importlib.metadata, "distributions", lambda: installed)
+    if fault is None:
+        result = runtime.check_dependencies()
+        assert result["checked_requirements"] == 1
+        assert result["distributions"]["child"]["location"] == "/usr/local/site-packages"
+    else:
+        with pytest.raises(RuntimeError):
+            runtime.check_dependencies()

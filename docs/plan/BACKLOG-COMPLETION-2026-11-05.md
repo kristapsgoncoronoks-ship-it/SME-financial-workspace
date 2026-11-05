@@ -9,7 +9,7 @@ unchanged. Work is on `dev/backlog-completion-20261105`.
 
 Seven subsequently identified entries are appended separately, preserving the
 197-row baseline inventory. Current schema: 120 tables, 156 revisions, single
-head `8d1f3a5c7e90`; current collection is 5,890 backend cases.
+head `8d1f3a5c7e90`; current collection is 5,895 backend cases.
 
 ## Current implementation
 
@@ -80,3 +80,10 @@ Per-task logs, failed controls, native receipts and source hashes are retained i
 `/workspace/artifacts/backlog-completion-2026-11-05/`; earlier qualified evidence
 is preserved unchanged. Final delivered-source receipts will be added here when
 available.
+
+The final runtime image `addeda248664` also passes 191 offline smoke cases with five
+hash-locked test tools, 59 unchanged runtime distributions and 60 active dependency
+requirements. Native OCR/font/PDF/zlib/timezone/ECB XML probes pass. The extra
+local image-to-PostgreSQL smoke could not start because the local Docker daemon
+ran out of disk; no database test ran in that attempt. Its failed context is
+retained. Hosted native/image/visual qualification remains mandatory.
