@@ -12,6 +12,7 @@ import importlib.util
 import json
 import os
 import uuid
+from copy import deepcopy
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -30,6 +31,7 @@ from tests.test_migrations import BACKEND_DIR, _run_alembic
 
 MERGE = "f0b2d4e6a8c1"
 PLANNING_COMMANDS = "8d1f3a5c7e90"
+JOB_LEASE = "b2e4f6a8c0d3"
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -401,6 +403,15 @@ def snapshot(connection):
     }
 
 
+def _records_before_job_lease(records):
+    expected = deepcopy(records)
+    for job in expected["jobs"]:
+        # This migration adds exactly one nullable column and infers no past
+        # lease identities. Keep every other field/value in the comparison.
+        assert job.pop("lease_token") is None
+    return expected
+
+
 def schemas(connection):
     inspector = inspect(connection)
     result = {
@@ -430,7 +441,8 @@ def schemas(connection):
             tuple(row)
             for row in connection.execute(
                 text(
-                    "SELECT tablename,policyname,cmd,qual,with_check FROM pg_policies "
+                    "SELECT tablename,policyname,cmd,qual,with_check,roles,permissive "
+                    "FROM pg_policies "
                     "WHERE schemaname='public' ORDER BY tablename,policyname"
                 )
             )
@@ -445,13 +457,14 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert graph.get_heads() == [PLANNING_COMMANDS]
+    assert graph.get_heads() == [JOB_LEASE]
+    assert graph.get_revision(JOB_LEASE).down_revision == PLANNING_COMMANDS
     assert graph.get_revision(PLANNING_COMMANDS).down_revision == MERGE
     assert set(graph.get_revision(MERGE).down_revision) == PARENTS
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 156
+    assert len(revisions) == 157
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -514,15 +527,24 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     database(migration_url, index_contract)
 
     head_schema = database(migration_url, schemas)
-    # The additive planning-command migration is now the linear head. Its
-    # empty receipt table can be removed; test merge ambiguity AT the merge,
-    # while the separate planning migration tests refuse populated downgrade.
+    # The two linear additions above this merge are an empty planning receipt
+    # table and the unused nullable job token. Compare their exact removal,
+    # then test ambiguity AT the merge. Separate tests guard populated removal.
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
     assert set(head_schema) - set(schema_before) == {"planning_commands"}
-    expected_marker_schema = {
-        key: value for key, value in head_schema.items() if key != "planning_commands"
-    }
+    expected_marker_schema = deepcopy(head_schema)
+    del expected_marker_schema["planning_commands"]
+    lease_columns = [c for c in head_schema["jobs"]["columns"] if c[0] == "lease_token"]
+    lease_type = (
+        "UUID" if make_url(migration_url).get_backend_name() == "postgresql" else "CHAR(36)"
+    )
+    assert lease_columns == [["lease_token", lease_type, True, None]]
+    expected_marker_schema["jobs"]["columns"].remove(lease_columns[0])
+    assert all(c[0] != "lease_token" for c in schema_before["jobs"]["columns"])
+    # This includes every remaining column, index and FK; the full comparison
+    # below also retains all job RLS flags, policies, roles and permissiveness.
+    assert schema_before["jobs"] == expected_marker_schema["jobs"]
     if "_rls" in head_schema:
         assert [row for row in head_schema["_rls"] if row[0] == "planning_commands"] == [
             ["planning_commands", True, True]
@@ -534,7 +556,8 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
                 row for row in head_schema[key] if row[0] != "planning_commands"
             ]
     assert expected_marker_schema == schema_before
-    assert database(migration_url, snapshot) == after
+    marker_records = _records_before_job_lease(after)
+    assert database(migration_url, snapshot) == marker_records
     # An unqualified relative downgrade is ambiguous at a merge point.
     refused = _run_alembic(["downgrade", "-1"], migration_url)
     assert refused.returncode != 0 and "Ambiguous walk" in refused.stdout + refused.stderr
@@ -546,7 +569,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     )
     assert versions == PARENTS
     assert database(migration_url, schemas) == schema_before
-    assert database(migration_url, snapshot) == after
+    assert database(migration_url, snapshot) == marker_records
     migrate(migration_url, "upgrade", "head")
     assert database(migration_url, snapshot) == after
     assert database(migration_url, schemas) == head_schema
@@ -704,7 +727,7 @@ def test_payment_index_interruption_refuses_without_guessing_and_recovers(
     # index in this disposable DB; production recovery remains an operator action.
     asyncio.run(native_index(False))
     migrate(migration_url, "upgrade", "head")
-    assert database(migration_url, snapshot) == before
+    assert _records_before_job_lease(database(migration_url, snapshot)) == before
     rebuilt = database(migration_url, index_state)
     assert rebuilt[0] and rebuilt[1]
     assert "(org_id, operation, target_id)" in rebuilt[2]

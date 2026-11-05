@@ -50,6 +50,9 @@ class Job(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     locked_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Fresh per claim, retained as evidence after completion/reclaim. NULL is
+    # valid for rows created before the additive lease-fencing migration.
+    lease_token: Mapped[str | None] = mapped_column(GUID(), nullable=True)
 
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     result_json: Mapped[str | None] = mapped_column(Text, nullable=True)

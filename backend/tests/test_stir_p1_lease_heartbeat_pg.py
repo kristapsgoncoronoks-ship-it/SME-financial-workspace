@@ -73,8 +73,8 @@ async def test_stir_p1_heartbeat_renews_on_a_second_connection_while_the_handler
 
     real_renew = jobs._renew_lease
 
-    async def _observed(job_id, worker_id, org):
-        ok = await real_renew(job_id, worker_id, org)
+    async def _observed(lease):
+        ok = await real_renew(lease)
         if ok:
             renewals.append(datetime.now(UTC))
         return ok
@@ -141,8 +141,11 @@ async def test_stir_p1_renewal_is_tenant_scoped_under_rls(monkeypatch):
             claimed.locked_at = stale
             await s.commit()
             job_id = claimed.id
-        assert await jobs._renew_lease(job_id, "w-a", org_a) is True
-        assert await jobs._renew_lease(job_id, "w-a", org_b) is False  # another tenant's scope
+            lease = jobs._Lease.from_job(claimed)
+        assert await jobs._renew_lease(lease) is True
+        from dataclasses import replace
+
+        assert await jobs._renew_lease(replace(lease, org_id=org_b)) is False
         async with sm() as s:
             live = await s.get(Job, job_id)
             assert live is not None

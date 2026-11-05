@@ -513,7 +513,7 @@ async def test_renew_lease_keeps_owned_job_live(auth_client, db_session, _db, mo
 
     monkeypatch.setattr(database, "SessionLocal", _db)
 
-    assert await jobs._renew_lease(claimed.id, "live-worker", org) is True
+    assert await jobs._renew_lease(jobs._Lease.from_job(claimed)) is True
     await db_session.refresh(claimed)
     assert claimed.locked_at is not None
     assert claimed.locked_at.replace(tzinfo=UTC) > old  # SQLite hands back naive UTC
@@ -535,6 +535,7 @@ async def test_renew_lease_does_not_retake_a_lease_another_worker_now_holds(
     await jobs.enqueue(db_session, "recurring.generate", {}, org_id=org)
     first = await jobs.claim(db_session, "worker-a")
     assert first is not None
+    original_lease = jobs._Lease.from_job(first)
     first.locked_at = datetime.now(UTC) - timedelta(seconds=jobs.STALE_LEASE_SECONDS + 60)
     await db_session.commit()
     assert await jobs.reclaim_stale(db_session) == 1
@@ -545,7 +546,7 @@ async def test_renew_lease_does_not_retake_a_lease_another_worker_now_holds(
     import app.core.database as database
 
     monkeypatch.setattr(database, "SessionLocal", _db)
-    assert await jobs._renew_lease(first.id, "worker-a", org) is False
+    assert await jobs._renew_lease(original_lease) is False
     await db_session.refresh(second)
     assert second.locked_by == "worker-b"
 
@@ -561,7 +562,7 @@ async def test_run_once_heartbeats_while_handler_is_alive(auth_client, db_sessio
         await release.wait()
         return {"ok": True}
 
-    async def _fake_renew(job_id, worker_id, org_id):
+    async def _fake_renew(lease):
         heartbeat_seen.set()
         return True
 
@@ -589,8 +590,8 @@ async def test_heartbeat_stops_when_handler_fails_and_a_failed_renewal_does_not_
         await asyncio.sleep(0.05)
         raise RuntimeError("boom")
 
-    async def _broken_renew(job_id, worker_id, org_id):
-        calls.append(job_id)
+    async def _broken_renew(lease):
+        calls.append(lease.job_id)
         raise ConnectionError("db went away")
 
     monkeypatch.setattr(jobs, "_renew_lease", _broken_renew)
@@ -618,7 +619,7 @@ async def test_heartbeat_task_inherits_the_job_tenant_and_log_context(
         await release.wait()
         return {}
 
-    async def _renew(job_id, worker_id, org_id):
+    async def _renew(lease):
         seen.update(org=get_current_org(), job_id=job_id_ctx.get(), kind=job_kind_ctx.get())
         release.set()
         return True
@@ -719,7 +720,7 @@ async def test_a_hung_renewal_does_not_hold_the_worker_after_the_handler_returns
         await started.wait()  # let the heartbeat get stuck first
         return {"ok": True}
 
-    async def _stuck(job_id, worker_id, org_id):
+    async def _stuck(lease):
         started.set()
         await asyncio.sleep(3600)  # a connection that never answers
         return True
@@ -740,11 +741,12 @@ async def test_a_terminal_job_cannot_be_renewed_or_resurrected(
     await jobs.enqueue(db_session, "recurring.generate", {}, org_id=org)
     claimed = await jobs.claim(db_session, "w1")
     assert claimed is not None
+    original_lease = jobs._Lease.from_job(claimed)
     await jobs._complete(db_session, claimed, {})
     import app.core.database as database
 
     monkeypatch.setattr(database, "SessionLocal", _db)
-    assert await jobs._renew_lease(claimed.id, "w1", org) is False
+    assert await jobs._renew_lease(original_lease) is False
     await db_session.refresh(claimed)
     assert claimed.status == jobmodel.SUCCEEDED and claimed.locked_at is None
 

@@ -44,7 +44,7 @@ def _database(url, action):
 
 @pytest.mark.slow
 def test_empty_planning_receipt_migration_roundtrip_and_exact_model(migration_url):
-    _migrate(migration_url, "upgrade", "head")
+    _migrate(migration_url, "upgrade", HEAD)
     columns, constraints, indexes, foreign_keys = _database(
         migration_url,
         lambda conn: (
@@ -91,7 +91,7 @@ def test_empty_planning_receipt_migration_roundtrip_and_exact_model(migration_ur
 
 @pytest.mark.slow
 def test_populated_planning_downgrade_refuses_without_erasing_receipt(migration_url):
-    _migrate(migration_url, "upgrade", "head")
+    _migrate(migration_url, "upgrade", HEAD)
     org_id, actor_id, receipt_id, key = (str(uuid4()) for _ in range(4))
 
     async def seed():
@@ -170,7 +170,7 @@ def test_populated_planning_downgrade_refuses_without_erasing_receipt(migration_
         )
         == HEAD
     )
-    _migrate(migration_url, "upgrade", "head")
+    _migrate(migration_url, "upgrade", HEAD)
     assert (
         _database(
             migration_url,
