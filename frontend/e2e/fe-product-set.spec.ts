@@ -96,9 +96,9 @@ test("FE-004: a failed list read says so and offers a retry instead of showing a
     if (p === "/issuer/registry") return route.fulfill(json([ISSUER]));
     if (p === "/issued" && route.request().method() === "GET") {
       listCalls++;
-      // The first answers (the request + the client's single retry) fail; the
-      // retry the PERSON asks for succeeds.
-      if (listCalls <= 2) return route.fulfill(json({ detail: "Internal Server Error" }, 500));
+      // The paged list does not retry automatically. Its first GET fails;
+      // the explicit retry requested by the person succeeds.
+      if (listCalls === 1) return route.fulfill(json({ detail: "Internal Server Error" }, 500));
       return route.fulfill(json({ items: [], total: 0 }));
     }
     return false;
@@ -109,10 +109,12 @@ test("FE-004: a failed list read says so and offers a retry instead of showing a
   await expect(failed).toBeVisible();
   // Before the fix this read as a true answer.
   await expect(page.getByText("No invoices issued yet.")).toHaveCount(0);
+  expect(listCalls).toBe(1);
 
   await page.getByRole("button", { name: /retry|try again/i }).click();
   await expect(page.getByText("No invoices issued yet.")).toBeVisible();
   await expect(failed).toHaveCount(0);
+  expect(listCalls).toBe(2);
 });
 
 // ---------------------------------------------------------------- R2-A3

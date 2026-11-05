@@ -2138,6 +2138,19 @@ async def test_override_payment_waits_for_report_before_taking_audit_lock(
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             fixture = await _ex20_fixture(client, factory, override=True)
+            # Independent authorized actors reach the report-row contention.
+            # Same-actor requests correctly serialize on Membership first.
+            decision_actor = await client.get("/api/v1/auth/me", headers=fixture["second_headers"])
+            assert decision_actor.status_code == 200, decision_actor.text
+            decision_actor_id = decision_actor.json()["user"]["id"]
+            assert decision_actor_id != fixture["actor_id"]
+            promoted = await client.patch(
+                f"/api/v1/team/members/{decision_actor_id}",
+                headers=fixture["first_headers"],
+                json={"is_expense_approver": True},
+            )
+            assert promoted.status_code == 200, promoted.text
+            assert promoted.json()["is_expense_approver"] is True
 
             async def decision_load(db, org_id, report_id, *, lock=False):
                 row = await original_report(db, org_id, report_id, lock=lock)
@@ -2168,7 +2181,7 @@ async def test_override_payment_waits_for_report_before_taking_audit_lock(
                     return await client.post(
                         f"/api/v1/expenses/{fixture['report_ids'][0]}/decision",
                         json={"action": "mark_for_reimbursement", "version": 7},
-                        headers=fixture["first_headers"],
+                        headers=fixture["second_headers"],
                     )
                 finally:
                     name.reset(token)
@@ -2191,6 +2204,12 @@ async def test_override_payment_waits_for_report_before_taking_audit_lock(
             count = await asyncio.wait_for(
                 _ex20_observe_wait(factory, pids["decision"], pids["pay"], finished=tasks[1]), 10
             )
+            async with factory() as observer:
+                waiting_sql = await observer.scalar(
+                    text("SELECT query FROM pg_stat_activity WHERE pid = :pid"),
+                    {"pid": pids["pay"]},
+                )
+            assert "expense_reports" in waiting_sql.lower() and "FOR UPDATE" in waiting_sql.upper()
             assert payer_audits == [], (
                 "override payer acquired/wrote audit before its required report row"
             )
@@ -2218,6 +2237,8 @@ async def test_override_payment_waits_for_report_before_taking_audit_lock(
                 sum(r["action"] == audit.A.EXPENSE_TRANSITION for r in state["audit_events"]) == 1
             )
             record_property("observed_real_report_block", True)
+            record_property("independent_authorized_decision_actor", True)
+            record_property("blocked_statement", waiting_sql)
             record_property("payer_audit_before_required_report", False)
             record_property("observer_queries", count)
     finally:
@@ -2261,6 +2282,19 @@ async def test_cancel_waits_for_report_before_taking_audit_lock(monkeypatch, rec
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             fixture = await _ex20_fixture(client, factory)
+            # Preserve fresh Membership admission; use distinct actors so this
+            # particular test observes the later report-before-audit invariant.
+            decision_actor = await client.get("/api/v1/auth/me", headers=fixture["second_headers"])
+            assert decision_actor.status_code == 200, decision_actor.text
+            decision_actor_id = decision_actor.json()["user"]["id"]
+            assert decision_actor_id != fixture["actor_id"]
+            promoted = await client.patch(
+                f"/api/v1/team/members/{decision_actor_id}",
+                headers=fixture["first_headers"],
+                json={"is_expense_approver": True},
+            )
+            assert promoted.status_code == 200, promoted.text
+            assert promoted.json()["is_expense_approver"] is True
             body = {
                 "version": fixture["body"]["version"],
                 "report_versions": fixture["body"]["report_versions"],
@@ -2295,7 +2329,7 @@ async def test_cancel_waits_for_report_before_taking_audit_lock(monkeypatch, rec
                     return await client.post(
                         f"/api/v1/expenses/{fixture['report_ids'][0]}/decision",
                         json={"action": "mark_for_reimbursement", "version": 7},
-                        headers=fixture["first_headers"],
+                        headers=fixture["second_headers"],
                     )
                 finally:
                     name.reset(token)
@@ -2318,6 +2352,12 @@ async def test_cancel_waits_for_report_before_taking_audit_lock(monkeypatch, rec
             count = await asyncio.wait_for(
                 _ex20_observe_wait(factory, pids["decision"], pids["cancel"], finished=tasks[1]), 10
             )
+            async with factory() as observer:
+                waiting_sql = await observer.scalar(
+                    text("SELECT query FROM pg_stat_activity WHERE pid = :pid"),
+                    {"pid": pids["cancel"]},
+                )
+            assert "expense_reports" in waiting_sql.lower() and "FOR UPDATE" in waiting_sql.upper()
             assert payer_audits == [], (
                 "cancellation acquired/wrote audit before its required report row"
             )
@@ -2344,6 +2384,8 @@ async def test_cancel_waits_for_report_before_taking_audit_lock(monkeypatch, rec
                 sum(r["action"] == audit.A.EXPENSE_TRANSITION for r in state["audit_events"]) == 1
             )
             record_property("observed_real_report_block", True)
+            record_property("independent_authorized_decision_actor", True)
+            record_property("blocked_statement", waiting_sql)
             record_property("cancel_audit_before_required_report", False)
             record_property("observer_queries", count)
     finally:
