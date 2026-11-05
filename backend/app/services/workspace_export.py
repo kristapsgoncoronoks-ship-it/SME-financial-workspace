@@ -62,7 +62,7 @@ from app.models.membership import Membership
 from app.models.organization import Organization
 from app.models.user import User
 from app.models.workspace_export import WorkspaceExport
-from app.services import audit, documents, export_artefacts, jobs, mailer, verification
+from app.services import audit, documents, export_artefacts, export_requests, mailer, verification
 
 log = logging.getLogger("invoiceiq.workspace_export")
 
@@ -391,25 +391,16 @@ async def request_for_org(
     existing = await _recent_request(db, org_id)
     if existing is not None:
         return existing
-    row = WorkspaceExport(
-        org_id=org_id, requested_email=email, requested_by_user_id=user_id, status="queued"
-    )
-    db.add(row)
-    await db.flush()
-    job = await jobs.enqueue(
-        db, WORKSPACE_EXPORT_KIND, {"export_id": row.id}, org_id=org_id, commit=False
-    )
-    row.job_id = job.id
-    await audit.record(
+    return await export_requests.enqueue_request(
         db,
-        audit.A.WORKSPACE_EXPORT_REQUESTED,
+        WorkspaceExport,
+        org_id,
+        email=email,
+        user_id=user_id,
+        job_kind=WORKSPACE_EXPORT_KIND,
+        audit_action=audit.A.WORKSPACE_EXPORT_REQUESTED,
         target_type="workspace_export",
-        target_id=row.id,
-        meta={"to": email},
-        org_id=org_id,
-        actor=(user_id, email),
     )
-    return row
 
 
 async def list_requests(db: AsyncSession, org_id: str) -> list[WorkspaceExport]:

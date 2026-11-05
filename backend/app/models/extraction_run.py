@@ -92,6 +92,9 @@ class ExtractionRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # worker produced, so the client can fetch it after the parse runs OFF the API
     # tier. NULL for a synchronous/email run or one still queued.
     draft_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Actual preparation for this published attempt, including failed readings.
+    # Historical rows remain unknown; never infer it from current settings.
+    reading_preparation_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     preview_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     # WO-X — live progress, so a long capture can be told apart from a stuck one.
     # `stage` is a code from `capture_progress.STAGES`; NULL means the run predates

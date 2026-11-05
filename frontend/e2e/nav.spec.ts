@@ -583,6 +583,7 @@ async function mockApiForOneH1(page: Page): Promise<void> {
     if (path === "/invoices/inv-1/payments") return route.fulfill(json([]));
     if (path === "/expenses/summary") return route.fulfill(json({ my_reimbursable: "0.00", reclaimable_vat: "0.00", my_submitted: 0, pending_approvals: 0 }));
     if (path === "/expenses" || path === "/expenses/transactions") return route.fulfill(json(path === "/expenses" ? { items: [], total: 0 } : []));
+    if (path === "/payment-runs/page") return route.fulfill(json({ items: [], total: 0 }));
     if (path === "/payment-runs" || path === "/payment-runs/payable") return route.fulfill(json([]));
     if (path === "/analytics/cash-position") {
       return route.fulfill(

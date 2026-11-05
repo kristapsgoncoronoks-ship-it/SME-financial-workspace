@@ -8,11 +8,11 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "Two reviewable waves with scoped local/native/browser/image evidence. Exact01a9912 hosted failures are preserved; guard classifications are repaired and the user approved exactly one reviewed mobile baseline. Fresh delivered-source all13 contexts are required. Finance/lease follow-ups are locally qualified; OCR/resource safety remains active in a third checkout. No release clearance/merge/deploy/settings/production migrations.",
+  "qualification": "PR1059efcd1c andPR10637b826b passed all13 actualPR contexts. Third wave has scoped local/native/connected qualification,158 revisions/6185 collected cases, and needs fresh delivered-source all13 contexts. Following FK/parser/workflow/concurrency work is isolated in separate branches. No main merge/deploy/settings/production migration or complete-backlog/release claim.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY-DELEGATED",
       "title": "Run/attempt-owned Trivy database cache",
       "sources": [
@@ -21,11 +21,19 @@
         " scripts/image_audit.py"
       ],
       "next": "Use fresh per-run-attempt cache, normal refresh, every ten target/twenty report/failure/cleanup contract; measure DB requests/bytes/time, never assert identical DB bytes by tag.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "PERF-RUNTIME-DEV-01",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Separate runtime and test requirements",
       "sources": [
@@ -35,11 +43,19 @@
         "scripts/dependency_delta.py"
       ],
       "next": "Remove only five measured test distributions from runtime. Add bounded recursive requirement includes to audit/cache interpretation, retain one pin per package and documented in-container pytest smoke. Qualify source/combined-dev/image behavior; disk-only benefit until measured.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "SEC-NPM-RESIDUAL",
-      "status": "PARTIAL-SUPPORTED-FIX-CI-PENDING",
+      "status": "PARTIAL-CI-PASS-UPSTREAM-DEPENDENCY",
       "inventory_status": "INVESTIGATE-DELEGATED",
       "title": "Three global npm advisory IDs",
       "sources": [
@@ -48,12 +64,12 @@
         "frontend/Dockerfile",
         " frontend/scripts/verify-npm-toolchain.mjs"
       ],
-      "next": "Official npm12.2.2 fixes ip-address10.7.5 and retains undici6.29.1; fresh supported parent review finds no compatible fixed glob/minimatch. Keep both IDs and alternate/historical ratings, no forced incompatible majors/waivers. Current exact-source supply/image checks pass, full CI visual pending.",
+      "next": "Official npm12.2.2 ip-address/retained undici fixes pass all13 source37b826b contexts. Fresh compatible parent review finds no supported fixed glob/minimatch; preserve bothIDs/all current and alternate/historical ratings. No forced incompatible major or waiver.",
       "dependencies": []
     },
     {
       "id": "EX19",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY-DELEGATED",
       "title": "Full recoverable reimbursement cancellation",
       "sources": [
@@ -65,11 +81,19 @@
       "next": "Shared actor/org/key cancellation receipt; typed POST+legacy DELETE, optional reason, versions, membership\u2192batch\u2192ordered reports\u2192audit locks; frozen released IDs/child bumps; strict rollback; GET-only recovery and alias permission guards. No new event or migration implied.",
       "dependencies": [
         "Existing export/paid refusal and EXPENSE_APPROVE policy"
-      ]
+      ],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CI-TIMING-FAIL-FAST",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Measure and improve failed-head CI feedback",
       "sources": [
@@ -77,11 +101,19 @@
         ".github/workflows/ci.yml:99"
       ],
       "next": "Record serial baseline, evaluate backend needs existing lint; retain seven core/four supply exact-success result summaries and every skipped/cancelled/missing failure. Explicitly measure valid-head critical-path tradeoff.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CI-PROCESS-WORKERS",
-      "status": "READY-AFTER-DEPENDENCY",
+      "status": "QUALIFICATION-PREPARED",
       "inventory_status": "READY-AFTER-DEPENDENCY",
       "title": "Qualify bounded portable process workers",
       "sources": [
@@ -89,7 +121,7 @@
         "backend/tests/conftest.py",
         "backend/requirements-dev.txt"
       ],
-      "next": "First prove per-case DB/storage/FX isolation; pin compatible runner, bounded workers; compare exact node-ID union/skip parity and scoped CPU/RSS. Keep native lock observers/perf/auth pacing isolated.",
+      "next": "Pinned runner/isolation fixes ready. Paired strict serial then two-worker full6185-case qualification is prepared on an immutable third-wave source/environment with two-CPU affinity, exact node/status/skip parity and scoped resource sampling. No CI parallelism adopted before green comparison.",
       "dependencies": [
         "TEST-GC-ISOLATION",
         "Serial baseline and isolation proof"
@@ -97,7 +129,7 @@
     },
     {
       "id": "TEST-GC-ISOLATION",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Isolate live heap freeze test",
       "sources": [
@@ -105,11 +137,19 @@
         "backend/tests/test_perf016_startup_heap_freeze.py:35"
       ],
       "next": "Current finally unfreezes then freezes entire heap if prior frozen count existed. Move real freeze assertions to subprocess; prove parent frozen count/threshold/enabled state unchanged and retain startup/harness behavior.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CAP-EMAIL-REPLAY",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Same-message admission race verification and repair",
       "sources": [
@@ -120,11 +160,19 @@
         "backend/app/models/email_intake.py:37"
       ],
       "next": "Reproduce concurrent generic and Mailgun same-message multi-attachment delivery. Existing SELECT-before-write with nonunique org/message index is not concurrency dedupe. Preserve distinct deliveries, missing-ID semantics, per-attachment acceptance and transaction/job/health truth.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CAP-EMAIL-STATE",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Serialize inbound extraction/review publication",
       "sources": [
@@ -134,11 +182,19 @@
         "backend/app/api/routes/email.py:515"
       ],
       "next": "Reproduce overlapping queued/failed extraction versus confirm/discard and duplicate worker failures. Worker currently checks status before await parse/read then overwrites later; choose conditional publication/shared locks from actual interleavings. Preserve confirmed invoice/evidence/audit; no invented retry workflow.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "SYS-08",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Historical PostgreSQL downgrade dialect portability",
       "sources": [
@@ -146,11 +202,19 @@
         "backend/alembic/versions/01160bebbd7f_quota_keyed_off_org_plan_not_user_role.py:75"
       ],
       "next": "sa.DATETIME() remains in PostgreSQL downgrade. Reproduce on disposable nonsuperuser DB, review intentionally discarded role/plan override semantics, correct dialect portability and prove roundtrip/parity. Never run destructive historical downgrade on live records.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "SYS-11",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Concurrent first-boot FX seed conflict",
       "sources": [
@@ -159,18 +223,26 @@
         "backend/app/services/fx.py"
       ],
       "next": "Reproduce four-worker first boot, compare dated/provenance-bearing final rows with single worker; conflict-safe initialization without rate change, invented completeness or swallowing unrelated DB errors.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "SYS-07",
-      "status": "INVESTIGATE",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "INVESTIGATE",
       "title": "SQLite worker teardown warning",
       "sources": [
         "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:333",
         "backend/tests/conftest.py"
       ],
-      "next": "Reproduce warning with stated process/loop conditions and fix demonstrated lifecycle cause; no warning suppression or assertion relaxation.",
+      "next": "Current SQLite fixture setup/seed/early-close/cancellation leaks are repaired;7 actual subprocess lifecycle controls and73-case serial/four-worker subset pass. Original historical passing-suite warning remains unattributed; no suppression.",
       "dependencies": []
     },
     {
@@ -204,7 +276,7 @@
     },
     {
       "id": "CAP-CAPACITY",
-      "status": "PARTIAL-LOCAL-EVIDENCE",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY",
       "title": "Remaining stored reads and aggregate resource qualification",
       "sources": [
@@ -212,7 +284,7 @@
         "docs/BACKLOG.md:875",
         "inventory/stored-read-calls.json"
       ],
-      "next": "Delivery/claim-pack remaining raw reads replaced by verified bounds/file streaming; local/native tests pass. Native80Mpx image experiments reproduced process OOM under768MiB; supervised bounded image repair active in isolated thirdcheckout. Aggregate temp/inode/fleet/PDF, unknown historical sizes and production/corpus capacity remain unqualified.",
+      "next": "Verified remaining reads, owned exports, PDF scratch and supervised image decoding implemented.22 native source-overlay profiles include full40/80M queued uploads, timeout/cancellation, peak427.7MiB/OOM0. Per-pod concurrent receipt/API admission, shared temp/inodes/fleet, PDF worst cases, unknown historical-size reads and customer corpus remain open; new concurrency investigation is isolated from qualified source.",
       "dependencies": [
         "Per-purpose metadata/authorization/integrity contract"
       ]
@@ -234,14 +306,14 @@
     },
     {
       "id": "SYS-05",
-      "status": "INVESTIGATE",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "INVESTIGATE",
       "title": "Kubernetes configuration qualification",
       "sources": [
         "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:329",
         "deploy/k8s"
       ],
-      "next": "Refresh32 dated candidates including false positives; qualify concrete deployment/readiness/storage/network behavior. Do not blindly apply scanner hardening; actual cluster/provider acceptance separate.",
+      "next": "Fresh32-template-candidate review repairs18 explicit role/group/no-escalation/read-only/capability/seccomp findings.14 raw rows remain individually classified.15 manifest contracts, actual migration512MiB/0.5CPU and91-asset group-owned-volume NGINX128MiB/0.2CPU fixtures pass; actual cluster/provider/volume/port/network acceptance remains open.",
       "dependencies": []
     },
     {
@@ -258,7 +330,7 @@
     },
     {
       "id": "EXPORT-001",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Streaming storage upload/export delivery",
       "sources": [
@@ -269,11 +341,19 @@
       "next": "Finished ZIP still fh.read() and put(bytes). Add streaming digest/upload-by-parts/write-through across adapters and compatible delivery; preserve current128MiB honest limit until qualification, integrity/auth/token semantics and interruption cleanup.",
       "dependencies": [
         "CAP-CAPACITY per-purpose contracts"
-      ]
+      ],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "EXPORT-002",
-      "status": "READY-LOW",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-LOW",
       "title": "Extract common one-time export rails",
       "sources": [
@@ -282,12 +362,12 @@
         "backend/app/services/workspace_export.py:358",
         "backend/app/services/export_artefacts.py"
       ],
-      "next": "Already shares verified artifact reads; remaining request/coalescing/worker/token rails duplicate. Extract only behaviorally identical rails with exact public archive versus authenticated workspace boundaries, expiry/single-use/audit/error semantics retained.",
+      "next": "Only identical post-coalescing request/job/audit writes share a typed helper; public archive vs authenticated workspace admission/token/privacy differences remain.62 distinct cases pass including12 native PostgreSQL; no binding/retention or best-effort audit policy changes.",
       "dependencies": []
     },
     {
       "id": "PRIV-001",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Truthful erasure report for retained exports",
       "sources": [
@@ -298,11 +378,19 @@
       "dependencies": [
         "Existing export retention policy",
         "No new destructive purge without policy"
-      ]
+      ],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "R2-C3",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Stale job reclaim compare-and-set race",
       "sources": [
@@ -310,11 +398,19 @@
         "backend/app/services/jobs.py:518"
       ],
       "next": "Current select stale list then ORM overwrite can race completion/renewal. Reproduce actual PG schedule, use conditional state/lease ownership boundary, preserve max-attempt/backoff/tenant and heartbeat semantics.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "R2-A2",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY-LOW",
       "title": "Public AP expression composition seam",
       "sources": [
@@ -322,7 +418,15 @@
         "backend/app/services/cash_position.py:60"
       ],
       "next": "cash_position still imports _outstanding_expr/_overdue_cond. Extract narrow intentional shared expression API without changing arithmetic, statement counts or money policy.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "DB-021",
@@ -338,7 +442,7 @@
     },
     {
       "id": "PLAN-API-DOCS",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Typed list/retry and callback303 OpenAPI",
       "sources": [
@@ -346,11 +450,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "UI-PLANNING-FOCUS-01",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Unobscured native reverse-Tab focus",
       "sources": [
@@ -358,11 +470,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CTX-02-A",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Keyboard file chooser controls",
       "sources": [
@@ -370,11 +490,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CTX-02-B",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Four project table header relationships",
       "sources": [
@@ -382,11 +510,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CTX-02-C",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Adjustment amount purpose/currency/row labels",
       "sources": [
@@ -394,11 +530,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CTX-03",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Organization switch write uncertainty",
       "sources": [
@@ -406,11 +550,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CTX-04",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Viewport-contained switcher dropdown",
       "sources": [
@@ -418,11 +570,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CTX-05",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "INVESTIGATE",
       "title": "Suppliers full-page overflow cause",
       "sources": [
@@ -430,11 +590,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "IMP-11",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Bounded authenticated photo thumbnails",
       "sources": [
@@ -442,11 +610,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "IMP-12",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Lazy optional dashboard analytics",
       "sources": [
@@ -454,11 +630,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "IMP-13",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Settled/cancelled invoice search",
       "sources": [
@@ -466,11 +650,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "IMP-14",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Measured mobile hit areas",
       "sources": [
@@ -478,11 +670,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "IMP-15",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Semantic UI state roles",
       "sources": [
@@ -490,11 +690,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "PLAN-CREATE",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY",
       "title": "Durable assignment create receipt/recovery",
       "sources": [
@@ -502,23 +710,31 @@
         "docs/BACKLOG.md"
       ],
       "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "O05-UI01",
-      "status": "READY",
+      "status": "ENGINEERING-CHECKS-PASS-HUMAN-ACCEPTANCE",
       "inventory_status": "READY",
       "title": "Remaining320px/shared-shell payout reflow",
       "sources": [
         "inventory/ui-source.md",
         "docs/BACKLOG.md"
       ],
-      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "next": "Source-backed bounded mobile/shared-shell/payout focus repairs are implemented and CI-qualified at37b826b. Real device/assistive-technology/human design acceptance remains separate; do not repeat old source premise.",
       "dependencies": []
     },
     {
       "id": "UI-CURRENCIES-REFLOW",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "INVESTIGATE",
       "title": "Currencies background-page reflow",
       "sources": [
@@ -526,11 +742,19 @@
         "docs/BACKLOG.md"
       ],
       "next": "Pinned Chromium156 reproduced fractional Archive focus clipping at320px. Mobile-only trailing padding+scroll margin restore full visibility;13 responsive checks and hosted functional1071 pass, assertions/baselines unchanged. Separate supplier-invoice mobile screenshot was explicitly approved by the user; only that exact baseline is updated, fresh CI pending.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "OCR-TABLE-01",
-      "status": "READY",
+      "status": "BLOCKED-CORPUS-ARTIFACT",
       "inventory_status": "READY",
       "title": "Whole-document spurious table rows",
       "sources": [
@@ -538,7 +762,7 @@
         "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:107",
         "backend/app/services/pdf_ocr.py"
       ],
-      "next": "Preserve actual two-spurious-row fixture; quantify missing/extra rows and column geometry before heuristic repair. Exact amount/currency/line completeness; no customer-quality claim.",
+      "next": "Original two-spurious-row fixture/word boxes and referenced OCR-region receipt bytes are absent; retained hashes/descriptions cannot reproduce it. New independent synthetic header/amount/provenance defects are tracked as OCR-PARSER-GAPS; do not claim original-case closure.",
       "dependencies": []
     },
     {
@@ -1447,40 +1671,40 @@
     },
     {
       "id": "IMPECCABLE-FINAL-AUDIT",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "PARTIAL-LOCAL-CHECKS-HUMAN-ACCEPTANCE",
       "inventory_status": "READY-AFTER-DEPENDENCY",
       "title": "Final same-source polish and design acceptance",
       "sources": [
         "docs/BACKLOG.md:569",
         "inventory/ui-source.md"
       ],
-      "next": "User explicitly approved only mobile supplier-invoice44px screenshot. Exact CI actual bytes replace that single baseline; otherimages/assertions/tolerances unchanged. Fresh visual/full CI remains required.",
+      "next": "Same-source retained-row/design review distinguishes repaired source gaps from stale label/nav/button premises. Current source needs fresh hosted qualification; real-device/AT/accountant/human acceptance is not supplied by browser or screenshot tests. Only one user-approved mobile baseline was updated.",
       "dependencies": [
         "Open IMP/CTX/UI engineering"
       ]
     },
     {
       "id": "BE-013",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Org switcher query shape",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Measure current organization-list N+1 before grouped read refactor; preserve memberships and served permissions.",
+      "next": "One account-scoped joined organization-list read replaces measured2/11/51 queries for1/10/50 companies.15 portable+2 native HTTP/session compatibility cases pass; activity/order/role/current selection and complete population preserved.",
       "dependencies": []
     },
     {
       "id": "BE-017",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Worker metrics exception diagnostics",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Current bare except/pass for queue metrics remains; add bounded sanitized diagnostic without breaking worker availability or log storm.",
+      "next": "Bounded fixed metrics failure/recovery messages; read-only failed snapshot rolls back before dispatch, unrecoverable session discarded.62 distinct cases pass including actual PostgreSQL aborted-transaction recovery and committed scheduler-marker preservation; no exception text/SQL/credentials logged.",
       "dependencies": []
     },
     {
@@ -1509,14 +1733,14 @@
     },
     {
       "id": "DB-010",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-FOLLOWUP",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Remaining composite parent links",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Refresh nine dated candidates/tenant targets; source uses single-column report parent at162. Introduce only necessary tenant-safe constraints with data preflight and native deletion/tenant proof.",
+      "next": "Isolated159 item/report tenant CASCADE fix passes77 checks; isolated160 comment/approval-step pair fixes pass122 checks. Current third-wave tree remains158 and does not include them. Six dated candidates remain individually assessed; no optional SET NULL semantics or tenant integrity is weakened.",
       "dependencies": []
     },
     {
@@ -1653,38 +1877,38 @@
     },
     {
       "id": "FE-010",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Mutation success communication",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Verify retained silent-success actions under actual payload/readback; do not announce success before committed/readback truth.",
+      "next": "Draft-copy failure\u2192verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure.56-case UI union passes. Separately reproduced recurring-create missing acknowledgement is being repaired in isolated sixth checkout, not this source.",
       "dependencies": []
     },
     {
       "id": "FE-012",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Native form validation",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Inventory button-only forms where required is inert; meaningful keyboard/submission/validation proofs, preserve money input.",
+      "next": "Proved valid Enter did nothing on Team/Rebates; bounded native forms now preserve exact server payload/readback. Team4 cases and rebate119-case union pass. Shared required validation is opt-in for8 already-required rebate fields; legacy defaults unchanged. Other form candidates require concrete proofs.",
       "dependencies": []
     },
     {
       "id": "FE-014",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "MAINTENANCE-ONLY-NO-UNSCOPED-REWRITE",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Shared button migration",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Incremental migration of remaining button systems with domain/pending/aria behavior unchanged; coordinate IMP14.",
+      "next": "Existing shared buttons/role-aware controls and first-wave target/focus checks cover retained concrete defects. Counts alone do not justify a wholesale migration; preserve this as incremental touched-surface maintenance.",
       "dependencies": []
     },
     {
@@ -1713,7 +1937,7 @@
     },
     {
       "id": "REBATE-MERGE-PREVIEW",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Dry-run rebate merge",
       "sources": [
@@ -1721,7 +1945,15 @@
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
       "next": "Shared canonical Decimal planner serves bounded read-only preview, paged allocations and exact summary; monthly close re-plans current sources.249 distinct scoped checks pass including live105-row browser/API/PostgreSQL no-write journey; no historical backfill.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "F4-DOC-REQUEST",
@@ -1737,14 +1969,14 @@
     },
     {
       "id": "ISSUE-ACTION-GROUPING",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "MAINTENANCE-ONLY-NO-UNSCOPED-REWRITE",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Issue page action grouping",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Active plan low-priority retained grouping; inspect current actions, preserve financial/readback/recovery command boundaries.",
+      "next": "Current Issue already groups Payment/Send/PDF/XML controls. New pagination/copy outcomes retain boundaries. No demonstrated residual grouping defect justifies an independent wholesale restyle.",
       "dependencies": []
     },
     {
@@ -2026,7 +2258,7 @@
     },
     {
       "id": "OCR-PARSER-GAPS",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "ACTIVE-ISOLATED-FOLLOWUP",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Integer amount and mixed net/tax/gross extraction gaps",
       "sources": [
@@ -2034,7 +2266,7 @@
         "backend/app/services/pdf_ocr.py",
         "backend/app/services/parser.py"
       ],
-      "next": "Plan explicitly retains integer-only amounts, mixed amount roles, supplier/header heuristics and line defaults. Define exact missing/extra fields/rows before heuristic changes; preserve original/normalized provenance and no invented totals.",
+      "next": "Sixth checkout independently reproduces integer-row omissions, explicit Net/VAT/Gross cell-role swaps, supplier-label errors and invented default provenance. A bounded header-aware parser/provenance repair is underway with no shared MONEY_RE/tax-policy/model/provider change. Missing original/customer corpus stays separate.",
       "dependencies": [
         "OCR-ACCEPT for actual customer claim",
         "OCR-PAGES for page identity"
@@ -2057,14 +2289,14 @@
     },
     {
       "id": "UI-DESIGN-SYSTEM-REMAINDER",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-HUMAN-ACCEPTANCE",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Remaining shared UI migration and form/navigation pass",
       "sources": [
         "TODO.md:3056",
         "inventory/ui-source.md"
       ],
-      "next": "Historical TODO retains incremental design-system migration/form-label/nav-collapse work. Source-confirm concrete remaining defects or agreed usability outcome before broad edits; later grouped-navigation and login-label repairs already supersede older gaps.",
+      "next": "Retained label/nav-collapse/orphan-entry premises are superseded by current zero-debt controls, collapsible shell and explicit entries. Team/rebate native forms and identified copy outcomes now repaired in third wave. No blanket table/button rewrite or new unapproved baseline.",
       "dependencies": [
         "Coordinate IMP14/15 and CTX/shared-shell work"
       ]
@@ -2495,101 +2727,239 @@
     },
     {
       "id": "FIN-REPORT-REVIEW-CYCLE",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Invalidate stale expense reviews across owner mutation cycles",
       "sources": [
         "backend/app/api/routes/expenses.py"
       ],
       "next": "112+42 portable and21 native PostgreSQL controls pass; preserve first-submit version1 and current role/money policy.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "FIN-AP-EXPORTED-CANCEL-GUARD",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Refuse cancellation after committed AP bank export evidence",
       "sources": [
         "backend/app/services/payment_run.py"
       ],
       "next": "31 portable,4 native PostgreSQL and14 browser controls pass; retain links/status/version/audit/ledger on refusal.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "CAP-PDF-SCRATCH",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Confine PDF OCR scratch to owned process staging",
       "sources": [
         "backend/app/services/pdf_process.py"
       ],
       "next": "Actual pytesseract.save timeout orphan reproduced; private TMPDIR fix passes10 process controls including child reaping and subsequent work.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "FIN-EXPENSE-AUTHORITY-WAIT",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Fresh mandatory approver authority after admission waits",
       "sources": [
         "backend/app/api/routes/expenses.py"
       ],
       "next": "Fresh locked membership authority now governs decision/reassignment, preserving designated-approver policy and membership\u2192report ordering.27 native PostgreSQL+85 portable tests pass.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "FIN-AP-CREATE-SELECTION",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Prevent overlapping AP run creation from stealing invoices",
       "sources": [
         "backend/app/services/payment_run.py"
       ],
       "next": "Duplicate selections refused; ordered fresh invoice locks prevent overlapping payment runs stealing invoice assignments.20 native+37 portable tests pass; combined create/settlement union80 cases.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "FIN-AP-SETTLEMENT-BOUNDARY",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Conserve AP ledger and cumulative balances under concurrent payment",
       "sources": [
         "backend/app/services/payment_run.py"
       ],
       "next": "Manual/manual and run/manual settlements share ordered fresh invoice locks, conserving existing cumulative ledger semantics.38 portable+16 native tests pass; combined create/settlement union80 cases.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "JOBS-LATE-GENERATION",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Fence terminal job results to the original lease generation",
       "sources": [
         "backend/app/services/jobs.py"
       ],
       "next": "Additive nullable random lease_token fences heartbeat/reclaim/terminal publication, original claim captured before commit.175 combined tests plus migration composition pass. Drain old unfenced workers before relying on the new guarantee; no forced live migration/downgrade.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "JOBS-MANUAL-RETRY",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-REPRODUCED",
       "title": "Refuse a stale manual retry after another claim",
       "sources": [
         "docs/plan/FINANCE-LEASE-FOLLOWUPS-2026-11-05.md"
       ],
       "next": "Observed status/attempt/random lease identity CAS before flush; stale retry returns existing409 mapping without requeuing live work.19 native controls pass, included in175 job/migration union.",
-      "dependencies": []
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
     },
     {
       "id": "PERF-ISSUED-PAGINATION",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "NEW-SOURCE-REPRODUCED",
       "title": "Navigate the complete bounded issued-invoice population",
       "sources": [
         "docs/plan/FINANCE-LEASE-FOLLOWUPS-2026-11-05.md"
       ],
       "next": "Use existing API100-item page contract with stable created_at/id ordering, URLpage, tenant/user query identity, exact totals and GET recovery.47 backend+41 browser+1 live105-invoice connected checks pass; ZIP selection remains independent.",
+      "dependencies": [],
+      "qualification": {
+        "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
+        "required_contexts": "13/13 passed; optional deploy/baseline-refresh skipped",
+        "ci": [
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343145",
+          "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42095343114"
+        ]
+      }
+    },
+    {
+      "id": "PERF-AP-HISTORY-PAGINATION",
+      "title": "Navigate every AP payment run",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "sources": [
+        "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
+      ],
+      "next": "Additive typed/page endpoint retains legacyarray and exact scoped totals; URL paging reaches201st row.77 distinct checks including actual201-row browser/API/non-superuser PostgreSQL no-financial-write journey pass.",
+      "dependencies": []
+    },
+    {
+      "id": "OCR-IMAGE-PROCESSING",
+      "title": "Supervise image reading and disclose measured preparation",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "sources": [
+        "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
+      ],
+      "next": "Linux child containment,40M source/12M maximum raster, integer reduction for large images, unchanged<=12M path, measured geometry/advisory and typed no-partial failures.22 actual source-overlay profiles and local/native publication/retention checks pass; fleet/PDF/customer acceptance remains open.",
+      "dependencies": []
+    },
+    {
+      "id": "TEST-SQLITE-SETUP-CLEANUP",
+      "title": "Join owned SQLite fixture cleanup",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "sources": [
+        "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
+      ],
+      "next": "Finally covers schema/FX seed/yield; shield and join engine disposal through repeated cancellation.7 real subprocess lifecycle controls plus73 serial/four-worker compatibility subset pass; historical warning causality remains open.",
+      "dependencies": []
+    },
+    {
+      "id": "UI-TEAM-INVITE-NATIVE-FORM",
+      "title": "Submit valid Team invites by keyboard",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "sources": [
+        "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
+      ],
+      "next": "Native email/required validation and guarded submit preserve permissions/exact payload/readback; actual invalid-email POST and dead Enter reproduction repaired.",
+      "dependencies": []
+    },
+    {
+      "id": "UI-REBATE-RECORD-NATIVE-FORM",
+      "title": "Submit existing rebate form by keyboard",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "sources": [
+        "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
+      ],
+      "next": "Native form, opt-in existing required fields, pending/readiness guards and exact Decimal payload; narrow grid fixes proved48px overflow.119-case union passes.",
+      "dependencies": []
+    },
+    {
+      "id": "UI-DRAFT-COPY-OUTCOME",
+      "title": "Retain verified draft copy outcome",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "sources": [
+        "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
+      ],
+      "next": "Typed observed201 acknowledgement survives row paging/list failure and clears old error; distinct copy ID remains internal, visible buyer/source outcome plus explicit GET-only latest-list recovery. Late identity replies discarded.",
       "dependencies": []
     }
   ]

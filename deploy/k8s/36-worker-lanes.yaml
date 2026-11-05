@@ -4,16 +4,14 @@
 # work on its own pool so it can never starve — or be starved by — the light,
 # latency-sensitive periodic jobs (dunning, recurring invoices, integrity).
 #
-# The two lanes are COMPLEMENTARY and together cover every kind (no job is
-# orphaned): `worker-extract` takes only email.extract; `worker-general` takes
-# everything except email.extract. Scale and size each independently.
+# The two lanes are complementary: worker-extract takes email.extract and
+# upload.extract; worker-general takes every other kind. Scale and size each
+# independently. Receipt scans and some report generation still use the web
+# tier; these lanes do not establish aggregate OCR or fleet capacity.
 #
 #   kubectl -n invoiceiq delete deploy worker            # remove the all-kinds pool
 #   kubectl -n invoiceiq apply -f 36-worker-lanes.yaml   # bring up the two lanes
 #
-# NOTE (see deploy/SCALING.md): direct-upload OCR and PDF/Excel generation still
-# run inline on the WEB tier today — moving them onto their own kinds
-# (upload.extract / report.render) is the follow-up that fully isolates them here.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -35,6 +33,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        runAsGroup: 10001
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: worker
@@ -89,6 +88,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        runAsGroup: 10001
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: worker

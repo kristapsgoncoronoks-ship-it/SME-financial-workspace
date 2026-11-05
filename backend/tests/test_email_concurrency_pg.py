@@ -25,7 +25,7 @@ from app.models.audit import AuditEvent
 from app.models.email_intake import InboundInvoice
 from app.models.invoice import Invoice
 from app.models.job import Job
-from app.services import audit, email_intake, jobs, parser
+from app.services import audit, email_intake, image_ocr, jobs, parser
 
 PG_URL = os.environ.get("RLS_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not PG_URL, reason="requires migrated non-superuser PostgreSQL")
@@ -215,7 +215,7 @@ async def test_late_worker_cannot_replace_review_decision(
     client, factory, org_id, _, _ = email_pg
     row_id = await seeded(email_pg)
     started, release = asyncio.Event(), asyncio.Event()
-    original = email_intake.run_in_threadpool
+    original = image_ocr.run_reading
 
     async def held_parse(*args, **kwargs):
         started.set()
@@ -224,7 +224,7 @@ async def test_late_worker_cannot_replace_review_decision(
             raise ValueError("Synthetic extraction failed after the user decided")
         return await original(*args, **kwargs)
 
-    monkeypatch.setattr(email_intake, "run_in_threadpool", held_parse)
+    monkeypatch.setattr(image_ocr, "run_reading", held_parse)
 
     async def work():
         async with scoped(factory, org_id) as db:
@@ -539,7 +539,7 @@ async def test_duplicate_worker_cannot_replace_newer_publication(
     client, factory, org_id, _, _ = email_pg
     row_id = await seeded(email_pg)
     started, release = asyncio.Event(), asyncio.Event()
-    original = email_intake.run_in_threadpool
+    original = image_ocr.run_reading
     first = True
 
     async def held_parse(*args, **kwargs):
@@ -552,7 +552,7 @@ async def test_duplicate_worker_cannot_replace_newer_publication(
                 raise ValueError("Synthetic late obsolete parser failure")
         return await original(*args, **kwargs)
 
-    monkeypatch.setattr(email_intake, "run_in_threadpool", held_parse)
+    monkeypatch.setattr(image_ocr, "run_reading", held_parse)
 
     async def extract():
         async with scoped(factory, org_id) as db:
@@ -582,14 +582,14 @@ async def test_delete_during_parse_keeps_attachment_deleted(email_pg, monkeypatc
     client, factory, org_id, _, _ = email_pg
     row_id = await seeded(email_pg)
     started, release = asyncio.Event(), asyncio.Event()
-    original = email_intake.run_in_threadpool
+    original = image_ocr.run_reading
 
     async def held_parse(*args, **kwargs):
         started.set()
         await asyncio.wait_for(release.wait(), timeout=15)
         return await original(*args, **kwargs)
 
-    monkeypatch.setattr(email_intake, "run_in_threadpool", held_parse)
+    monkeypatch.setattr(image_ocr, "run_reading", held_parse)
 
     async def extract():
         async with scoped(factory, org_id) as db:

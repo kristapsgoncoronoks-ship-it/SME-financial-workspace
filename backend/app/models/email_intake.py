@@ -52,6 +52,7 @@ class InboundInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(20), nullable=True
     )  # detected type / parse path
     draft_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # ParsedInvoiceDraft JSON
+    reading_preparation_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     # H-1: the CLASSIFIED cause when the row is `failed`/`rejected` — a stable
     # code from `capture_failures.KINDS`. `error` above keeps the raw message.

@@ -117,10 +117,10 @@ export default function Team() {
       {canManage && (
         <Card title="Invite a member">
           <div className="space-y-3">
-            <div className="flex flex-wrap items-end gap-3">
+            <form aria-label="Invite a member" className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (!invite.isPending) invite.mutate(); }}>
               <div className="flex-1">
                 <label className="label" htmlFor="invite-email">Email</label>
-                <input id="invite-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
+                <input id="invite-email" className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
               </div>
               <div>
                 <label className="label" htmlFor="invite-role">Role</label>
@@ -128,10 +128,10 @@ export default function Team() {
                   {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                 </select>
               </div>
-              <Button loading={invite.isPending} disabled={!email} onClick={() => invite.mutate()}>
+              <Button type="submit" loading={invite.isPending} disabled={!email}>
                 Create invite
               </Button>
-            </div>
+            </form>
 
             {invites.isError && (
               <ErrorState title="Couldn’t load the pending invites" onRetry={() => invites.refetch()} />

@@ -315,6 +315,7 @@ function AddItem({ onAdd, pending }: { onAdd: (b: ExpenseItemInput) => void; pen
   const toast = useToast();
   const scanRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const [scanWarnings, setScanWarnings] = useState<string[]>([]);
   const [type, setType] = useState<ExpenseType>("standard");
   const [f, setF] = useState<Record<string, string>>({
     spend_date: new Date().toISOString().slice(0, 10),
@@ -329,11 +330,13 @@ function AddItem({ onAdd, pending }: { onAdd: (b: ExpenseItemInput) => void; pen
 
   // Advisory receipt OCR: scan a photo/PDF and prefill the fields to confirm.
   const scan = async (file: File) => {
+    setScanWarnings([]);
     setScanning(true);
     try {
       const form = new FormData();
       form.append("file", file);
       const s = (await api.post("/expenses/receipt-scan", form)).data;
+      setScanWarnings(Array.isArray(s.warnings) ? s.warnings.filter((warning: unknown): warning is string => typeof warning === "string" && warning.trim().length > 0) : []);
       setF((cur) => ({
         ...cur,
         merchant: s.merchant ?? cur.merchant,
@@ -394,6 +397,11 @@ function AddItem({ onAdd, pending }: { onAdd: (b: ExpenseItemInput) => void; pen
           ))}
         </div>
       </div>
+      {scanWarnings.length > 0 && (
+        <div role="status" aria-live="polite" aria-atomic="true" aria-label="Receipt reading notes" className="min-w-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 [overflow-wrap:anywhere]">
+          <ul className="space-y-1">{scanWarnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <input aria-label="Spend date" className={inp} type="date" value={f.spend_date} onChange={(e) => set("spend_date", e.target.value)} />
         <select aria-label="Category" className={inp} value={f.category} onChange={(e) => set("category", e.target.value)}>

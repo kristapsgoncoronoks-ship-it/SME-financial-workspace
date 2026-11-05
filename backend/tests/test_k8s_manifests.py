@@ -165,6 +165,43 @@ def test_the_migrate_job_runs_the_same_image_as_the_backend_and_only_migrates():
     assert job["spec"]["template"]["spec"]["restartPolicy"] == "Never"
 
 
+def test_migration_and_frontend_enforce_the_qualified_runtime_boundaries():
+    """Native fixture proofs cover these roles and writable paths; not a cluster certificate."""
+    for name, doc, container in _containers():
+        workload = doc["metadata"]["name"]
+        if workload not in {"invoiceiq-migrate", "frontend"}:
+            continue
+        pod = doc["spec"]["template"]["spec"]
+        role = pod["securityContext"]
+        expected_id = 101 if workload == "frontend" else 10001
+        assert role["runAsNonRoot"] is True, name
+        assert role["runAsUser"] == role["runAsGroup"] == expected_id, name
+        assert role["seccompProfile"] == {"type": "RuntimeDefault"}, name
+        boundary = container["securityContext"]
+        assert boundary["allowPrivilegeEscalation"] is False, name
+        assert boundary["readOnlyRootFilesystem"] is True, name
+        assert boundary["capabilities"] == {"drop": ["ALL"]}, name
+        paths = {mount["mountPath"] for mount in container["volumeMounts"]}
+        assert paths == ({"/tmp", "/var/cache/nginx"} if workload == "frontend" else {"/tmp"})
+        assert all("emptyDir" in volume for volume in pod["volumes"]), name
+        if workload == "frontend":
+            assert role["fsGroup"] == 101  # group-write access to fresh node-owned volumes
+
+
+def test_python_pods_declare_the_existing_image_group():
+    for name, doc, _container in _containers():
+        if doc["metadata"]["name"] not in {
+            "invoiceiq-migrate",
+            "backend",
+            "worker",
+            "worker-extract",
+            "worker-general",
+        }:
+            continue
+        role = doc["spec"]["template"]["spec"]["securityContext"]
+        assert role["runAsUser"] == role["runAsGroup"] == 10001, name
+
+
 @pytest.mark.parametrize("key", sorted(_secret_example()))
 def test_the_runbook_command_creates_every_required_secret_key(key):
     """docs/DEPLOYMENT.md's `kubectl create secret` command must name every key

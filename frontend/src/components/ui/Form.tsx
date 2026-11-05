@@ -90,12 +90,16 @@ type BaseFieldProps = Pick<FormFieldProps, "label" | "hint" | "error" | "require
 
 /** Single-line text input with the full field wiring. */
 export function TextInput({
-  label, hint, error, required, className,
+  label, hint, error, required, className, nativeValidation = false,
   ...input
-}: BaseFieldProps & Omit<InputHTMLAttributes<HTMLInputElement>, "id">) {
+}: BaseFieldProps & {
+  /** Opt in to native required validation for an already-required field.
+   * Legacy callers retain their existing aria-only required behavior. */
+  nativeValidation?: boolean;
+} & Omit<InputHTMLAttributes<HTMLInputElement>, "id">) {
   return (
     <FormField label={label} hint={hint} error={error} required={required} className={className}>
-      {(f) => <input {...f} {...input} className={inputClass(!!error)} />}
+      {(f) => <input {...f} {...input} required={nativeValidation && required} className={inputClass(!!error)} />}
     </FormField>
   );
 }
