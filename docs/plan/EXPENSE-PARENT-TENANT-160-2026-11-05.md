@@ -57,3 +57,8 @@ external setting change. Focused evidence:
 `/workspace/artifacts/backlog-followups-2026-11-05/db010-children160/`;
 integration evidence: sibling `db010-graph-qualification/` and
 `/workspace/artifacts/backlog-fifth-wave-2026-11-05/`.
+
+The first hosted head9a47efa exposed two historical159 fixture failures against
+valid160 dependencies. [The isolated159 correction](HISTORICAL-159-TEST-ISOLATION-2026-11-05.md)
+retains all integrity assertions and passes31 native/40 discovery controls.
+Fresh repaired-head CI remains required.
