@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "PR1059efcd1c andPR10637b826b passed all13 actualPR contexts. Third wave has scoped local/native/connected qualification,158 revisions/6185 collected cases, and needs fresh delivered-source all13 contexts. Following FK/parser/workflow/concurrency work is isolated in separate branches. No main merge/deploy/settings/production migration or complete-backlog/release claim.",
+  "qualification": "PR1059efcd1c,PR10637b826b andPR1074fd44b8 passed all13 actualPR contexts; PR107 preserves one browserfirst-attempt flake, repaired separately. This160-revision/6256-case tree adds the two mandatory expense report child pairs.122 focused and83 fullgraph/parity/bootstrap checks pass locally; fresh delivered-source all13contexts remain required. Further partner/webhook, parser, workflow and capacity work is separate. No main/PR merge/deploy or complete-backlog claim.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1733,15 +1733,24 @@
     },
     {
       "id": "DB-010",
-      "status": "PARTIAL-LOCAL-FOLLOWUP",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Remaining composite parent links",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Isolated159 item/report tenant CASCADE fix passes77 checks; isolated160 comment/approval-step pair fixes pass122 checks. Current third-wave tree remains158 and does not include them. Six dated candidates remain individually assessed; no optional SET NULL semantics or tenant integrity is weakened.",
-      "dependencies": []
+      "next": "This tree includes159item/report plus160comment/approval-step tenant pairs, all mandatoryCASCADE.160reuses159uniqueindex, maskedglobalhistory refusal/orderedlocks/FORCERLS/atomic2linkrollback and exactunrelatedschema preservation.122focused and83 final integrationchecks pass, zero skips. Sixdated candidates remain in separate investigations; nooptionalSETNULL conversion/historyrepair.",
+      "dependencies": [],
+      "qualification": {
+        "source_commit": "b91db66f467f8d936f106425429cdefbf444933b",
+        "migration_head": "e6f8a0b2c4d7",
+        "focused_checks": 122,
+        "integration_checks": 83,
+        "integrated_ci": "pending",
+        "focused_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-children160/",
+        "integration_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-graph-qualification/"
+      }
     },
     {
       "id": "DB-015",
