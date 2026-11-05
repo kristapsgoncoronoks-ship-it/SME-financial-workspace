@@ -10,7 +10,7 @@ the last recorded owner address. This module is the export half:
   owner asks by email from a public form (`request_by_email`) — the address
   must be an owner's of that workspace, and the response never says whether it
   was (the forgot-password posture: no enumeration, always "sent").
-- The worker builds ONE zip for the whole archive (`build_zip`): a
+- The worker builds ONE zip for the whole archive (`build_zip_file`): a
   `manifest.csv`, a `records.json` with every field and line item, and every
   source document that still has its bytes. A record whose bytes are gone is
   listed as `missing`, never dropped, never a reason to fail the export.
@@ -29,7 +29,9 @@ import csv
 import io
 import json
 import logging
+import os
 import re
+import tempfile
 import zipfile
 from datetime import UTC, datetime, timedelta
 
@@ -45,7 +47,15 @@ from app.models.email_token import PURPOSE_ARCHIVE_EXPORT
 from app.models.membership import Membership
 from app.models.organization import Organization
 from app.models.user import User, UserRole
-from app.services import audit, documents, export_artefacts, jobs, mailer, verification
+from app.services import (
+    audit,
+    document_registry,
+    documents,
+    export_artefacts,
+    jobs,
+    mailer,
+    verification,
+)
 
 log = logging.getLogger("invoiceiq.archive_export")
 
@@ -167,9 +177,11 @@ async def list_requests(db: AsyncSession, org_id: str) -> list[ArchiveExport]:
     )
 
 
-async def build_zip(db: AsyncSession, org_id: str) -> tuple[bytes, int, int]:
-    """(zip bytes, records, missing documents). Every archived record of the
-    workspace; a document whose bytes are gone is listed, never dropped."""
+async def build_zip_file(db: AsyncSession, org_id: str) -> tuple[str, int, int]:
+    """(owned ZIP path, records, missing documents). Caller removes the file.
+
+    Every archived record is retained; a missing document is listed, not dropped.
+    """
     org = await db.get(Organization, org_id)
     rows = list(
         await db.scalars(
@@ -199,86 +211,105 @@ async def build_zip(db: AsyncSession, org_id: str) -> tuple[bytes, int, int]:
     )
     records: list[dict] = []
     missing = 0
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for r in rows:
-            doc_path = ""
-            doc_status = "none"
-            if r.source_sha256:
-                try:
-                    data = await documents.load(documents.UPLOADS, org_id, r.source_sha256)
-                except StorageReadError:
-                    # A read failure does not prove the bytes are gone, and
-                    # must not produce a partial ready export.
-                    raise
-                except StorageError:
-                    data = None
-                if data is None:
-                    doc_status = "missing"
-                    missing += 1
-                else:
-                    doc_path = f"documents/{r.id}-{_safe_name(r.source_filename, 'document')}"
-                    zf.writestr(doc_path, data)
-                    doc_status = "included"
-            try:
-                lines = json.loads(r.line_items_json or "[]")
-            except ValueError:
-                lines = []
-            record = {
-                "archive_id": r.id,
-                "original_invoice_id": r.original_invoice_id,
-                "invoice_number": r.invoice_number,
-                "vendor_name": r.vendor_name,
-                "issue_date": r.issue_date.isoformat() if r.issue_date else None,
-                "currency": r.currency,
-                "subtotal": str(r.subtotal) if r.subtotal is not None else None,
-                "tax_amount": str(r.tax_amount) if r.tax_amount is not None else None,
-                "total": str(r.total) if r.total is not None else None,
-                "line_items": lines,
-                "original_deleted_at": (
-                    r.original_deleted_at.isoformat() if r.original_deleted_at else None
-                ),
-                "original_deleted_by": r.original_deleted_by,
-                "archived_at": r.archived_at.isoformat() if r.archived_at else None,
-                "expires_at": r.expires_at.isoformat() if r.expires_at else None,
-                "document": doc_path or None,
-                "document_status": doc_status,
-            }
-            records.append(record)
-            writer.writerow(
-                [
-                    sanitize_cell(record[k])
-                    for k in (
-                        "archive_id",
-                        "original_invoice_id",
-                        "invoice_number",
-                        "vendor_name",
-                        "issue_date",
-                        "currency",
-                        "subtotal",
-                        "tax_amount",
-                        "total",
-                        "archived_at",
-                        "expires_at",
-                        "document",
-                        "document_status",
+    descriptor, path = tempfile.mkstemp(prefix="archive-export-", suffix=".zip")
+    os.close(descriptor)
+    try:
+        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for r in rows:
+                doc_path = ""
+                doc_status = "none"
+                if r.source_sha256:
+                    doc = await document_registry.find(
+                        db, org_id, sha256=r.source_sha256, kind=documents.UPLOADS
                     )
-                ]
+                    try:
+                        source = await documents.load_verified_file(
+                            documents.UPLOADS,
+                            org_id,
+                            r.source_sha256,
+                            size=doc.size if doc is not None else None,
+                        )
+                    except StorageReadError:
+                        # A read failure does not prove the bytes are gone, and
+                        # must not produce a partial ready export.
+                        raise
+                    except StorageError:
+                        source = None
+                    if source is None:
+                        doc_status = "missing"
+                        missing += 1
+                    else:
+                        doc_path = f"documents/{r.id}-{_safe_name(r.source_filename, 'document')}"
+                        try:
+                            zf.write(source.path, doc_path)
+                        finally:
+                            source.cleanup()
+                        doc_status = "included"
+                try:
+                    lines = json.loads(r.line_items_json or "[]")
+                except ValueError:
+                    lines = []
+                record = {
+                    "archive_id": r.id,
+                    "original_invoice_id": r.original_invoice_id,
+                    "invoice_number": r.invoice_number,
+                    "vendor_name": r.vendor_name,
+                    "issue_date": r.issue_date.isoformat() if r.issue_date else None,
+                    "currency": r.currency,
+                    "subtotal": str(r.subtotal) if r.subtotal is not None else None,
+                    "tax_amount": str(r.tax_amount) if r.tax_amount is not None else None,
+                    "total": str(r.total) if r.total is not None else None,
+                    "line_items": lines,
+                    "original_deleted_at": (
+                        r.original_deleted_at.isoformat() if r.original_deleted_at else None
+                    ),
+                    "original_deleted_by": r.original_deleted_by,
+                    "archived_at": r.archived_at.isoformat() if r.archived_at else None,
+                    "expires_at": r.expires_at.isoformat() if r.expires_at else None,
+                    "document": doc_path or None,
+                    "document_status": doc_status,
+                }
+                records.append(record)
+                writer.writerow(
+                    [
+                        sanitize_cell(record[k])
+                        for k in (
+                            "archive_id",
+                            "original_invoice_id",
+                            "invoice_number",
+                            "vendor_name",
+                            "issue_date",
+                            "currency",
+                            "subtotal",
+                            "tax_amount",
+                            "total",
+                            "archived_at",
+                            "expires_at",
+                            "document",
+                            "document_status",
+                        )
+                    ]
+                )
+            zf.writestr(MANIFEST, manifest.getvalue())
+            zf.writestr(
+                RECORDS,
+                json.dumps(
+                    {
+                        "workspace": org.name if org else None,
+                        "exported_at": datetime.now(UTC).isoformat(),
+                        "records": records,
+                    },
+                    indent=2,
+                    default=str,
+                ),
             )
-        zf.writestr(MANIFEST, manifest.getvalue())
-        zf.writestr(
-            RECORDS,
-            json.dumps(
-                {
-                    "workspace": org.name if org else None,
-                    "exported_at": datetime.now(UTC).isoformat(),
-                    "records": records,
-                },
-                indent=2,
-                default=str,
-            ),
-        )
-    return buf.getvalue(), len(rows), missing
+    except BaseException:
+        try:
+            os.unlink(path)
+        except OSError:
+            log.warning("Could not remove a private archive export staging file")
+        raise
+    return path, len(rows), missing
 
 
 def _download_link(raw: str) -> str:
@@ -298,12 +329,18 @@ async def run_export(db: AsyncSession, org_id: str, export_id: str) -> dict:
         row.status = "failed"
         row.error = "requesting owner no longer exists"
         return {"export_id": row.id, "status": row.status}
-    data, records, missing = await build_zip(db, org_id)
-    org = await db.get(Organization, org_id)
-    filename = f"archive-{_safe_name(org.name if org else None, 'workspace')}.zip"
-    sha, size = await documents.store(
-        documents.EXPORTS, org_id, data, "application/zip", db=db, filename=filename
-    )
+    path, records, missing = await build_zip_file(db, org_id)
+    try:
+        org = await db.get(Organization, org_id)
+        filename = f"archive-{_safe_name(org.name if org else None, 'workspace')}.zip"
+        sha, size = await documents.store_file(
+            documents.EXPORTS, org_id, path, "application/zip", db=db, filename=filename
+        )
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            log.warning("Could not remove a private archive export staging file")
     now = datetime.now(UTC)
     row.sha256, row.size, row.records, row.missing_documents = sha, size, records, missing
     row.status = "ready"
@@ -330,8 +367,8 @@ async def run_export(db: AsyncSession, org_id: str, export_id: str) -> dict:
     }
 
 
-async def download(db: AsyncSession, raw: str) -> tuple[bytes, str, str] | None:
-    """Consume the one-time link and hand back (zip, filename, org_id) — or
+async def download(db: AsyncSession, raw: str) -> tuple[documents.StoredFile, str, str] | None:
+    """Consume the one-time link and hand back (staged file, filename, org_id) — or
     None for an unknown, used or expired link, indistinguishably. UNSCOPED:
     the public route has no tenant; the token names it."""
     token = await verification.consume(db, raw, PURPOSE_ARCHIVE_EXPORT)
@@ -353,25 +390,33 @@ async def download(db: AsyncSession, raw: str) -> tuple[bytes, str, str] | None:
     if row is None or row.sha256 is None:
         return None
     try:
-        data = await export_artefacts.load_verified(row.org_id, row.sha256, row.size)
+        staged = await export_artefacts.prepare_file(row.org_id, row.sha256, row.size)
     except StorageReadError:
         # Preserve the token/download transaction for a retry after recovery.
         raise
     except StorageError:
-        data = None
-    if data is None:
+        staged = None
+    if staged is None:
         log.error("archive export %s: stored zip %s is missing", row.id, row.sha256)
         return None
-    row.status = "downloaded"
-    row.downloaded_at = datetime.now(UTC)
-    org = await db.get(Organization, row.org_id)
-    await audit.record(
-        db,
-        audit.A.ARCHIVE_EXPORT_DOWNLOADED,
-        target_type="archive_export",
-        target_id=row.id,
-        meta={"bytes": row.size, "records": row.records},
-        org_id=row.org_id,
-        actor=(token.user_id, row.requested_email),
-    )
-    return data, f"archive-{_safe_name(org.name if org else None, 'workspace')}.zip", row.org_id
+    try:
+        row.status = "downloaded"
+        row.downloaded_at = datetime.now(UTC)
+        org = await db.get(Organization, row.org_id)
+        await audit.record(
+            db,
+            audit.A.ARCHIVE_EXPORT_DOWNLOADED,
+            target_type="archive_export",
+            target_id=row.id,
+            meta={"bytes": row.size, "records": row.records},
+            org_id=row.org_id,
+            actor=(token.user_id, row.requested_email),
+        )
+        return (
+            staged,
+            f"archive-{_safe_name(org.name if org else None, 'workspace')}.zip",
+            row.org_id,
+        )
+    except BaseException:
+        staged.cleanup()
+        raise

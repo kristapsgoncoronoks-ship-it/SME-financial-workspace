@@ -15,9 +15,10 @@ decision 2026-08-16 §1.C), so both doors here are unauthenticated:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import DbSession
+from app.api.file_response import TemporaryFileResponse
 from app.core.security_headers import content_disposition
 from app.schemas.archive import ArchiveExportRequestIn
 from app.services import archive_export as export_svc
@@ -37,14 +38,18 @@ async def download_archive_export(token: str, db: DbSession):
     found = await export_svc.download(db, token)
     if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Invalid, used or expired export link")
-    data, filename, _org_id = found
-    await db.commit()  # the consumed token and the downloaded stamp
-    return Response(
-        content=data,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": content_disposition(filename, fallback="archive.zip"),
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-store",
-        },
-    )
+    staged, filename, _org_id = found
+    try:
+        await db.commit()  # the consumed token and the downloaded stamp
+        return TemporaryFileResponse(
+            staged,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": content_disposition(filename, fallback="archive.zip"),
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control": "no-store",
+            },
+        )
+    except BaseException:
+        staged.cleanup()
+        raise

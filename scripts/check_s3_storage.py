@@ -29,11 +29,13 @@ import json
 import os
 import secrets
 import sys
+import tempfile
+from pathlib import Path
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import ClientError
-from app.core.storage import S3Storage, StorageError, StorageReadError, StorageReadTooLarge, content_key
+from app.core.storage import S3Storage, StorageError, StorageReadError, StorageReadTooLarge, StorageWriteError, content_key
 
 assert os.getuid() == 10001
 bucket = os.environ['STORAGE_S3_BUCKET']
@@ -49,6 +51,9 @@ try:
             store.put(key, data, content_type='application/octet-stream')
         assert store.exists(key) and store.get(key) == data and store.digest(key) == sha
         assert store.get(key, max_bytes=max(1, len(data))) == data
+        with tempfile.TemporaryDirectory(prefix='s3-file-copy-') as temporary:
+            copied = Path(temporary) / 'copied.bin'
+            assert store.get_file(key, copied, max_bytes=max(1, len(data))) == (sha, len(data))
         if len(data) > 1:
             try:
                 store.get(key, max_bytes=len(data)-1)
@@ -57,7 +62,53 @@ try:
             else:
                 raise AssertionError('expected size refusal')
             assert store.get(key, max_bytes=len(data)) == data
+            with tempfile.TemporaryDirectory(prefix='s3-file-bound-') as temporary:
+                bounded = Path(temporary) / 'bounded.bin'
+                try:
+                    store.get_file(key, bounded, max_bytes=len(data)-1)
+                except StorageReadTooLarge:
+                    assert bounded.stat().st_size < len(data)
+                else:
+                    raise AssertionError('expected file-copy size refusal')
     if sys.argv[1] == 'write':
+        with tempfile.TemporaryDirectory(prefix='s3-file-upload-') as temporary:
+            source, copied = Path(temporary) / 'source.bin', Path(temporary) / 'copy.bin'
+            digest = hashlib.sha256()
+            block = bytes(range(256)) * 256
+            with source.open('wb') as stream:
+                for _ in range(144):
+                    stream.write(block)
+                    digest.update(block)
+            file_sha, file_size = digest.hexdigest(), source.stat().st_size
+            assert file_size == 9 * 1024 * 1024
+            store.put_file('file-stream', source, 'application/octet-stream', sha256=file_sha, size=file_size)
+            assert store.get_file('file-stream', copied, max_bytes=file_size) == (file_sha, file_size)
+            try:
+                store.put_file('file-stream', source, sha256='0' * 64, size=file_size)
+            except StorageWriteError:
+                pass
+            else:
+                raise AssertionError('changed upload identity was accepted')
+            assert store.get_file('file-stream', copied, max_bytes=file_size) == (file_sha, file_size)
+            real_part = store._client.upload_part
+            written = []
+            def interrupted_part(**kwargs):
+                result = real_part(**kwargs)
+                written.append(kwargs['PartNumber'])
+                raise RuntimeError('synthetic response lost after actual part upload')
+            store._client.upload_part = interrupted_part
+            try:
+                try:
+                    store.put_file('interrupted-file', source, sha256=file_sha, size=file_size)
+                except StorageWriteError:
+                    pass
+                else:
+                    raise AssertionError('interrupted multipart upload was accepted')
+            finally:
+                store._client.upload_part = real_part
+            assert written == [1] and not store.exists('interrupted-file')
+            assert not store._client.list_multipart_uploads(Bucket=bucket).get('Uploads')
+            store.delete('file-stream')
         store.put('delete-me', b'synthetic deletion')
         store.delete('delete-me')
         assert not store.exists('delete-me')
@@ -106,6 +157,8 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
+from pathlib import Path
 from botocore.exceptions import ClientError, EndpointConnectionError
 from app.core.storage import S3Storage, StorageReadError, content_key
 
@@ -116,18 +169,19 @@ store = S3Storage(os.environ['STORAGE_S3_BUCKET'], endpoint_url=endpoint,
                   region='us-east-1', prefix='smoke')
 key = content_key('uploads', 'tenant-a', hashlib.sha256(bytes(range(256)) * 16384).hexdigest())
 try:
-    for method in (store.get, store.digest):
-        try:
-            method(key)
-        except StorageReadError as exc:
-            assert str(exc) == 'Stored document could not be read. Check storage and retry.'
-            if mode == 'denied':
-                assert isinstance(exc.__cause__, ClientError)
-                assert exc.__cause__.response['ResponseMetadata']['HTTPStatusCode'] == 403
+    with tempfile.TemporaryDirectory(prefix='s3-file-unavailable-') as temporary:
+        for method in (store.get, store.digest, lambda key: store.get_file(key, Path(temporary) / 'copy')):
+            try:
+                method(key)
+            except StorageReadError as exc:
+                assert str(exc) == 'Stored document could not be read. Check storage and retry.'
+                if mode == 'denied':
+                    assert isinstance(exc.__cause__, ClientError)
+                    assert exc.__cause__.response['ResponseMetadata']['HTTPStatusCode'] == 403
+                else:
+                    assert isinstance(exc.__cause__, EndpointConnectionError)
             else:
-                assert isinstance(exc.__cause__, EndpointConnectionError)
-        else:
-            raise AssertionError('unavailable object was accepted')
+                raise AssertionError('unavailable object was accepted')
     print(json.dumps({'check': mode}))
 finally:
     store._client.close()
@@ -392,6 +446,7 @@ def main(image: str) -> int:
             initialize(wrong_env, refused=True)
             passed("cold-repeated-and-wrong-auth-bootstrap")
             result["runtime"] = probe("write")
+            passed("shipped-file-copy-multipart-identity-and-abort")
             for mode, env in (("denied", wrong_env), ("offline", client_env)):
                 response = client(["-", mode], env=env, source=READ_FAILURE_PROBE)
                 require(

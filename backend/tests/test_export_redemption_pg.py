@@ -9,6 +9,7 @@ import os
 import time
 import zipfile
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -81,6 +82,7 @@ class _Redemption:
         self.release_first = asyncio.Event()
         self.storage_entries = []
         self.commit_failure = False
+        self.staged_paths = []
 
     async def seed(self, kind, *, second_token=False):
         self.kind = kind
@@ -189,6 +191,7 @@ class _Redemption:
             self.release_first.set()
             responses = await asyncio.wait_for(asyncio.gather(*tasks), timeout=15)
             assert self.pids["winner"] != self.pids["contender"]
+            assert all(not path.exists() for path in self.staged_paths)
             return responses, waited
         finally:
             self.release_first.set()
@@ -225,7 +228,7 @@ async def redemption_pg(monkeypatch):
     objects = _Objects()
     storage.set_storage(objects)
     overrides = dict(app.dependency_overrides)
-    original_load = documents.load
+    original_load = documents.load_file
     harness = None
 
     async def session():
@@ -245,7 +248,11 @@ async def redemption_pg(monkeypatch):
                 harness.first_at_storage.set()
             if label in {"winner", "contender"}:
                 await asyncio.wait_for(harness.release_first.wait(), timeout=15)
-        return await original_load(prefix, org_id, sha, **kwargs)
+        staged = await original_load(prefix, org_id, sha, **kwargs)
+        if staged is not None:
+            assert staged.path.stat().st_mode & 0o077 == 0
+            harness.staged_paths.append(Path(staged.path))
+        return staged
 
     try:
         async with factory() as db:
@@ -264,7 +271,7 @@ async def redemption_pg(monkeypatch):
             ).all()
             assert len(rows) == 3 and all(enabled and forced for enabled, forced in rows)
         app.dependency_overrides[get_session] = session
-        monkeypatch.setattr(documents, "load", held_load)
+        monkeypatch.setattr(documents, "load_file", held_load)
         async with AsyncClient(
             transport=ASGITransport(app=app, raise_app_exceptions=False), base_url="http://test"
         ) as client:
@@ -273,6 +280,7 @@ async def redemption_pg(monkeypatch):
     finally:
         if harness is not None:
             harness.release_first.set()
+            assert all(not path.exists() for path in harness.staged_paths)
         app.dependency_overrides.clear()
         app.dependency_overrides.update(overrides)
         await engine.dispose()

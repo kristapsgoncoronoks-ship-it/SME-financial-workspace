@@ -21,13 +21,11 @@ the one such exception: they are the proof the trail was not edited, and an
 export without them could not be verified by anyone.
 
 **Bounded, and honest when it cannot be.** The zip is built into a temporary
-file, one table and one document at a time, so building it does not hold the
-workspace in memory. Storing it does: `core.storage` is content-addressed and
-its `put` takes bytes, so the finished file is read once. That read is the
-ceiling — `settings.workspace_export_max_bytes` — and an export that would
-exceed it FAILS with the size in the message rather than taking the worker down
-(EXPORT-001 in the findings register: a streaming `put` would remove the
-ceiling, and is a storage-layer change, not this one).
+file, one table and one document at a time; stored sources, the finished ZIP and
+HTTP delivery use finite file reads. The existing
+`settings.workspace_export_max_bytes` policy remains: streaming does not raise
+it or certify aggregate disk/worker capacity. The in-memory test store still
+owns its complete stored blob.
 
 Delivery reuses WO-AI's rails exactly: the artefact goes to the `exports`
 document class, the owner gets a ONE-TIME `EmailToken` link (purpose
@@ -289,20 +287,25 @@ async def build_zip_file(db: AsyncSession, org_id: str) -> tuple[str, dict]:
                     "path": f"{DOCS_DIR}/{doc.kind}/{doc.sha256}",
                 }
                 try:
-                    data = await documents.load(doc.kind, org_id, doc.sha256)
+                    source = await documents.load_verified_file(
+                        doc.kind, org_id, doc.sha256, size=doc.size
+                    )
                 except StorageReadError:
                     # A backend failure does not prove the bytes are gone.
                     # Abort so the job can retry a complete export after recovery.
                     raise
                 except StorageError:
-                    data = None
-                if data is None:
+                    source = None
+                if source is None:
                     entry["status"] = "missing"
                     entry.pop("path")
                     missing += 1
                 else:
                     entry["status"] = "present"
-                    zf.writestr(f"{DOCS_DIR}/{doc.kind}/{doc.sha256}", data)
+                    try:
+                        zf.write(source.path, f"{DOCS_DIR}/{doc.kind}/{doc.sha256}")
+                    finally:
+                        source.cleanup()
                     doc_count += 1
                     _check_size()
                 index.append(entry)
@@ -323,6 +326,7 @@ async def build_zip_file(db: AsyncSession, org_id: str) -> tuple[str, dict]:
             }
             zf.writestr(MANIFEST, json.dumps(summary, indent=2, ensure_ascii=False))
             zf.writestr(README, _readme(summary))
+        _check_size()
     except BaseException:
         os.unlink(path)
         raise
@@ -446,16 +450,16 @@ async def run_export(db: AsyncSession, org_id: str, export_id: str) -> dict:
         log.error("workspace export %s refused: %s", row.id, row.error)
         return {"export_id": row.id, "status": row.status}
     try:
-        with open(path, "rb") as fh:
-            data = fh.read()
+        org = await db.get(Organization, org_id)
+        filename = f"workspace-{_safe_name(org.name if org else None)}.zip"
+        sha, size = await documents.store_file(
+            documents.EXPORTS, org_id, path, "application/zip", db=db, filename=filename
+        )
     finally:
-        os.unlink(path)
-
-    org = await db.get(Organization, org_id)
-    filename = f"workspace-{_safe_name(org.name if org else None)}.zip"
-    sha, size = await documents.store(
-        documents.EXPORTS, org_id, data, "application/zip", db=db, filename=filename
-    )
+        try:
+            os.unlink(path)
+        except OSError:
+            log.warning("Could not remove a private workspace export staging file")
     now = datetime.now(UTC)
     row.sha256, row.size = sha, size
     row.rows = summary["row_count"]
@@ -511,8 +515,8 @@ def _safe_name(name: str | None) -> str:
     return (cleaned or "workspace")[:60]
 
 
-async def download(db: AsyncSession, raw: str) -> tuple[bytes, str, str] | None:
-    """Consume the one-time link and hand back (zip, filename, org_id) — or
+async def download(db: AsyncSession, raw: str) -> tuple[documents.StoredFile, str, str] | None:
+    """Consume the one-time link and hand back (staged file, filename, org_id) — or
     None for an unknown, used, expired or already-purged link, all the same.
     UNSCOPED: the link names its own tenant."""
     token = await verification.consume(db, raw, PURPOSE_WORKSPACE_EXPORT)
@@ -533,25 +537,29 @@ async def download(db: AsyncSession, raw: str) -> tuple[bytes, str, str] | None:
     if row is None or row.sha256 is None:
         return None
     try:
-        data = await export_artefacts.load_verified(row.org_id, row.sha256, row.size)
+        staged = await export_artefacts.prepare_file(row.org_id, row.sha256, row.size)
     except StorageReadError:
         # Preserve the token/download transaction for a retry after recovery.
         raise
     except StorageError:
-        data = None
-    if data is None:
+        staged = None
+    if staged is None:
         log.error("workspace export %s: stored zip %s is missing", row.id, row.sha256)
         return None
-    row.status = "downloaded"
-    row.downloaded_at = datetime.now(UTC)
-    org = await db.get(Organization, row.org_id)
-    await audit.record(
-        db,
-        audit.A.WORKSPACE_EXPORT_DOWNLOADED,
-        target_type="workspace_export",
-        target_id=row.id,
-        meta={"bytes": row.size, "rows": row.rows},
-        org_id=row.org_id,
-        actor=(row.requested_by_user_id, row.requested_email),
-    )
-    return data, f"workspace-{_safe_name(org.name if org else None)}.zip", row.org_id
+    try:
+        row.status = "downloaded"
+        row.downloaded_at = datetime.now(UTC)
+        org = await db.get(Organization, row.org_id)
+        await audit.record(
+            db,
+            audit.A.WORKSPACE_EXPORT_DOWNLOADED,
+            target_type="workspace_export",
+            target_id=row.id,
+            meta={"bytes": row.size, "rows": row.rows},
+            org_id=row.org_id,
+            actor=(row.requested_by_user_id, row.requested_email),
+        )
+        return staged, f"workspace-{_safe_name(org.name if org else None)}.zip", row.org_id
+    except BaseException:
+        staged.cleanup()
+        raise

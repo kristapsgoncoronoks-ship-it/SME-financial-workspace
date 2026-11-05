@@ -17,9 +17,10 @@ the single-use link emailed to that owner's own address.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import CurrentUser, DbSession, require_perm
+from app.api.file_response import TemporaryFileResponse
 from app.core import authz
 from app.core.security_headers import content_disposition
 from app.models.workspace_export import WorkspaceExport
@@ -92,14 +93,18 @@ async def download_workspace_export(token: str, db: DbSession):
     found = await export_svc.download(db, token)
     if found is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Invalid, used or expired export link")
-    data, filename, _org_id = found
-    await db.commit()  # the consumed token and the downloaded stamp
-    return Response(
-        content=data,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": content_disposition(filename, fallback="workspace.zip"),
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-store",
-        },
-    )
+    staged, filename, _org_id = found
+    try:
+        await db.commit()  # the consumed token and the downloaded stamp
+        return TemporaryFileResponse(
+            staged,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": content_disposition(filename, fallback="workspace.zip"),
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control": "no-store",
+            },
+        )
+    except BaseException:
+        staged.cleanup()
+        raise
