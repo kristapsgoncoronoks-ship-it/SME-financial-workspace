@@ -52,7 +52,7 @@ from app.services import (
     document_registry,
     documents,
     export_artefacts,
-    jobs,
+    export_requests,
     mailer,
     verification,
 )
@@ -125,25 +125,16 @@ async def request_for_org(
     existing = await _recent_request(db, org_id, email)
     if existing is not None:
         return existing
-    row = ArchiveExport(
-        org_id=org_id, requested_email=email, requested_by_user_id=user_id, status="queued"
-    )
-    db.add(row)
-    await db.flush()
-    job = await jobs.enqueue(
-        db, ARCHIVE_EXPORT_KIND, {"export_id": row.id}, org_id=org_id, commit=False
-    )
-    row.job_id = job.id
-    await audit.record(
+    return await export_requests.enqueue_request(
         db,
-        audit.A.ARCHIVE_EXPORT_REQUESTED,
+        ArchiveExport,
+        org_id,
+        email=email,
+        user_id=user_id,
+        job_kind=ARCHIVE_EXPORT_KIND,
+        audit_action=audit.A.ARCHIVE_EXPORT_REQUESTED,
         target_type="archive_export",
-        target_id=row.id,
-        meta={"to": email},
-        org_id=org_id,
-        actor=(user_id, email),
     )
-    return row
 
 
 async def request_by_email(db: AsyncSession, email: str) -> int:
