@@ -143,6 +143,7 @@ _AMOUNT_COLS = ("amount", "value")
 _DEBIT_COLS = ("debit", "withdrawal", "paid out", "money out", "out")
 _CREDIT_COLS = ("credit", "deposit", "paid in", "money in", "in")
 _CURRENCY_COLS = ("currency", "ccy", "transaction currency")
+_CSV_ROW_WARNING_LIMIT = 20
 
 
 def _pick(fieldmap: dict, names) -> str | None:
@@ -166,10 +167,20 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
     if not date_c or (not amount_c and not debit_c and not credit_c):
         raise ValueError("CSV must have a date column and an amount (or debit/credit) column")
 
+    skipped_dates = 0
+    skipped_amounts = 0
+    row_warnings: list[str] = []
+
+    def warn_skip(row_number: int, reason: str) -> None:
+        if len(row_warnings) < _CSV_ROW_WARNING_LIMIT:
+            row_warnings.append(f"CSV row {row_number} skipped: {reason}.")
+
     txns: list[Txn] = []
     for row_number, row in enumerate(reader, start=2):
         d = pdf_ocr._to_date((row.get(date_c) or "").strip())
         if d is None:
+            skipped_dates += 1
+            warn_skip(row_number, "invalid or missing date")
             continue
         desc = (row.get(desc_c) or "").strip() if desc_c else "Transaction"
         if amount_c:
@@ -184,8 +195,12 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
             elif credit:
                 direction, amount = "credit", abs(credit)
             else:
+                skipped_amounts += 1
+                warn_skip(row_number, "no nonzero amount was recognized")
                 continue
         if amount == 0:
+            skipped_amounts += 1
+            warn_skip(row_number, "no nonzero amount was recognized")
             continue
         currency = (row.get(currency_c) or "").strip().upper() if currency_c else ""
         if currency and re.fullmatch(r"[A-Z]{3}", currency) is None:
@@ -201,6 +216,18 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
                 currency=currency or None,
             )
         )
+    skipped = skipped_dates + skipped_amounts
+    if skipped:
+        summary = (
+            f"Skipped {skipped} CSV {'row' if skipped == 1 else 'rows'}: "
+            f"{skipped_dates} with an invalid or missing date; "
+            f"{skipped_amounts} with no nonzero recognized amount."
+        )
+        omitted = skipped - len(row_warnings)
+        if omitted:
+            summary += f" Additional skipped rows not listed: {omitted}."
+        warnings.append(summary)
+        warnings.extend(row_warnings)
     return txns
 
 
