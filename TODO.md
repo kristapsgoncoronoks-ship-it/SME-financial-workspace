@@ -1,5 +1,12 @@
 # TODO — Task Board
 
+**Expense report navigation follow-up:** [Independent report and approval pages](docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md)
+make the 201/101 fixture populations reachable through existing 100-row API pages.
+81 browser, 18 portable and 2 PostgreSQL checks pass; the retained red manual-save
+readback regression is repaired with current-scope GET invalidation/recovery.
+The tree collects 6,273 cases with 158 revisions. Other list/export contracts and
+fresh delivered-source CI remain open; no financial write or baseline change.
+
 **Document registry follow-up:** [Bounded pages and complete kind choices](docs/plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
 reduce the measured203-row fixture to100 rendered rows and fix mobile overflow.
 21 backend/27 browser checks pass; final-source CI and connected combined
@@ -9,7 +16,7 @@ readback remain required. No main merge, deployment or source-byte change.
 required CI contexts. The [current OCR/workflow wave](docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
 has scoped local/native/connected qualification; newly delivered source needs
 fresh CI. Continue the [execution inventory](docs/plan/BACKLOG-COMPLETION-2026-11-05.json),
-including isolated tenant-link/parser/workflow/resource follow-ups. Owner/legal/
+including remaining tenant-link, list/export and resource boundaries. Owner/legal/
 provider/corpus/restore acceptance is not inferred. No main merge or deployment.
 
 

@@ -237,6 +237,7 @@ jobs:
           tests/test_planning_create_commands_pg.py
           tests/test_expense_review_cycle_pg.py
           tests/test_expense_review_authority_pg.py
+          tests/test_expense_report_pagination_pg.py
           tests/test_ap_create_selection_pg.py
           tests/test_ap_settlement_boundary.py
           tests/test_invoice_delivery_reads_pg.py

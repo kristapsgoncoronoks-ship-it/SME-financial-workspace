@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { KpiCard } from "../components/KpiCard";
 import { ModuleInactive } from "../components/ModuleGate";
 import { useAuth } from "../auth/AuthContext";
 import { EmptyState, PageHeader, QueryState, Skeleton } from "../components/ui";
-import { api, apiError } from "../lib/api";
+import { api, apiError, tokenStore } from "../lib/api";
 import { EXPENSE_STATUS_STYLES, decimalMoney, money, shortDate } from "../lib/format";
 import { useModules } from "../lib/useModules";
 import {
@@ -31,19 +31,68 @@ const emptyItem = (): ExpenseItemInput => ({
   comment: "",
 });
 
+const REPORT_PAGE_SIZE = 100;
+const REPORT_READ_TIMEOUT_MS = 15_000;
+
+function reportPage(raw: string | null): number {
+  if (!raw || !/^[1-9]\d*$/.test(raw)) return 1;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) ? value : 1;
+}
+
+function useReportPage(kind: "mine" | "pending", page: number, enabled: boolean) {
+  const { user, org, cacheIdentity } = useAuth();
+  return useQuery<Paginated<ExpenseReport>>({
+    queryKey: ["expenses", kind, user?.id, org?.id, cacheIdentity, page, REPORT_PAGE_SIZE],
+    enabled: enabled && !!user?.id && !!org?.id,
+    queryFn: async ({ signal }) => {
+      const data = (await api.get<Paginated<ExpenseReport>>("/expenses", {
+        params: { ...(kind === "mine" ? { mine: true } : { status: "submitted" }), page, page_size: REPORT_PAGE_SIZE },
+        signal, timeout: REPORT_READ_TIMEOUT_MS,
+      })).data;
+      if (!Array.isArray(data?.items) || !Number.isSafeInteger(data.total) || data.total < 0 ||
+          data.items.length > REPORT_PAGE_SIZE || data.items.length > data.total) {
+        throw new Error("The report page could not be read. Retry loading this page.");
+      }
+      return data;
+    },
+  });
+}
+
 export default function Expenses() {
   const { hasPerm, cacheIdentity } = useAuth();
   const isManager = hasPerm("expense.approve");
   const modules = useModules();
   const enabled = modules.isEnabled("expenses");
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawMinePage = searchParams.get("my_page"), rawPendingPage = searchParams.get("approval_page");
+  const minePage = reportPage(rawMinePage), pendingPage = reportPage(rawPendingPage);
 
   const summary = useQuery<ExpenseSummary>({ queryKey: ["expenses", "summary"], queryFn: async () => (await api.get("/expenses/summary")).data, enabled });
-  const mine = useQuery<Paginated<ExpenseReport>>({ queryKey: ["expenses", "mine"], queryFn: async () => (await api.get("/expenses?mine=true")).data, enabled });
-  const pending = useQuery<Paginated<ExpenseReport>>({
-    queryKey: ["expenses", "pending"],
-    queryFn: async () => (await api.get("/expenses?status=submitted")).data,
-    enabled: enabled && isManager,
-  });
+  const mine = useReportPage("mine", minePage, !!enabled);
+  const pending = useReportPage("pending", pendingPage, !!enabled && isManager);
+  const mineLast = mine.isSuccess && !mine.isFetching ? Math.max(1, Math.ceil(mine.data.total / REPORT_PAGE_SIZE)) : null;
+  const pendingLast = pending.isSuccess && !pending.isFetching ? Math.max(1, Math.ceil(pending.data.total / REPORT_PAGE_SIZE)) : null;
+
+  const changeReportPage = (parameter: "my_page" | "approval_page", next: number) => {
+    if (!Number.isSafeInteger(next) || next < 1) return;
+    setSearchParams((current) => { const updated = new URLSearchParams(current); updated.set(parameter, String(next)); return updated; }, { state: location.state });
+  };
+
+  useEffect(() => {
+    const nextMine = mineLast === null ? minePage : Math.min(minePage, mineLast);
+    const nextPending = pendingLast === null ? pendingPage : Math.min(pendingPage, pendingLast);
+    const normalizeMine = nextMine !== minePage || (rawMinePage !== null && rawMinePage !== String(nextMine));
+    const normalizePending = isManager && (nextPending !== pendingPage || (rawPendingPage !== null && rawPendingPage !== String(nextPending)));
+    if (!normalizeMine && !normalizePending) return;
+    setSearchParams((current) => {
+      const updated = new URLSearchParams(current);
+      if (normalizeMine && current.get("my_page") === rawMinePage) updated.set("my_page", String(nextMine));
+      if (normalizePending && current.get("approval_page") === rawPendingPage) updated.set("approval_page", String(nextPending));
+      return updated;
+    }, { replace: true, state: location.state });
+  }, [minePage, pendingPage, rawMinePage, rawPendingPage, mineLast, pendingLast, isManager, setSearchParams, location.state]);
 
   if (modules.data && !enabled) {
     return (
@@ -84,16 +133,22 @@ export default function Expenses() {
 
       {isManager && (
         <ReportTable
-          title={`Awaiting my approval${pending.data ? ` (${pending.data.total})` : ""}`}
+          label="Awaiting my approval"
+          title={`Awaiting my approval${pending.data && !pending.isError ? ` (${pending.data.total})` : ""}`}
           query={pending}
+          page={pendingPage}
+          onPageChange={(next) => changeReportPage("approval_page", next)}
           showEmployee
           emptyTitle="Nothing awaiting your approval"
         />
       )}
 
       <ReportTable
-        title={`My reports${mine.data ? ` (${mine.data.total})` : ""}`}
+        label="My reports"
+        title={`My reports${mine.data && !mine.isError ? ` (${mine.data.total})` : ""}`}
         query={mine}
+        page={minePage}
+        onPageChange={(next) => changeReportPage("my_page", next)}
         emptyTitle="No expense reports yet"
       />
     </div>
@@ -311,44 +366,82 @@ function AvailableExpenses({ enabled }: { enabled: boolean }) {
 }
 
 function ReportTable({
+  label,
   title,
   query,
   showEmployee,
   emptyTitle,
+  page,
+  onPageChange,
 }: {
+  label: string;
   title: string;
   query: UseQueryResult<Paginated<ExpenseReport>>;
   showEmployee?: boolean;
   emptyTitle: string;
+  page: number;
+  onPageChange: (page: number) => void;
 }) {
+  const { cacheIdentity } = useAuth();
+  const previousRef = useRef<HTMLButtonElement>(null), nextRef = useRef<HTMLButtonElement>(null);
+  const focusIntent = useRef<{ element: HTMLButtonElement; page: number; identity: string; generation: number; token: string | null } | null>(null);
+  const pages = query.data ? Math.max(1, Math.ceil(query.data.total / REPORT_PAGE_SIZE)) : null;
+  const clamping = query.isSuccess && !query.isFetching && pages !== null && page > pages;
+  const loading = query.isPending || clamping;
+  const count = query.data?.items.length ?? 0;
+  const navigate = (element: HTMLButtonElement, next: number) => {
+    focusIntent.current = document.activeElement === element ? {
+      element, page: next, identity: cacheIdentity, generation: tokenStore.generation(), token: tokenStore.get(),
+    } : null;
+    onPageChange(next);
+  };
+  useEffect(() => {
+    const intent = focusIntent.current;
+    if (!intent) return;
+    if (intent.identity !== cacheIdentity || intent.generation !== tokenStore.generation() || intent.token !== tokenStore.get() || page !== intent.page) {
+      focusIntent.current = null;
+      return;
+    }
+    if (query.isPending || query.isFetching || clamping) return;
+    if (document.activeElement === document.body || document.activeElement === intent.element) {
+      const target = !intent.element.disabled ? intent.element : [previousRef.current, nextRef.current].find((element) => element && !element.disabled);
+      target?.focus();
+    }
+    focusIntent.current = null;
+  }, [page, query.isPending, query.isFetching, clamping, cacheIdentity]);
   return (
-    <div>
+    <section aria-label={label} aria-busy={query.isFetching || clamping} className="min-w-0 space-y-3">
       <h2 className="mb-2 text-sm font-semibold text-slate-600">{title}</h2>
-      <div className="card overflow-x-auto p-0">
+      <div role="region" aria-label={`${label} table`} tabIndex={0} className="card relative min-w-0 max-w-full overflow-x-auto overscroll-x-contain p-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-inset">
+        {clamping ? <Skeleton className="m-4 h-32 w-[calc(100%-2rem)]" /> : (
         <QueryState
           query={query}
           loading={<Skeleton className="m-4 h-32 w-[calc(100%-2rem)]" />}
-          isEmpty={(d) => d.items.length === 0}
+          isEmpty={(d) => d.total === 0}
           empty={<EmptyState title={emptyTitle} />}
           errorTitle="Couldn’t load expense reports"
         >
-          {(d) => (
-            <table className="w-full text-sm">
+          {(d) => d.items.length === 0 ? (
+            <EmptyState title="No reports on this page" description="Refresh to read the current report list."
+              action={<button type="button" className="btn-ghost" disabled={query.isFetching} onClick={() => { void query.refetch(); }}>Refresh reports</button>} />
+          ) : (
+            <table className="w-full min-w-[36rem] text-sm">
+              <caption className="sr-only">{label}</caption>
               <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Report</th>
-                  {showEmployee && <th className="px-4 py-3">Employee</th>}
-                  <th className="px-4 py-3">Submitted</th>
-                  <th className="px-4 py-3 text-right">VAT</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3">Report</th>
+                  {showEmployee && <th scope="col" className="px-4 py-3">Employee</th>}
+                  <th scope="col" className="px-4 py-3">Submitted</th>
+                  <th scope="col" className="px-4 py-3 text-right">VAT</th>
+                  <th scope="col" className="px-4 py-3 text-right">Total</th>
+                  <th scope="col" className="px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {d.items.map((r) => (
                   <tr key={r.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <Link to={`/expenses/${r.id}`} className="font-medium text-brand-600 hover:underline">{r.title}</Link>
+                      <Link to={`/expenses/${r.id}`} className="font-medium text-brand-600 hover:underline [overflow-wrap:anywhere]">{r.title}</Link>
                     </td>
                     {showEmployee && <td className="px-4 py-3 text-slate-500">{r.employee_name}</td>}
                     <td className="px-4 py-3 text-slate-500">{r.submitted_at ? shortDate(r.submitted_at) : "—"}</td>
@@ -361,8 +454,22 @@ function ReportTable({
             </table>
           )}
         </QueryState>
+        )}
       </div>
-    </div>
+      <nav aria-label={`${label} pages`} className="flex min-w-0 flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+        <p aria-live="polite" aria-atomic="true">
+          {loading ? "Loading reports…" : query.isFetching ? "Refreshing reports…" : query.isError ? `Page ${page} could not be loaded.` : query.data ? (
+            query.data.total === 0 ? "No results" :
+              `Showing ${count === 0 ? "0" : `${(page - 1) * REPORT_PAGE_SIZE + 1}–${(page - 1) * REPORT_PAGE_SIZE + count}`} of ${query.data.total}`
+          ) : ""}
+        </p>
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <button ref={previousRef} type="button" className="btn-ghost" disabled={page <= 1 || query.isFetching || clamping} onClick={(event) => navigate(event.currentTarget, page - 1)}>Previous page</button>
+          <span>Page {page}{pages !== null && !query.isError && !clamping ? ` of ${pages}` : ""}</span>
+          <button ref={nextRef} type="button" className="btn-ghost" disabled={query.isError || query.isFetching || clamping || pages === null || page >= pages} onClick={(event) => navigate(event.currentTarget, page + 1)}>Next page</button>
+        </div>
+      </nav>
+    </section>
   );
 }
 
@@ -372,7 +479,7 @@ type ManualSaveIntention = {
 
 function NewReport({ enabled }: { enabled: boolean }) {
   const qc = useQueryClient();
-  const { user, org, hasPerm } = useAuth();
+  const { user, org, hasPerm, cacheIdentity } = useAuth();
   const scope = { userId: user?.id ?? "", orgId: org?.id ?? "" };
   const canWrite = enabled && !!user && !!org && hasPerm("expense.write");
   const [title, setTitle] = useState("");
@@ -422,7 +529,7 @@ function NewReport({ enabled }: { enabled: boolean }) {
           if (manualDraftResponse(current, "", "write").id !== report.id) throw new Error("The current report response did not match the saved ID.");
           return current;
         } }),
-      qc.invalidateQueries({ queryKey: ["expenses", "mine"], exact: true }, { throwOnError: true }),
+      qc.invalidateQueries({ queryKey: ["expenses", "mine", scope.userId, scope.orgId, cacheIdentity] }, { throwOnError: true }),
       qc.invalidateQueries({ queryKey: ["expenses", "summary"], exact: true }, { throwOnError: true }),
     ]);
     if (!active.current) return;
