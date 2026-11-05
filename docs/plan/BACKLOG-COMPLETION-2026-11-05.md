@@ -1,11 +1,12 @@
 # Backlog completion — 5 November 2026
 
-**Combined NINTH base:**162 revisions/6,410 collected cases now include the
-tenant-parent repairs and SIXTH parser, native admission, review recovery,
-recurring notice and Documents navigation. New per-page/profile work has not
-begun. Historical branch paragraphs below retain their own source context.
-The separate historical159 test correction and fresh full CI remain required.
-No main/PR merge, deployment or complete-backlog claim.
+**Current163 reading facts:** [Per-page selection and fenced publication](OCR-READING-FACTS-2026-11-05.md)
+adds bounded provenance without retained raw page text.73 focused,15 native
+authority/cache,40 boxed runtime and658 broader portable controls pass; those
+cohorts overlap. The full graph passes28 checks/3 explicit SQLite-only skips.
+PR105–PR110 separately pass all13 required contexts. Current combined-source CI
+and connected qualification remain required. Historical paragraphs below retain
+their dated source scope. No main/PR merge, deployment or complete-backlog claim.
 
 The user's instruction is to finish actionable work. The
 [execution inventory](BACKLOG-COMPLETION-2026-11-05.json) preserves197 original

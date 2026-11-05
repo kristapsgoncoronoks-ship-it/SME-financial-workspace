@@ -1,14 +1,14 @@
 {
   "date": "2026-11-05",
   "baseline": "47baca2bc45d7772f54f3bb51ee832408bd4459d",
-  "scope": "Named current engineering backlog, current TODO entry point, Decisions1\u201333, linked findings register/OCR/reimbursement/planning/current design reports, historical development/reference/audit carry-forwards. This is an actionable source inventory, not runtime acceptance or a claim that all product vision is built.",
+  "scope": "Named current engineering backlog, current TODO entry point, Decisions1–33, linked findings register/OCR/reimbursement/planning/current design reports, historical development/reference/audit carry-forwards. This is an actionable source inventory, not runtime acceptance or a claim that all product vision is built.",
   "limits": [
     "Original large uploaded83-semantic-action register is not checked into repository and prior referenced workspace artifacts are absent; retained EX/RN/ACC01 actions require original contract refresh.",
     "Inventory source line references belong to assigned baseline; parallel implementation may move lines.",
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "NINTH combined base:162 revisions/6410 collected cases, containing the qualified scoped tenant-parent and SIXTH OCR/parser/capacity/workflow/Documents source. New page/profile implementation has not begun. PR105/106/107 passed13 required contexts; old PR1099a47 failed two historical159 fixtures and its separate corrected head254dd9e is pending freshCI. The corrected historical fixture will be integrated before final qualification. No new-source all13 claim, main/PR merge, deploy or complete-backlog claim.",
+  "qualification": "PR105 throughPR110 each passed all13 required actualPR contexts at their separately frozen heads. This source adds published reading facts and per-page selection at163, with73 focused/15 native authority controls,40 boxed runtime cases and658 broader portable cases; 28 graph/generic checks pass with3 SQLite-only skips/all12native executed. Source-specific cohorts overlap. Current combined-source CI/connected qualification still remains; no production/merge/deploy or complete-backlog claim.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -78,7 +78,7 @@
         "backend/app/services/reimbursement.py",
         "backend/app/models/expense.py"
       ],
-      "next": "Shared actor/org/key cancellation receipt; typed POST+legacy DELETE, optional reason, versions, membership\u2192batch\u2192ordered reports\u2192audit locks; frozen released IDs/child bumps; strict rollback; GET-only recovery and alias permission guards. No new event or migration implied.",
+      "next": "Shared actor/org/key cancellation receipt; typed POST+legacy DELETE, optional reason, versions, membership→batch→ordered reports→audit locks; frozen released IDs/child bumps; strict rollback; GET-only recovery and alias permission guards. No new event or migration implied.",
       "dependencies": [
         "Existing export/paid refusal and EXPENSE_APPROVE policy"
       ],
@@ -1213,7 +1213,7 @@
       "sources": [
         "docs/DECISIONS-NEEDED.md:460"
       ],
-      "next": "Plan tier/add-on/rate/payout and fee-invoice business choices only those still outstanding; 15%/\u20ac50 default already decided",
+      "next": "Plan tier/add-on/rate/payout and fee-invoice business choices only those still outstanding; 15%/€50 default already decided",
       "dependencies": []
     },
     {
@@ -1740,18 +1740,17 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "This tree includes159item/report plus160comment/approval-step tenant pairs, all mandatoryCASCADE.160reuses159uniqueindex, maskedglobalhistory refusal/orderedlocks/FORCERLS/atomic2linkrollback and exactunrelatedschema preservation.122focused and83 final integrationchecks pass, zero skips. Sixdated candidates remain in separate investigations; nooptionalSETNULL conversion/historyrepair.",
+      "next": "This tree includes five repaired dated mandatory links through162. Partner-document/webhook CASCADE pairs pass118 focused,28 full graph/generic and98 composed current/historical native controls. Four dated optional links need separately reviewed dual-dialect guards; additional current candidates remain outside datednine. No SETNULL action/org/history weakening.",
       "dependencies": [],
       "qualification": {
-        "source_commit": "b91db66f467f8d936f106425429cdefbf444933b",
-        "migration_head": "e6f8a0b2c4d7",
-        "focused_checks": 122,
-        "integration_checks": 83,
+        "product_source": "bd8f970",
+        "migration_head": "a8b0d2f4c6e9",
+        "focused_distinct": 118,
+        "graph_generic_passed": 28,
+        "graph_generic_skips": "3 explicit SQLite-only cases; all12 native graph cases run",
+        "native_composition": 98,
         "integrated_ci": "pending",
-        "focused_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-children160/",
-        "integration_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-graph-qualification/",
-        "hosted_first_failure": "9a47efa: two historical159 fixtures attempted index removal under valid160 dependents; no product/migration change",
-        "historical_fixture_correction": "Actual159 private UUID database;31 affected native and40 discovery controls pass, zero skips; fresh full CI pending"
+        "evidence": "/workspace/artifacts/backlog-seventh-wave-2026-11-05/db010-next/"
       }
     },
     {
@@ -1895,7 +1894,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Draft-copy failure\u2192verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure.56-case UI union passes. Separately reproduced recurring-create missing acknowledgement is being repaired in isolated sixth checkout, not this source.",
+      "next": "Draft-copy failure→verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure.56-case UI union passes. Separately reproduced recurring-create missing acknowledgement is being repaired in isolated sixth checkout, not this source.",
       "dependencies": []
     },
     {
@@ -2437,7 +2436,7 @@
       "sources": [
         "docs/BACKLOG.md:282"
       ],
-      "next": "Failed81/88\u201390 logs triaged; current stack inherits repairs. No blanket reimplementation of older audit failures; supported paired dependency updates still need own qualification.",
+      "next": "Failed81/88–90 logs triaged; current stack inherits repairs. No blanket reimplementation of older audit failures; supported paired dependency updates still need own qualification.",
       "dependencies": []
     },
     {
@@ -2585,7 +2584,7 @@
       "sources": [
         "inventory/ui-source.md"
       ],
-      "next": "Already implemented foundations; CTX02A/B/C, IMP11\u201315, shared shell/body remaining scope active.",
+      "next": "Already implemented foundations; CTX02A/B/C, IMP11–15, shared shell/body remaining scope active.",
       "dependencies": []
     },
     {
@@ -2801,7 +2800,7 @@
       "sources": [
         "backend/app/api/routes/expenses.py"
       ],
-      "next": "Fresh locked membership authority now governs decision/reassignment, preserving designated-approver policy and membership\u2192report ordering.27 native PostgreSQL+85 portable tests pass.",
+      "next": "Fresh locked membership authority now governs decision/reassignment, preserving designated-approver policy and membership→report ordering.27 native PostgreSQL+85 portable tests pass.",
       "dependencies": [],
       "qualification": {
         "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
@@ -2983,7 +2982,7 @@
         "backend/app/services/document_registry.py",
         "frontend/src/pages/Documents.tsx"
       ],
-      "next": "Compatible/page materializes100 default/200maximum stable rows, exact current filtered total and fulltenant kindchoices; legacyarray retained.21focusedbackend controls include actualnon-superuserPG and27browser cases cover pages/GETrecovery/URL/history/320px/2xtext.203row mock before/after payload52259\u219225686bytes and DOM203\u2192100; no realdevice/capacityclaim. Fresh finalsource CI and connected browser/APIreadback remain required.",
+      "next": "Compatible/page materializes100 default/200maximum stable rows, exact current filtered total and fulltenant kindchoices; legacyarray retained.21focusedbackend controls include actualnon-superuserPG and27browser cases cover pages/GETrecovery/URL/history/320px/2xtext.203row mock before/after payload52259→25686bytes and DOM203→100; no realdevice/capacityclaim. Fresh finalsource CI and connected browser/APIreadback remain required.",
       "dependencies": []
     }
   ]
