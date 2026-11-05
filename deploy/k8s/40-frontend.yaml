@@ -16,6 +16,11 @@ spec:
       labels: { app: invoiceiq, component: frontend }
     spec:
       securityContext:
+        # Match the pinned NGINX image's existing unprivileged account.
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: frontend
@@ -31,6 +36,18 @@ spec:
           resources:
             requests: { cpu: "25m", memory: "48Mi" }
             limits: { cpu: "200m", memory: "128Mi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: nginx-cache, mountPath: /var/cache/nginx }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
