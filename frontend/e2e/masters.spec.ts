@@ -122,9 +122,11 @@ async function mockApi(page: Page, store: Store): Promise<void> {
     }
 
     // --- document registry ---
-    if (path === "/documents" && method === "GET") {
+    if (path === "/documents/page" && method === "GET") {
       const kind = url.searchParams.get("kind");
-      return route.fulfill(json(store.documents.filter((d) => !kind || d.kind === kind)));
+      const rows = store.documents.filter((d) => !kind || d.kind === kind);
+      const offset = Number(url.searchParams.get("offset") ?? 0), limit = Number(url.searchParams.get("limit") ?? 100);
+      return route.fulfill(json({ items: rows.slice(offset, offset + limit), total: rows.length, kinds: Array.from(new Set(store.documents.map((d) => d.kind))).sort() }));
     }
 
     // Anything else the shell touches: harmless empty list.
@@ -298,7 +300,7 @@ test.describe("documents", () => {
           body: JSON.stringify([{ org_id: ORG.id, name: ORG.name, role: USER.role, current: true }]),
         });
       }
-      if (path.endsWith("/documents")) {
+      if (path.endsWith("/documents/page")) {
         return route.fulfill({
           status: 500,
           contentType: "application/json",

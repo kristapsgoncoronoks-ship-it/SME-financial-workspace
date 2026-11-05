@@ -2,9 +2,18 @@
 
 The user's instruction is to finish actionable work. The
 [execution inventory](BACKLOG-COMPLETION-2026-11-05.json) preserves197 original
-named rows and15 separately appended findings. These are differently sized
-engineering/review/policy items, not212 equivalent features or a completion
+named rows and16 separately appended findings. These are differently sized
+engineering/review/policy items, not213 equivalent features or a completion
 percentage. Source references retain their original baseline context.
+
+## Current document registry follow-up
+
+[Bounded registry navigation](DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+adds complete kind choices and stable100-row pages without changing legacy
+clients, source downloads or financial records.21 focused backend and27 browser
+checks pass; this independent158-revision tree collects6,198 backend cases.
+Fresh delivered-source CI and combined connected readback remain required.
+Other dated wave paragraphs below retain their original source context.
 
 ## Qualified and current work
 

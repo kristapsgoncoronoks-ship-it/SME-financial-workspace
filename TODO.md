@@ -1,5 +1,10 @@
 # TODO — Task Board
 
+**Document registry follow-up:** [Bounded pages and complete kind choices](docs/plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+reduce the measured203-row fixture to100 rendered rows and fix mobile overflow.
+21 backend/27 browser checks pass; final-source CI and connected combined
+readback remain required. No main merge, deployment or source-byte change.
+
 **5 November current status:** PR105 `9efcd1c` and PR106 `37b826b` pass all13
 required CI contexts. The [current OCR/workflow wave](docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
 has scoped local/native/connected qualification; newly delivered source needs
