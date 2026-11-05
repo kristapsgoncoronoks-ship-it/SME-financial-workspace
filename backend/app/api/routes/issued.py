@@ -946,7 +946,9 @@ async def list_issued(
     rows = await db.scalars(
         select(IssuedInvoice)
         .where(IssuedInvoice.org_id == current.org_id)
-        .order_by(IssuedInvoice.created_at.desc())
+        # Stable ties make bounded pages deterministic for the same population
+        # without changing the existing newest-first chronology.
+        .order_by(IssuedInvoice.created_at.desc(), IssuedInvoice.id.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )

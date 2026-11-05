@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { api, apiError, downloadFile, openFile } from "../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { checkSavedInvoiceCommand, deliveryOutcome, hasSavedInvoiceCommand, invoiceCommand } from "../lib/invoiceCommands";
@@ -22,15 +22,53 @@ const SCHEMES: { value: VatScheme; label: string }[] = [
 ];
 
 const emptyLine = (): IssuedLineInput => ({ description: "", quantity: "1", unit_price: "0", vat_rate: "21" });
+const ISSUED_PAGE_SIZE = 100;
+const ISSUED_READ_TIMEOUT_MS = 15_000;
+
+function issuedPage(raw: string | null): number {
+  if (!raw || !/^[1-9]\d*$/.test(raw)) return 1;
+  const page = Number(raw);
+  return Number.isSafeInteger(page) ? page : 1;
+}
 
 export default function Issue() {
   const qc = useQueryClient();
+  const { user, org } = useAuth();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawPage = searchParams.get("page");
+  const page = issuedPage(rawPage);
   const modules = useModules();
   const issuer = useQuery<IssuerProfile>({ queryKey: ["issuer"], queryFn: async () => (await api.get("/issuer")).data });
   const list = useQuery<Paginated<IssuedInvoice>>({
-    queryKey: ["issued"],
-    queryFn: async () => (await api.get("/issued")).data,
+    queryKey: ["issued", user?.id, org?.id, page, ISSUED_PAGE_SIZE],
+    enabled: !!user?.id && !!org?.id,
+    queryFn: async ({ signal }) => (await api.get("/issued", {
+      params: { page, page_size: ISSUED_PAGE_SIZE }, signal, timeout: ISSUED_READ_TIMEOUT_MS,
+    })).data,
+    retry: false,
+    meta: { errorHandled: true },
   });
+  const totalPages = list.data ? Math.max(1, Math.ceil(list.data.total / ISSUED_PAGE_SIZE)) : null;
+  const clamping = list.isSuccess && !list.isFetching && totalPages !== null && page > totalPages;
+  const loadingPage = list.isPending || clamping;
+  const visibleRows = !list.isError && !clamping ? list.data?.items ?? [] : [];
+  const changePage = (next: number) => setSearchParams((current) => {
+    const updated = new URLSearchParams(current);
+    updated.set("page", String(next));
+    return updated;
+  }, { state: location.state });
+
+  useEffect(() => {
+    const next = clamping ? totalPages : page;
+    if (next === null || (!clamping && (rawPage === null || rawPage === String(page)))) return;
+    setSearchParams((current) => {
+      if (issuedPage(current.get("page")) !== page) return current;
+      const updated = new URLSearchParams(current);
+      updated.set("page", String(next));
+      return updated;
+    }, { replace: true, state: location.state });
+  }, [clamping, totalPages, page, rawPage, setSearchParams, location.state]);
 
   const enabled = modules.isEnabled("issuing");
   const ready = !!issuer.data?.is_complete;
@@ -77,7 +115,23 @@ export default function Issue() {
       <RecurringSchedules onGenerated={() => qc.invalidateQueries({ queryKey: ["issued"] })} />
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-600">Issued ({list.data?.total ?? 0})</h2>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-slate-600">
+            Issued{list.data && !list.isError ? ` (${list.data.total})` : ""}
+          </h2>
+          <nav aria-label="Issued invoice pages" className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <span aria-live="polite" aria-atomic="true">
+              {list.isError ? `Page ${page} could not be loaded.` : loadingPage ? "Loading issued invoices…" : list.data ? (
+                <>Showing {list.data.items.length === 0 ? "0" : `${(page - 1) * ISSUED_PAGE_SIZE + 1}–${(page - 1) * ISSUED_PAGE_SIZE + list.data.items.length}`} of {list.data.total}</>
+              ) : ""}
+            </span>
+            <button type="button" className="btn-ghost" disabled={page <= 1 || list.isFetching || clamping}
+              onClick={() => changePage(page - 1)}>Previous page</button>
+            <span>Page {page}{totalPages !== null && !list.isError && !clamping ? ` of ${totalPages}` : ""}</span>
+            <button type="button" className="btn-ghost" disabled={list.isError || list.isFetching || clamping || totalPages === null || page >= totalPages}
+              onClick={() => changePage(page + 1)}>Next page</button>
+          </nav>
+        </div>
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -94,7 +148,7 @@ export default function Issue() {
               </tr>
             </thead>
             <tbody>
-              {list.data?.items.map((inv) => (
+              {visibleRows.map((inv) => (
                 <tr key={inv.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium">
                     {inv.number ?? <span className="italic text-text-secondary">Draft — unnumbered</span>}
@@ -183,10 +237,18 @@ export default function Issue() {
                   </td>
                 </tr>
               )}
-              {list.data && list.data.items.length === 0 && (
+              {loadingPage && (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-text-secondary">Loading issued invoices…</td></tr>
+              )}
+              {!loadingPage && !list.isError && list.data?.total === 0 && (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">No invoices issued yet.</td>
                 </tr>
+              )}
+              {!loadingPage && !list.isError && list.data && list.data.total > 0 && list.data.items.length === 0 && (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
+                  This page has no invoices. <button type="button" className="underline" disabled={list.isFetching} onClick={() => list.refetch()}>Refresh this page</button> to check the current list.
+                </td></tr>
               )}
             </tbody>
           </table>

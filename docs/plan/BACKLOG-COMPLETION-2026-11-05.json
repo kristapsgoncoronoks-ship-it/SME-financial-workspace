@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "First repair wave has preserved exact01a9912 CI failures: missing planning-receipt tenant probe, multipart-buffer false-positive classification and the intentional mobile target screenshot change. All182 focused guard/storage/planning cases pass after repair; user explicitly approved only the reviewed mobile baseline. Fresh delivered-source all13 contexts remain required. Finance/lease fixes are in stacked draftPR106; no release clearance/merge/deploy/settings/production migrations.",
+  "qualification": "Two reviewable waves with scoped local/native/browser/image evidence. Exact01a9912 hosted failures are preserved; guard classifications are repaired and the user approved exactly one reviewed mobile baseline. Fresh delivered-source all13 contexts are required. Finance/lease follow-ups are locally qualified; OCR/resource safety remains active in a third checkout. No release clearance/merge/deploy/settings/production migrations.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -48,7 +48,7 @@
         "frontend/Dockerfile",
         " frontend/scripts/verify-npm-toolchain.mjs"
       ],
-      "next": "npm12.2.2 fixes ip-address10.7.5 and retains undici6.29.1; supported fixed glob/minimatch parent remains unverified. Keep both advisory IDs and all ratings visible. Final source image inventories/CI required.",
+      "next": "Official npm12.2.2 fixes ip-address10.7.5 and retains undici6.29.1; fresh supported parent review finds no compatible fixed glob/minimatch. Keep both IDs and alternate/historical ratings, no forced incompatible majors/waivers. Current exact-source supply/image checks pass, full CI visual pending.",
       "dependencies": []
     },
     {
@@ -212,7 +212,7 @@
         "docs/BACKLOG.md:875",
         "inventory/stored-read-calls.json"
       ],
-      "next": "Known-admission original bounds, streaming exports and PDF scratch cleanup implemented; worst-case decoding/cgroup, shared disk/inodes/fleet reservations and legacy unknown-size byte/disk behavior remain open. Two raw delivery/claim-pack reads remain source-backed follow-ups.",
+      "next": "Delivery/claim-pack remaining raw reads replaced by verified bounds/file streaming; local/native tests pass. Native80Mpx image experiments reproduced process OOM under768MiB; supervised bounded image repair active in isolated thirdcheckout. Aggregate temp/inode/fleet/PDF, unknown historical sizes and production/corpus capacity remain unqualified.",
       "dependencies": [
         "Per-purpose metadata/authorization/integrity contract"
       ]
@@ -518,14 +518,14 @@
     },
     {
       "id": "UI-CURRENCIES-REFLOW",
-      "status": "INVESTIGATE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "INVESTIGATE",
       "title": "Currencies background-page reflow",
       "sources": [
         "inventory/ui-source.md",
         "docs/BACKLOG.md"
       ],
-      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "next": "Pinned Chromium156 reproduced fractional Archive focus clipping at320px. Mobile-only trailing padding+scroll margin restore full visibility;13 responsive checks and hosted functional1071 pass, assertions/baselines unchanged. Separate supplier-invoice mobile screenshot was explicitly approved by the user; only that exact baseline is updated, fresh CI pending.",
       "dependencies": []
     },
     {
@@ -1713,14 +1713,14 @@
     },
     {
       "id": "REBATE-MERGE-PREVIEW",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Dry-run rebate merge",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Active plan tail still names no merge_period dry-run; propose read-only canonical comparison from actual merge logic, no financial write.",
+      "next": "Shared canonical Decimal planner serves bounded read-only preview, paged allocations and exact summary; monthly close re-plans current sources.249 distinct scoped checks pass including live105-row browser/API/PostgreSQL no-write journey; no historical backfill.",
       "dependencies": []
     },
     {
@@ -2528,46 +2528,68 @@
     },
     {
       "id": "FIN-EXPENSE-AUTHORITY-WAIT",
-      "status": "READY-NEXT-WAVE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Fresh mandatory approver authority after admission waits",
       "sources": [
         "backend/app/api/routes/expenses.py"
       ],
-      "next": "Real team-API revocation while decision waits still commits; implement fresh Principal under membership\u2192report order, preserving exact flag/role policy.",
+      "next": "Fresh locked membership authority now governs decision/reassignment, preserving designated-approver policy and membership\u2192report ordering.27 native PostgreSQL+85 portable tests pass.",
       "dependencies": []
     },
     {
       "id": "FIN-AP-CREATE-SELECTION",
-      "status": "READY-NEXT-WAVE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Prevent overlapping AP run creation from stealing invoices",
       "sources": [
         "backend/app/services/payment_run.py"
       ],
-      "next": "Reproduce HTTP overlapping selections on actual PG; deterministic invoice locks and fresh eligibility before linking, with exact no-write conflict.",
+      "next": "Duplicate selections refused; ordered fresh invoice locks prevent overlapping payment runs stealing invoice assignments.20 native+37 portable tests pass; combined create/settlement union80 cases.",
       "dependencies": []
     },
     {
       "id": "FIN-AP-SETTLEMENT-BOUNDARY",
-      "status": "READY-NEXT-WAVE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Conserve AP ledger and cumulative balances under concurrent payment",
       "sources": [
         "backend/app/services/payment_run.py"
       ],
-      "next": "Reproduce manual/manual and run/manual races before narrow existing-payment lock/balance repair; no new money/correction policy.",
+      "next": "Manual/manual and run/manual settlements share ordered fresh invoice locks, conserving existing cumulative ledger semantics.38 portable+16 native tests pass; combined create/settlement union80 cases.",
       "dependencies": []
     },
     {
       "id": "JOBS-LATE-GENERATION",
-      "status": "READY-NEXT-WAVE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Fence terminal job results to the original lease generation",
       "sources": [
         "backend/app/services/jobs.py"
       ],
-      "next": "Actual run_once success/failure stale generation overwrote newer state in PG; freeze original worker/attempt through rollback and compare-and-set terminal/retry writes.",
+      "next": "Additive nullable random lease_token fences heartbeat/reclaim/terminal publication, original claim captured before commit.175 combined tests plus migration composition pass. Drain old unfenced workers before relying on the new guarantee; no forced live migration/downgrade.",
+      "dependencies": []
+    },
+    {
+      "id": "JOBS-MANUAL-RETRY",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "title": "Refuse a stale manual retry after another claim",
+      "sources": [
+        "docs/plan/FINANCE-LEASE-FOLLOWUPS-2026-11-05.md"
+      ],
+      "next": "Observed status/attempt/random lease identity CAS before flush; stale retry returns existing409 mapping without requeuing live work.19 native controls pass, included in175 job/migration union.",
+      "dependencies": []
+    },
+    {
+      "id": "PERF-ISSUED-PAGINATION",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-REPRODUCED",
+      "title": "Navigate the complete bounded issued-invoice population",
+      "sources": [
+        "docs/plan/FINANCE-LEASE-FOLLOWUPS-2026-11-05.md"
+      ],
+      "next": "Use existing API100-item page contract with stable created_at/id ordering, URLpage, tenant/user query identity, exact totals and GET recovery.47 backend+41 browser+1 live105-invoice connected checks pass; ZIP selection remains independent.",
       "dependencies": []
     }
   ]

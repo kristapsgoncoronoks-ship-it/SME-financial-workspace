@@ -144,7 +144,8 @@ async def test_reclaim_does_not_overwrite_a_changed_lease(isolated_pg, monkeypat
                     await jobs._complete(worker, job, {"durable": "completed result"})
                 elif winner == "renew":
                     monkeypatch.setattr("app.core.database.SessionLocal", sm)
-                    assert await jobs._renew_lease(job_id, "original-worker", org_id)
+                    job = await worker.get(Job, job_id)
+                    assert await jobs._renew_lease(jobs._Lease.from_job(job))
                 else:
                     assert await jobs.reclaim_stale(worker, now=now) == 1
             expected = await _snapshot(sm, job_id)

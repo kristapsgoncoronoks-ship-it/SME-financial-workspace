@@ -75,8 +75,9 @@ WHAT THIS MODULE NEVER DOES
 -------------------------------
 Persists nothing, mutates nothing, audits nothing (read-only artifact
 generation — the `erp_export`/`report_writers` precedent; master-context
-§4.16 requires audit on *mutations*). No route exists yet — the
-`api/routes/transport/*` batch serves and permission-gates these bytes later.
+§4.16 requires audit on *mutations*). The transport route delivers an owned
+ZIP file after refreshing current authority and the source facts. The byte
+builder remains a cleanup-owning compatibility adapter for service callers.
 Every figure is read from the frozen `Numeric(14,2)` columns as `Decimal` and
 summed via `q2` ROUND_HALF_UP (R14, §4.9) — never recomputed from
 `fuel_transactions`, never through float. Free-text cells go through the ONE
@@ -88,11 +89,15 @@ injection — `csv_safety`'s own rule).
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
+import os
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,7 +107,7 @@ from app.core.errors import ConflictError, NotFoundError, PermissionError
 from app.core.money import q2
 from app.core.storage import StorageError, StorageReadError, sha256_hex
 from app.models.transport.vat_claim import VatRefundClaim, VatRefundClaimLine
-from app.services import documents, extraction, modules, vendors
+from app.services import document_registry, documents, extraction, modules, vendors
 from app.services import invoices as ap_invoices
 from app.services import issuer as issuer_svc
 from app.services.transport import queries
@@ -428,18 +433,23 @@ async def build_workbook(db: AsyncSession, org_id: str, claim_id: str) -> bytes:
 
 
 @dataclass(frozen=True)
-class _BundleFile:
+class _BundleSource:
+    invoice_id: str
+    run_id: str
+    sha256: str
+    filename: str | None
     path: str
-    data: bytes
+    size: int | None
+    invoice_number: str
 
 
-async def _collect_documents(db: AsyncSession, org_id: str, pack: ClaimPack) -> list[_BundleFile]:
+async def _document_sources(db: AsyncSession, org_id: str, pack: ClaimPack) -> list[_BundleSource]:
     """Every vaulted capture of the pack's invoices, deduped by SHA-256
     (an invoice re-captured from the same bytes contributes one file), in
     deterministic (invoice_number, sha256) order. Missing object-store bytes
     refuse — module docstring "WHY MISSING DOCUMENT BYTES REFUSE"."""
     seen: set[str] = set()
-    files: list[_BundleFile] = []
+    files: list[_BundleSource] = []
     by_invoice: dict[str, PackLine] = {}
     for ln in pack.lines:
         by_invoice.setdefault(ln.invoice_id, ln)
@@ -453,48 +463,56 @@ async def _collect_documents(db: AsyncSession, org_id: str, pack: ClaimPack) -> 
             if sha is None or sha in seen:
                 continue
             seen.add(sha)
-            try:
-                data = await documents.load(documents.UPLOADS, org_id, sha)
-            except StorageReadError as exc:
-                raise ConflictError(
-                    f"Vaulted document {sha[:12]}… for invoice "
-                    f"'{ln.invoice_number}' could not be read from object storage — "
-                    "refusing to assemble an incomplete filing bundle. "
-                    "Check storage and retry after recovery.",
-                    code="evidence_document_unavailable",
-                ) from exc
-            except StorageError as exc:
-                raise ConflictError(
-                    f"Vaulted document {sha[:12]}… for invoice "
-                    f"'{ln.invoice_number}' is missing from object storage — refusing to "
-                    "assemble an incomplete filing bundle",
-                    code="evidence_document_unavailable",
-                ) from exc
-            if data is None:
-                raise ConflictError(
-                    f"Vaulted document reference for invoice '{ln.invoice_number}' is empty — "
-                    "refusing to assemble an incomplete filing bundle",
-                    code="evidence_document_unavailable",
-                )
             source_name = run.source_filename or f"{sha[:12]}.bin"
             filename = _sanitize_segment(f"{ln.invoice_number} - {source_name}")
-            files.append(_BundleFile(path=filename, data=data))
+            size = await document_registry.admitted_size(
+                db, org_id, sha256=sha, kind=documents.UPLOADS
+            )
+            files.append(
+                _BundleSource(
+                    invoice_id, run.id, sha, run.source_filename, filename, size, ln.invoice_number
+                )
+            )
     return files
 
 
-def _manifest_csv(entries: list[tuple[str, bytes]]) -> str:
+def _manifest_csv(entries: list[tuple[str, str, int]]) -> str:
     """`manifest.csv` — file, sha256, size for every bundle entry (the §3.K
     K4 manifest discipline applied to the filing bundle). Filenames are
     free text -> sanitized; sizes/hashes are machine values, left raw."""
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
     writer.writerow(["file", "sha256", "size_bytes"])
-    for path, data in entries:
-        writer.writerow([sanitize_cell(path), sha256_hex(data), len(data)])
+    for path, sha, size in entries:
+        writer.writerow([sanitize_cell(path), sha, size])
     return out.getvalue()
 
 
-async def build_evidence_pack(db: AsyncSession, org_id: str, claim_id: str) -> bytes:
+@dataclass(frozen=True)
+class EvidencePackFile(documents.StoredFile):
+    """Owned ZIP plus the facts its caller revalidates before HTTP release."""
+
+    pack: ClaimPack
+    sources: tuple[_BundleSource, ...]
+
+
+async def validate_evidence_pack(
+    db: AsyncSession, org_id: str, claim_id: str, prepared: EvidencePackFile
+) -> None:
+    """Recheck after the caller ends its read snapshot and refreshes authority."""
+    pack = await _load_pack(db, org_id, claim_id)
+    sources = await _document_sources(db, org_id, pack)
+    if pack != prepared.pack or tuple(sources) != prepared.sources:
+        raise ConflictError(
+            "The claim or its source documents changed while preparing this evidence pack. "
+            "Retry to download its current filing evidence.",
+            code="evidence_source_changed",
+        )
+
+
+async def build_evidence_pack_file(
+    db: AsyncSession, org_id: str, claim_id: str
+) -> EvidencePackFile:
     """The ZIP filing bundle of a frozen claim (G2.12, §3.K K6): the claim
     workbook (rendered from the SAME loaded pack — identical lines and
     totals by construction), every vaulted invoice document, and a
@@ -504,17 +522,77 @@ async def build_evidence_pack(db: AsyncSession, org_id: str, claim_id: str) -> b
     vaulted document's bytes are gone (fails CLOSED — module docstring)."""
     pack = await _load_pack(db, org_id, claim_id)
     workbook_bytes = _render_workbook(pack)
-    doc_files = await _collect_documents(db, org_id, pack)
-
+    sources = await _document_sources(db, org_id, pack)
     prefix = vault_prefix(pack)
-    entries: list[tuple[str, bytes]] = [(f"{prefix}/{WORKBOOK_FILENAME}", workbook_bytes)]
-    entries.extend((f"{prefix}/{f.path}", f.data) for f in doc_files)
+    entries = [(f"{prefix}/{WORKBOOK_FILENAME}", sha256_hex(workbook_bytes), len(workbook_bytes))]
+    descriptor, name = tempfile.mkstemp(prefix="claim-evidence-", suffix=".zip")
+    os.close(descriptor)
+    path = Path(name)
+    owned = documents.StoredFile(path, "", 0)
+    try:
+        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(entries[0][0], workbook_bytes)
+            for source in sources:
+                try:
+                    staged = await documents.load_verified_file(
+                        documents.UPLOADS, org_id, source.sha256, size=source.size
+                    )
+                except documents.OriginalIntegrityError as exc:
+                    raise ConflictError(
+                        f"Vaulted document {source.sha256[:12]}… for invoice "
+                        f"'{source.invoice_number}' could not be verified as the "
+                        "original — refusing to assemble an incomplete filing bundle. "
+                        "Restore the original and retry.",
+                        code="evidence_document_unavailable",
+                    ) from exc
+                except StorageReadError as exc:
+                    raise ConflictError(
+                        f"Vaulted document {source.sha256[:12]}… for invoice "
+                        f"'{source.invoice_number}' could not be read from object "
+                        "storage — refusing to assemble an incomplete filing bundle. "
+                        "Check storage and retry after recovery.",
+                        code="evidence_document_unavailable",
+                    ) from exc
+                except StorageError as exc:
+                    raise ConflictError(
+                        f"Vaulted document {source.sha256[:12]}… for invoice "
+                        f"'{source.invoice_number}' is missing from object storage — "
+                        "refusing to assemble an incomplete filing bundle",
+                        code="evidence_document_unavailable",
+                    ) from exc
+                if staged is None:
+                    raise ConflictError(
+                        f"Vaulted document reference for invoice '{source.invoice_number}' "
+                        "is empty — refusing to assemble an "
+                        "incomplete filing bundle",
+                        code="evidence_document_unavailable",
+                    )
+                try:
+                    member = f"{prefix}/{source.path}"
+                    archive.write(staged.path, member)
+                    entries.append((member, staged.sha256, staged.size))
+                finally:
+                    staged.cleanup()
+            archive.writestr(f"{prefix}/{MANIFEST_FILENAME}", _manifest_csv(entries))
+        digest, size = hashlib.sha256(), 0
+        with path.open("rb") as stream:
+            while chunk := stream.read(64 * 1024):
+                digest.update(chunk)
+                size += len(chunk)
+        return EvidencePackFile(path, digest.hexdigest(), size, pack, tuple(sources))
+    except BaseException:
+        owned.cleanup()
+        raise
 
-    manifest = _manifest_csv(entries)
 
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for path, data in entries:
-            zf.writestr(path, data)
-        zf.writestr(f"{prefix}/{MANIFEST_FILENAME}", manifest)
-    return buf.getvalue()
+async def build_evidence_pack(db: AsyncSession, org_id: str, claim_id: str) -> bytes:
+    """Compatibility adapter for service callers; HTTP uses the owned-file API.
+
+    This intentionally materializes its requested byte result. The default HTTP
+    path never calls it, and it always removes the staged ZIP after the read.
+    """
+    prepared = await build_evidence_pack_file(db, org_id, claim_id)
+    try:
+        return prepared.path.read_bytes()
+    finally:
+        prepared.cleanup()

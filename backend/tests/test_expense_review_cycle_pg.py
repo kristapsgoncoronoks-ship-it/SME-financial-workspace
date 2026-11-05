@@ -19,6 +19,7 @@ from app.api.routes import expenses as route
 from app.core.database import get_session
 from app.main import app
 from app.models.expense import ExpenseTransaction
+from app.services import expense_commands
 from tests.test_expense_decision_version import _PNG, _h
 from tests.test_expense_review_cycle import BASE, financial_state, report_fixture
 from tests.test_reimbursement_pay_concurrency import _ex20_observe_wait
@@ -94,7 +95,16 @@ async def test_withdraw_and_decision_serialize_one_review_cycle(
     )
     release_first, release_second = asyncio.Event(), asyncio.Event()
     pids, tasks, probes = {}, [], []
-    original = route._load
+    original, original_actor = route._load, expense_commands.lock_actor
+
+    async def actor(db, current, **kwargs):
+        # Same-actor reviews now serialize on live membership before reaching
+        # the report. Observe that actual earlier wait rather than waiting for
+        # a report-loader hook the protected request cannot reach yet.
+        if role.get() == "second":
+            pids["second"] = await db.scalar(text("SELECT pg_backend_pid()"))
+            second_entered.set()
+        return await original_actor(db, current, **kwargs)
 
     async def load(db, org, target, *, lock=False):
         name = role.get()
@@ -112,6 +122,7 @@ async def test_withdraw_and_decision_serialize_one_review_cycle(
         return row
 
     monkeypatch.setattr(route, "_load", load)
+    monkeypatch.setattr(expense_commands, "lock_actor", actor)
 
     async def request(name, action):
         token = role.set(name)
@@ -141,8 +152,19 @@ async def test_withdraw_and_decision_serialize_one_review_cycle(
             asyncio.create_task(second_loaded.wait()),
         ]
         done, _ = await asyncio.wait(probes, timeout=10, return_when=asyncio.FIRST_COMPLETED)
-        assert probes[0] in done, "Competing review mutation bypassed the actual report row lock"
+        assert probes[0] in done, "Competing review mutation bypassed protected review admission"
         observed = probes[0].result()
+        relation = (
+            "memberships"
+            if first_action != "withdraw" and second_action != "withdraw"
+            else "expense_reports"
+        )
+        async with factory() as observer:
+            query = await observer.scalar(
+                text("SELECT query FROM pg_stat_activity WHERE pid = :pid"),
+                {"pid": pids["second"]},
+            )
+        assert f"FROM {relation}" in query, query
         release_first.set()
         first = await asyncio.wait_for(tasks[0], 15)
         assert first.status_code == 200, first.text
@@ -159,7 +181,8 @@ async def test_withdraw_and_decision_serialize_one_review_cycle(
         )
         assert current["version"] == report["version"] + 1
         record_property("first_action", first_action)
-        record_property("observed_report_row_wait", True)
+        record_property("observed_review_transaction_wait", True)
+        record_property("observed_lock_relation", relation)
         record_property("observer_queries", observed)
     finally:
         release_first.set()

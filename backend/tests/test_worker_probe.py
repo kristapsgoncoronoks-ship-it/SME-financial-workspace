@@ -167,7 +167,7 @@ async def test_run_once_reports_liveness_on_every_lease_heartbeat_during_a_long_
         await release.wait()
         return {"ok": True}
 
-    async def _fake_renew(job_id, worker_id, org_id):
+    async def _fake_renew(lease):
         return True
 
     monkeypatch.setattr(jobs, "_renew_lease", _fake_renew)
@@ -206,7 +206,7 @@ async def test_a_failing_liveness_tick_never_fails_the_job(auth_client, db_sessi
         await release.wait()
         return {"ok": True}
 
-    async def _fake_renew(job_id, worker_id, org_id):
+    async def _fake_renew(lease):
         return True
 
     def _boom():
@@ -257,7 +257,7 @@ async def test_a_handler_that_awaits_forever_keeps_the_probe_green_by_design(
         await release.wait()
         return {"ok": True}
 
-    async def _fake_renew(job_id, worker_id, org_id):
+    async def _fake_renew(lease):
         return True
 
     monkeypatch.setattr(jobs, "_renew_lease", _fake_renew)

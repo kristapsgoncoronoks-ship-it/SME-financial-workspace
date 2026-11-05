@@ -1,7 +1,8 @@
 """Wire schemas for the off-invoice rebate registry (WO-84, G4.2/R50).
 
-Field-for-field from `app/models/transport/off_invoice_rebate.py`'s columns —
-this module shapes the wire and computes nothing (engineering-rules §3). In
+Registry fields follow `app/models/transport/off_invoice_rebate.py`; preview
+fields follow the shared close planner. This module shapes the wire and
+computes nothing (engineering-rules §3). In
 particular it does NOT accept `amount_eur`: the EUR figure is RESOLVED by the
 service through `fx.to_eur` at the document's own date and refused when no rate
 exists (master-context §4.10 "the server recomputes every total", §4.15 "never a
@@ -22,7 +23,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RebateIn(BaseModel):
@@ -66,3 +67,36 @@ class RebateOut(BaseModel):
     fx_ecb_date: date | None = None
     fx_source: str | None = None
     note: str | None = None
+
+
+class RebateAllocationOut(BaseModel):
+    """Per-transaction NET EUR totals; no browser FX or price calculation."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    fuel_transaction_id: str
+    supplier: str
+    country: str
+    qty: Decimal
+    net_eur: Decimal
+    share_eur: Decimal
+    old_net_eur_eff: Decimal
+    new_net_eur_eff: Decimal
+
+
+class RebatePreviewOut(BaseModel):
+    """Whole-scope observed summary with only its allocation display paged.
+
+    `changed` is the number that WOULD change at observation time. This is not
+    a saved plan or an apply token; monthly close re-reads its own sources.
+    """
+
+    period: str
+    supplier: str | None
+    rebate_total_eur: Decimal
+    lines_allocated: int
+    changed: int
+    source_warnings: tuple[str, ...]
+    allocations: list[RebateAllocationOut]
+    page: int
+    page_size: int

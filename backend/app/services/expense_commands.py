@@ -69,7 +69,8 @@ async def lock_actor(
     current: Principal,
     *,
     permission: authz.Permission = authz.Permission.EXPENSE_WRITE,
-) -> None:
+) -> Principal:
+    """Return the pinned request identity with its locked membership authority."""
     membership = await db.scalar(
         select(Membership)
         .where(Membership.org_id == current.org_id, Membership.user_id == current.id)
@@ -88,6 +89,7 @@ async def lock_actor(
             "Expense access is unavailable. Refresh your account or ask an administrator."
         )
     await modules.require_enabled(db, current.org_id, "expenses")
+    return authority
 
 
 async def lookup(

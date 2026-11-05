@@ -43,9 +43,10 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 
-from app.api.deps import CurrentUser, DbSession, require_perm
+from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
+from app.api.file_response import TemporaryFileResponse
 from app.core import authz
 from app.core.security_headers import content_disposition
 from app.models.transport.receipt_waiver import VatReceiptWaiver
@@ -363,8 +364,19 @@ async def download_workbook(claim_id: str, current: CurrentUser, db: DbSession):
     )
 
 
-@router.get("/{claim_id}/evidence")
-async def download_evidence_pack(claim_id: str, current: CurrentUser, db: DbSession):
+@router.get(
+    "/{claim_id}/evidence",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Complete frozen claim evidence ZIP",
+            "content": {_ZIP_CT: {"schema": {"type": "string", "format": "binary"}}},
+        }
+    },
+)
+async def download_evidence_pack(
+    claim_id: str, current: CurrentUser, db: DbSession, request: Request
+):
     """The ZIP evidence pack of a FROZEN claim (G2.12, §3.K K6): the same
     workbook (rendered from the SAME loaded pack — identical lines and
     totals by construction) plus every vaulted invoice document and a
@@ -372,12 +384,23 @@ async def download_evidence_pack(claim_id: str, current: CurrentUser, db: DbSess
     the workbook, plus `evidence_document_unavailable` when a vaulted
     document's bytes are gone — an incomplete filing bundle is worse than
     none (a rejected claim's invoices stay locked, R5)."""
-    data = await claim_pack_svc.build_evidence_pack(db, current.org_id, claim_id)
-    return Response(
-        content=data,
-        media_type=_ZIP_CT,
-        headers={
-            "Content-Disposition": content_disposition(f"claim-{claim_id}-evidence.zip"),
-            "X-Content-Type-Options": "nosniff",
-        },
-    )
+    prepared = await claim_pack_svc.build_evidence_pack_file(db, current.org_id, claim_id)
+    try:
+        # End the read snapshot before refreshing the same pinned authority and
+        # the claim/source facts used to prepare this complete private artifact.
+        await db.rollback()
+        fresh, _org = await refresh_current_identity(request, db, current)
+        authz.require(fresh, authz.Permission.VAT_READ)
+        await claim_pack_svc.validate_evidence_pack(db, fresh.org_id, claim_id, prepared)
+        return TemporaryFileResponse(
+            prepared,
+            media_type=_ZIP_CT,
+            headers={
+                "Content-Disposition": content_disposition(f"claim-{claim_id}-evidence.zip"),
+                "X-Content-Type-Options": "nosniff",
+                "Cache-Control": "private, no-store",
+            },
+        )
+    except BaseException:
+        prepared.cleanup()
+        raise

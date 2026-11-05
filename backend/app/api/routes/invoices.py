@@ -1036,12 +1036,17 @@ async def capture_source(run_id: str, current: CurrentUser, db: DbSession, reque
     )
 
 
-async def _load_scoped(db: DbSession, org_id: str, invoice_id: str) -> Invoice:
-    invoice = await db.scalar(
+async def _load_scoped(
+    db: DbSession, org_id: str, invoice_id: str, *, lock: bool = False
+) -> Invoice:
+    stmt = (
         select(Invoice)
         .where(Invoice.id == invoice_id, Invoice.org_id == org_id)
         .options(selectinload(Invoice.line_items), selectinload(Invoice.vendor))
     )
+    if lock:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+    invoice = await db.scalar(stmt)
     if invoice is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
     return invoice
@@ -1221,7 +1226,9 @@ async def record_supplier_payment(
     (a downward figure is an auditable correction). The amount is capped at the
     invoice total, and settling it (partially/fully) advances the workflow state to
     partially_paid / paid."""
-    inv = await _load_scoped(db, current.org_id, invoice_id)
+    # Serialize the cumulative balance and workflow read with manual/run
+    # settlements so a signed ledger delta always uses the latest committed total.
+    inv = await _load_scoped(db, current.org_id, invoice_id, lock=True)
     if inv.workflow_state not in _PAYABLE:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,

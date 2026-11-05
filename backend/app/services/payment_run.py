@@ -209,16 +209,24 @@ async def runs_awaiting_check(db: AsyncSession, org_id: str, *, checker_id: str)
     )
 
 
-async def run_invoices(db: AsyncSession, org_id: str, run_id: str) -> list[Invoice]:
-    """Invoices linked to a run, ordered for a readable payout file."""
-    return list(
-        await db.scalars(
-            select(Invoice)
-            .where(Invoice.org_id == org_id, Invoice.payment_run_id == run_id)
-            .options(selectinload(Invoice.vendor))
-            .order_by(Invoice.invoice_number.asc())
-        )
+async def run_invoices(
+    db: AsyncSession, org_id: str, run_id: str, *, for_update: bool = False
+) -> list[Invoice]:
+    """Linked invoices: readable file order, or fresh globally ordered locks for settlement."""
+    stmt = (
+        select(Invoice)
+        .where(Invoice.org_id == org_id, Invoice.payment_run_id == run_id)
+        .options(selectinload(Invoice.vendor))
     )
+    if for_update:
+        stmt = (
+            stmt.order_by(Invoice.id.asc())
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    else:
+        stmt = stmt.order_by(Invoice.invoice_number.asc())
+    return list(await db.scalars(stmt))
 
 
 async def create_run(
@@ -238,9 +246,17 @@ async def create_run(
     provisional and `confirm_provisional` was not set. Flushes; caller commits."""
     if not invoice_ids:
         raise PaymentRunError("Select at least one scheduled invoice.")
+    if len(invoice_ids) != len(set(invoice_ids)):
+        raise PaymentRunError("Select each invoice once.")
     invoices = list(
         await db.scalars(
-            select(Invoice).where(Invoice.org_id == org_id, Invoice.id.in_(invoice_ids))
+            select(Invoice)
+            .where(Invoice.org_id == org_id, Invoice.id.in_(invoice_ids))
+            # Runs do not exist yet, so only the selected invoices can protect
+            # their initial assignment. Use the same ID order as AP settlement.
+            .order_by(Invoice.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
     )
     found = {i.id for i in invoices}
@@ -329,6 +345,10 @@ async def mark_paid(
             f"Run is {run.status}; only an approved run can be paid"
             + (" (a second user must approve it first)." if run.status == RUN_OPEN else ".")
         )
+    # Manual payments share these invoice locks. Acquire the entire ordered set
+    # before an explicit SoD override can take the tenant audit lock, and derive
+    # each ledger delta from the refreshed child state after any lock wait.
+    invoices = await run_invoices(db, org_id, run.id, for_update=True)
     await _enforce_sod(
         db,
         run,
@@ -339,7 +359,6 @@ async def mark_paid(
         override_sod=override_sod,
         include_approver=True,
     )
-    invoices = await run_invoices(db, org_id, run.id)
     if not invoices:
         raise PaymentRunError("Run has no invoices to pay.")
     # Re-check at pay time: a bank-detail change request filed AFTER the run was

@@ -95,6 +95,22 @@ async def find(db: AsyncSession, org_id: str, *, sha256: str, kind: str) -> Docu
     )
 
 
+async def admitted_size(
+    db: AsyncSession, org_id: str, *, sha256: str | None, kind: str
+) -> int | None:
+    """Fresh admission metadata without a cached ORM row or transaction changes.
+
+    Missing historical registration stays None; zero and negative values remain
+    visible for the caller's existing empty/integrity guards. This never flushes,
+    commits or locks another service's document row.
+    """
+    return await db.scalar(
+        select(Document.size)
+        .where(Document.org_id == org_id, Document.sha256 == sha256, Document.kind == kind)
+        .execution_options(autoflush=False)
+    )
+
+
 async def vaulted(db: AsyncSession, org_id: str, *, kind: str, shas: set[str]) -> set[str]:
     """Which of `shas` have bytes on file under `kind` for this tenant — one
     query for a whole worklist, so a screen can offer a download only where

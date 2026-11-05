@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
-from sqlalchemy import CursorResult, or_, select, update
+from sqlalchemy import CursorResult, Update, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +36,7 @@ from app.core.config import settings
 from app.core.observability import job_id_ctx, job_kind_ctx
 from app.core.tenant import reset_current_org, set_current_org
 from app.models import job as jobmodel
+from app.models.base import new_uuid
 from app.models.job import Job
 
 log = logging.getLogger("invoiceiq.jobs")
@@ -74,6 +75,41 @@ class _Registered:
 
     fn: Handler
     deadline_seconds: float | None
+
+
+@dataclass(frozen=True)
+class _Lease:
+    """The claim we own, independent of an ORM refresh or handler rollback.
+
+    The random token identifies one claim even when a manual retry resets the
+    attempts and a worker name or clock value is reused. `locked_at` cannot
+    fence completion because the heartbeat legitimately changes it.
+    """
+
+    job_id: str
+    org_id: str
+    worker_id: str
+    attempts: int
+    token: str | None
+    max_attempts: int
+
+    @classmethod
+    def from_job(cls, job: Job) -> _Lease:
+        assert job.locked_by is not None
+        return cls(
+            job.id, job.org_id, job.locked_by, job.attempts, job.lease_token, job.max_attempts
+        )
+
+
+def _lease_update(lease: _Lease) -> Update:
+    return update(Job).where(
+        Job.id == lease.job_id,
+        Job.org_id == lease.org_id,
+        Job.status == jobmodel.RUNNING,
+        Job.locked_by == lease.worker_id,
+        Job.attempts == lease.attempts,
+        Job.lease_token == lease.token,
+    )
 
 
 _HANDLERS: dict[str, _Registered] = {}
@@ -295,37 +331,34 @@ async def claim(
                 attempts=Job.attempts + 1,
                 locked_at=now,
                 locked_by=worker_id,
+                lease_token=new_uuid(),
                 updated_at=now,
             )
         )
         if cast(CursorResult, result).rowcount == 1:
+            # Read the winning identity while this transaction still owns the
+            # row lock. A post-commit SELECT could return a successor's token.
+            claimed = await db.get(Job, candidate, populate_existing=True)
             await db.commit()
-            return await db.get(Job, candidate)
+            return claimed
         await db.rollback()  # lost the race — try the next candidate
     return None
 
 
-async def _renew_lease(job_id: str, worker_id: str, org_id: str) -> bool:
+async def _renew_lease(lease: _Lease) -> bool:
     """Renew one live lease in its own session/transaction, so the renewal
     neither waits on nor disturbs the handler's transaction on the main session.
-    The predicate (id + RUNNING + locked_by == us) means a lease that was
-    already reclaimed by another worker is NOT re-taken — the renewal simply
-    reports False and the heartbeat stops."""
+    Match the original claim, including its random token and attempt, so a
+    later generation using the same worker name is never renewed by this one.
+    A lost lease reports False and the heartbeat stops."""
     from app.core.database import SessionLocal
 
-    token = set_current_org(org_id)
+    token = set_current_org(lease.org_id)
     try:
         now = _now()
         async with SessionLocal() as heartbeat_db:
             result = await heartbeat_db.execute(
-                update(Job)
-                .where(
-                    Job.id == job_id,
-                    Job.org_id == org_id,  # explicit even where RLS already scopes (SQLite)
-                    Job.status == jobmodel.RUNNING,
-                    Job.locked_by == worker_id,
-                )
-                .values(locked_at=now, updated_at=now)
+                _lease_update(lease).values(locked_at=now, updated_at=now)
             )
             await heartbeat_db.commit()
             return cast(CursorResult, result).rowcount == 1
@@ -334,9 +367,7 @@ async def _renew_lease(job_id: str, worker_id: str, org_id: str) -> bool:
 
 
 async def _heartbeat_loop(
-    job_id: str,
-    worker_id: str,
-    org_id: str,
+    lease: _Lease,
     stop: asyncio.Event,
     on_tick: Callable[[], None] | None = None,
 ) -> None:
@@ -356,29 +387,62 @@ async def _heartbeat_loop(
             try:
                 on_tick()
             except Exception as exc:  # noqa: BLE001 — liveness bookkeeping never fails work
-                log.warning("job %s liveness tick failed: %s", job_id, exc)
+                log.warning("job %s liveness tick failed: %s", lease.job_id, exc)
         try:
-            if not await _renew_lease(job_id, worker_id, org_id):
+            if not await _renew_lease(lease):
                 # Either the job just completed (benign race with `_complete`) or
                 # the lease was reclaimed and re-taken — in both cases renewing
                 # again would be wrong, so the loop ends.
                 log.info(
                     "job %s renewal matched no live lease for %s; heartbeat stops",
-                    job_id,
-                    worker_id,
+                    lease.job_id,
+                    lease.worker_id,
                 )
                 return
         except Exception as exc:  # noqa: BLE001 — the heartbeat must never fail business work
-            log.warning("job %s heartbeat failed: %s", job_id, exc)
+            log.warning("job %s heartbeat failed: %s", lease.job_id, exc)
 
 
-async def _complete(db: AsyncSession, job: Job, result: dict | None) -> None:
-    job.status = jobmodel.SUCCEEDED
-    job.result_json = json.dumps(result or {})
-    job.last_error = None
-    job.locked_at = None
-    job.locked_by = None
-    await db.commit()
+async def _finish(db: AsyncSession, lease: _Lease, values: dict[str, object]) -> Job | None:
+    # Win the lease predicate/row lock before flushing pending domain work.
+    # A successor's claim/completion must never be committed over by this one.
+    with db.no_autoflush:
+        # A handler may have rolled back (expiring every ORM attribute). Load
+        # current state without deriving our authority from that refreshed row.
+        current = await db.get(Job, lease.job_id, populate_existing=True)
+        result = await db.execute(
+            _lease_update(lease).values(**values).execution_options(synchronize_session="fetch")
+        )
+    if cast(CursorResult, result).rowcount == 1:
+        await db.commit()
+        return current
+    else:
+        # Roll back this handler's pending facts. Effects a handler already
+        # committed remain committed; its existing domain idempotency still applies.
+        await db.rollback()
+        log.warning(
+            "job %s lease lost by %s attempt %s; pending finalization discarded",
+            lease.job_id,
+            lease.worker_id,
+            lease.attempts,
+        )
+    return await db.get(Job, lease.job_id, populate_existing=True)
+
+
+async def _complete(
+    db: AsyncSession, job: Job, result: dict | None, *, lease: _Lease | None = None
+) -> Job | None:
+    return await _finish(
+        db,
+        lease or _Lease.from_job(job),
+        {
+            "status": jobmodel.SUCCEEDED,
+            "result_json": json.dumps(result or {}),
+            "last_error": None,
+            "locked_at": None,
+            "locked_by": None,
+        },
+    )
 
 
 async def _fail(
@@ -389,24 +453,24 @@ async def _fail(
     now: datetime | None = None,
     retry_after_seconds: float | None = None,
     permanent: bool = False,
-) -> None:
+    lease: _Lease | None = None,
+) -> Job | None:
+    lease = lease or _Lease.from_job(job)
     now = _now(now)
-    job.last_error = error[:2000]
-    job.locked_at = None
-    job.locked_by = None
-    if permanent or job.attempts >= job.max_attempts:
-        job.status = jobmodel.DEAD
+    values: dict[str, object] = {"last_error": error[:2000], "locked_at": None, "locked_by": None}
+    if permanent or lease.attempts >= lease.max_attempts:
+        values["status"] = jobmodel.DEAD
     else:
-        job.status = jobmodel.QUEUED
-        delay = float(_backoff(job.attempts))
+        values["status"] = jobmodel.QUEUED
+        delay = float(_backoff(lease.attempts))
         if retry_after_seconds is not None:
             # The downstream's hint can only LENGTHEN the wait — shortening it
             # would let a receiver drive our retry cadence below the backoff
             # curve — and only up to the cap: a receiver must not be able to
             # park our delivery indefinitely (or overflow the datetime).
             delay = max(delay, min(retry_after_seconds, RETRY_AFTER_CAP_SECONDS))
-        job.run_after = now + timedelta(seconds=delay)
-    await db.commit()
+        values["run_after"] = now + timedelta(seconds=delay)
+    return await _finish(db, lease, values)
 
 
 async def _run_handler(
@@ -431,12 +495,13 @@ async def _run_handler(
     bound for exactly that reason (STIR-P2-01); this deadline is the loop's
     guarantee, not a kill switch for every kind of work.
     """
-    budget = deadline_for(job.kind)
+    kind = job.kind
+    budget = deadline_for(kind)
     try:
         return await asyncio.wait_for(registered.fn(db, payload, job), timeout=budget)
     except TimeoutError as exc:
         raise JobDeadlineExceeded(
-            f"handler for '{job.kind}' exceeded its {budget:g}s deadline and was cancelled"
+            f"handler for '{kind}' exceeded its {budget:g}s deadline and was cancelled"
         ) from exc
 
 
@@ -457,16 +522,14 @@ async def run_once(
     if job is None:
         return None
 
+    lease = _Lease.from_job(job)
     registered = _HANDLERS.get(job.kind)
     if registered is None:
         # A missing handler is a permanent misconfiguration for that kind —
         # retrying within the same deployment can't help, so dead-letter now.
-        job.status = jobmodel.DEAD
-        job.last_error = f"no handler registered for kind '{job.kind}'"
-        job.locked_at = None
-        job.locked_by = None
-        await db.commit()
-        return job
+        return await _fail(
+            db, job, f"no handler registered for kind '{job.kind}'", permanent=True, lease=lease
+        )
 
     payload = json.loads(job.payload_json or "{}")
     job_id, org_id, kind = job.id, job.org_id, job.kind
@@ -476,27 +539,24 @@ async def run_once(
     # The heartbeat task is created AFTER the context is set so it inherits the
     # tenant and job ids (asyncio copies the context at task creation).
     heartbeat_stop = asyncio.Event()
-    heartbeat_task = asyncio.create_task(
-        _heartbeat_loop(job_id, worker_id, org_id, heartbeat_stop, on_liveness_tick)
-    )
+    heartbeat_task = asyncio.create_task(_heartbeat_loop(lease, heartbeat_stop, on_liveness_tick))
     try:
         result = await _run_handler(registered, db, payload, job)
-        await _complete(db, job, result)
+        finalized = await _complete(db, job, result, lease=lease)
     except Exception as exc:  # noqa: BLE001 — any handler error retries/dead-letters
-        # A rollback expires every attribute on `job`, so reload it before
-        # touching attempts/status (accessing an expired attr would do sync IO).
+        # Rollback expires the ORM row. Keep the claim identity captured before
+        # dispatch: reloading here could hand this old handler a successor's lease.
         await db.rollback()
-        job = await db.get(Job, job_id)
-        assert job is not None  # the row exists — we loaded it moments ago
-        log.warning("job %s (%s) failed on attempt %s: %s", job_id, kind, job.attempts, exc)
+        log.warning("job %s (%s) failed on attempt %s: %s", job_id, kind, lease.attempts, exc)
         retry_after = exc.retry_after_seconds if isinstance(exc, RetryAfterError) else None
-        await _fail(
+        finalized = await _fail(
             db,
             job,
             f"{type(exc).__name__}: {exc}",
             now=now,
             retry_after_seconds=retry_after,
             permanent=isinstance(exc, PermanentJobError),
+            lease=lease,
         )
     finally:
         heartbeat_stop.set()
@@ -509,7 +569,7 @@ async def run_once(
         job_kind_ctx.reset(job_kind_token)
         job_id_ctx.reset(job_id_token)
         reset_current_org(tenant_token)
-    return job
+    return finalized
 
 
 LEASE_EXPIRED_ERROR = "lease expired: the worker died mid-run"
@@ -561,6 +621,7 @@ async def reclaim_stale(db: AsyncSession, *, now: datetime | None = None) -> int
                 Job.status == jobmodel.RUNNING,
                 Job.locked_at == job.locked_at,
                 Job.locked_by == job.locked_by,
+                Job.lease_token == job.lease_token,
                 Job.attempts == job.attempts,
                 Job.max_attempts == job.max_attempts,
                 or_(Job.locked_at.is_(None), Job.locked_at < cutoff),
@@ -574,7 +635,7 @@ async def reclaim_stale(db: AsyncSession, *, now: datetime | None = None) -> int
 
 
 class JobNotRetryable(Exception):
-    """`retry` was asked to requeue a job that is not dead, failed or waiting."""
+    """The job is not retryable, or its observed state changed during retry."""
 
 
 # The statuses `retry` may act on. RUNNING is the one that matters (BE-001,
@@ -593,12 +654,34 @@ async def retry(db: AsyncSession, job: Job, *, now: datetime | None = None) -> J
             f"job {job.id} is {job.status}; only "
             f"{', '.join(sorted(RETRYABLE_STATUSES))} jobs can be retried"
         )
-    job.status = jobmodel.QUEUED
-    job.attempts = 0
-    job.run_after = _now(now)
-    job.last_error = None
-    job.locked_at = None
-    job.locked_by = None
+    job_id, org_id = job.id, job.org_id
+    observed_status, attempts, lease_token = job.status, job.attempts, job.lease_token
+    # A second retry may already have requeued this row and a worker may have
+    # claimed or finished it. Win the observed-state check before any pending
+    # caller facts are flushed; a stale retry has no authority over that work.
+    with db.no_autoflush:
+        result = await db.execute(
+            update(Job)
+            .where(
+                Job.id == job_id,
+                Job.org_id == org_id,
+                Job.status == observed_status,
+                Job.attempts == attempts,
+                Job.lease_token == lease_token,
+            )
+            .values(
+                status=jobmodel.QUEUED,
+                attempts=0,
+                run_after=_now(now),
+                last_error=None,
+                locked_at=None,
+                locked_by=None,
+            )
+            .execution_options(synchronize_session="fetch")
+        )
+    if cast(CursorResult, result).rowcount != 1:
+        await db.rollback()
+        raise JobNotRetryable(f"job {job_id} changed during retry; refresh before retrying")
     await db.commit()
     await db.refresh(job)
     return job
