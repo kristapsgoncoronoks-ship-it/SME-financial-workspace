@@ -786,6 +786,10 @@ async def decide(report_id: str, body: ExpenseDecision, current: CurrentUser, db
     a conflict directing the caller to payout batches. The state machine validates
     legality; suspicious expenses are returned/flagged, never silently dropped."""
     await _guard(db, current.org_id)
+    current = await expense_commands.lock_actor(
+        db, current, permission=authz.Permission.EXPENSE_APPROVE
+    )
+    authz.require(current, authz.Permission.EXPENSE_READ, authz.Permission.EXPENSE_APPROVE)
     if not _is_approver(current):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Only a designated expense approver can decide on expenses"
@@ -890,6 +894,10 @@ async def reassign_step(report_id: str, body: ReassignIn, current: CurrentUser, 
     """Reassign a pending approval step to a different approver (an approver may
     delegate/route). Defaults to the current pending step."""
     await _guard(db, current.org_id)
+    current = await expense_commands.lock_actor(
+        db, current, permission=authz.Permission.EXPENSE_APPROVE
+    )
+    authz.require(current, authz.Permission.EXPENSE_READ, authz.Permission.EXPENSE_APPROVE)
     if not _is_approver(current):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only an expense approver can reassign")
     r = await _load(db, current.org_id, report_id, lock=True)
