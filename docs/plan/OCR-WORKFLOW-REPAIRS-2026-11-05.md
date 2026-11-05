@@ -63,7 +63,8 @@ public email-image journey.
 
 Backend qualification includes92 portable,68 native publication, four retention
 migration and51 compatibility controls. Actual receipt UI uses host Python3.12;
-the separate source-overlay matrix uses the Python3.11 runtime. First harness
+the separate source-overlay matrix uses the immutable Python3.14.8 runtime
+([provenance correction](RUNTIME-PROVENANCE-ERRATUM-2026-11-05.md)). First harness
 setup failures and intermediate prototype measurements are retained separately.
 
 ## Schema, rollback and qualification boundaries

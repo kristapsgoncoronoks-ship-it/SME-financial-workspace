@@ -1,5 +1,13 @@
 # Engineering backlog
 
+## Current document registry follow-up
+
+[Bounded registry pages and complete kind choices](plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+preserve all originals through100-row navigation, with exact current filtered
+totals and a compatible legacy API.21 backend/27 browser checks pass; fresh
+combined-source CI and connected readback remain required. Other list contracts
+and owner/provider/operations dependencies remain explicit.
+
 ## Active backlog completion — 5 November 2026
 
 [Current implementation and dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)

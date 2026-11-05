@@ -8,7 +8,7 @@ persists it in the same transaction.
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -82,6 +82,50 @@ async def list_for_org(db: AsyncSession, org_id: str, *, kind: str | None = None
     if kind:
         stmt = stmt.where(Document.kind == kind)
     return list(await db.scalars(stmt.order_by(Document.created_at.desc())))
+
+
+async def page_for_org(
+    db: AsyncSession,
+    org_id: str,
+    *,
+    kind: str | None,
+    limit: int,
+    offset: int,
+) -> tuple[list[Document], int, list[str]]:
+    """Bound registry rows without truncating totals or the tenant's kind choices.
+
+    The legacy list remains compatible. This reads metadata only, never source
+    bytes, and does not flush, commit or mutate registry/financial records.
+    Counts and pages describe current reads, not a frozen export snapshot.
+    """
+    stmt = select(Document).where(Document.org_id == org_id)
+    if kind:
+        stmt = stmt.where(Document.kind == kind)
+    total = (
+        await db.scalar(
+            select(func.count()).select_from(stmt.subquery()).execution_options(autoflush=False)
+        )
+        or 0
+    )
+    rows = list(
+        await db.scalars(
+            stmt.order_by(Document.created_at.desc(), Document.id.desc())
+            .limit(limit)
+            .offset(offset)
+            .execution_options(autoflush=False)
+        )
+    )
+    # Facets cover the entire tenant, not just a page or the selected kind.
+    kinds = list(
+        await db.scalars(
+            select(Document.kind)
+            .where(Document.org_id == org_id)
+            .distinct()
+            .order_by(Document.kind)
+            .execution_options(autoflush=False)
+        )
+    )
+    return rows, total, kinds
 
 
 async def find(db: AsyncSession, org_id: str, *, sha256: str, kind: str) -> Document | None:
