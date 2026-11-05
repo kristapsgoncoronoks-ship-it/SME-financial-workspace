@@ -6,6 +6,15 @@ named rows and15 separately appended findings. These are differently sized
 engineering/review/policy items, not212 equivalent features or a completion
 percentage. Source references retain their original baseline context.
 
+## Current tenant-parent follow-up
+
+This fourth-wave tree adds revision159 `d5e7f9a1b3c6`, binding expense items
+to reports by tenant and report ID while retaining mandatory CASCADE.
+[Scope and evidence](EXPENSE-PARENT-TENANT-159-2026-11-05.md) separate focused
+checks from full graph and fresh CI qualification. It collects6,210 backend
+cases. PR107 at158 remains independently frozen; sibling160 and OCR/workflow
+follow-ups are separate. Later paragraphs describe their dated sources.
+
 ## Qualified and current work
 
 PR105 source `9efcd1c` and PR106 source `37b826b` each passed all13 required

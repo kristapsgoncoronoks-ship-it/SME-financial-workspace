@@ -1,5 +1,10 @@
 # TODO — Task Board
 
+**Current159 follow-up:** [Expense item/report tenant integrity](docs/plan/EXPENSE-PARENT-TENANT-159-2026-11-05.md)
+adds the composite mandatory parent without rewriting history. Focused native
+and rollback controls pass; full graph/fresh CI remain required. Sibling160 and
+OCR/workflow repairs continue separately. No main merge or deployment.
+
 **5 November current status:** PR105 `9efcd1c` and PR106 `37b826b` pass all13
 required CI contexts. The [current OCR/workflow wave](docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
 has scoped local/native/connected qualification; newly delivered source needs

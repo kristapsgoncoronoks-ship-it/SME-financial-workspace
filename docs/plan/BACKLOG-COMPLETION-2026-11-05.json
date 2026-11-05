@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "PR1059efcd1c andPR10637b826b passed all13 actualPR contexts. Third wave has scoped local/native/connected qualification,158 revisions/6185 collected cases, and needs fresh delivered-source all13 contexts. Following FK/parser/workflow/concurrency work is isolated in separate branches. No main merge/deploy/settings/production migration or complete-backlog/release claim.",
+  "qualification": "PR1059efcd1c andPR10637b826b passed all13 actualPR contexts. PR1074fd44b8 remains separately frozen with hostedCI and serial/two-worker qualification running. This fourth-wave tree has159 revisions/6210 collected cases and needs its own fresh all13 contexts. Fifth160 sibling and sixth parser/workflow/resource work remain isolated. No main merge/deploy/settings/production migration or complete-backlog/release claim.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1733,15 +1733,24 @@
     },
     {
       "id": "DB-010",
-      "status": "PARTIAL-LOCAL-FOLLOWUP",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Remaining composite parent links",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Isolated159 item/report tenant CASCADE fix passes77 checks; isolated160 comment/approval-step pair fixes pass122 checks. Current third-wave tree remains158 and does not include them. Six dated candidates remain individually assessed; no optional SET NULL semantics or tenant integrity is weakened.",
-      "dependencies": []
+      "next": "This tree adds159: expense_items references expense_reports by(org_id,report_id) with mandatoryCASCADE, masked globalhistory refusal and atomicrollback.77 distinct focused controls passed; 83 applicable graph/parity/bootstrap checks pass against fullTHIRD;74 final-freeze and9 AST-equivalent formatting-predecessor checks are distinguished. Two sibling links160 pass122 isolated checks in separatebranch; sixdated candidates remain separately assessed. No optionalSETNULL conversion or tenant/history weakening.",
+      "dependencies": [],
+      "qualification": {
+        "source_commit": "2422ee9db2c96f5a8634600ee099a1d94b1d424a",
+        "migration_head": "d5e7f9a1b3c6",
+        "focused_checks": 77,
+        "integrated_ci": "pending",
+        "evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-implementation/",
+        "integration_checks": 83,
+        "integration_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-graph-qualification/"
+      }
     },
     {
       "id": "DB-015",

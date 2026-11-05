@@ -60,6 +60,9 @@ class ExpenseReport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "expense_reports"
     __table_args__ = (
+        # DB-010: the item parent key includes the tenant. A unique index is a
+        # valid FK target without rebuilding existing report rows on SQLite.
+        Index("uq_expense_reports_org_id", "org_id", "id", unique=True),
         # DB-011: the workflow state is a closed set; a value outside it is a
         # bug reaching storage, never data. Kept in step with EXPENSE_STATUSES.
         CheckConstraint(
@@ -122,6 +125,12 @@ class ExpenseReport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class ExpenseItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "expense_items"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "report_id"],
+            ["expense_reports.org_id", "expense_reports.id"],
+            name="fk_expense_items_report",
+            ondelete="CASCADE",
+        ),
         # FX provenance is a closed enum (WO-8): eur/stated/ecb/unknown or NULL.
         CheckConstraint(FX_SOURCE_CHECK, name="ck_expense_items_fx_source"),
         # Slice 2b: normalised links to the cost-allocation master tables, same
@@ -157,9 +166,7 @@ class ExpenseItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    report_id: Mapped[str] = mapped_column(
-        GUID(), ForeignKey("expense_reports.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    report_id: Mapped[str] = mapped_column(GUID(), nullable=False, index=True)
     spend_date: Mapped[date] = mapped_column(Date, nullable=False)
     category: Mapped[str] = mapped_column(String(40), default="other", nullable=False)
     description: Mapped[str] = mapped_column(String(300), nullable=False)
