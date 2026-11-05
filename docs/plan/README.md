@@ -1,5 +1,9 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current bounded follow-up: [Expense report navigation](EXPENSE-REPORT-PAGINATION-2026-11-05.md),
+tracked as partial list-contract progress in the
+[execution inventory](BACKLOG-COMPLETION-2026-11-05.json).
+
 Everything needed to execute either plan lives under this folder. **Decide with
 `PLAN_A_vs_PLAN_B.md`, then follow ONE of the runbooks below.**
 

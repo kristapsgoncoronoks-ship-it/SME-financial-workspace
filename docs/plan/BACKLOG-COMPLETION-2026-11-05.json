@@ -267,9 +267,10 @@
       "sources": [
         "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:339",
         "backend/app/services/capture_region.py:194",
-        "backend/app/api/routes/invoices.py:830"
+        "backend/app/api/routes/invoices.py:830",
+        "frontend/e2e/capture-review-epoch.spec.ts"
       ],
-      "next": "Current fingerprint includes attempt_seq and validates supplied token; omission is required only after region apply, deliberately optional for legacy captures. Verify current-client coverage and remaining older-completed-attempt paths before repair; preserve staged legacy compatibility explicitly.",
+      "next": "Current fingerprint includes attempt_seq and validates supplied token; omission is required only after region apply and remains deliberately optional for legacy captures. Integrated sixth-wave CaptureReview repair retires old review epochs after successful retry and loads the fresh generation under actor/org/source fences. Preserve staged legacy compatibility; broader optional-token/older-completed-attempt paths remain individually assessed rather than closed by the UI epoch fix.",
       "dependencies": [
         "OCR-CONFIRM-01 already implements region-aware boundary"
       ]
@@ -284,10 +285,15 @@
         "docs/BACKLOG.md:875",
         "inventory/stored-read-calls.json"
       ],
-      "next": "Verified remaining reads, owned exports, PDF scratch and supervised image decoding implemented.22 native source-overlay profiles include full40/80M queued uploads, timeout/cancellation, peak427.7MiB/OOM0. Per-pod concurrent receipt/API admission, shared temp/inodes/fleet, PDF worst cases, unknown historical-size reads and customer corpus remain open; new concurrency investigation is isolated from qualified source.",
+      "next": "Earlier22 native image source-overlay profiles remain source-specific. Integrated sixth-wave repair adds a nonblocking stable private inode shared by image_ocr.read callers, inherited through helper/Tesseract ownership. Retained actual2-worker OOM is followed by same768MiB/1CPU distinct-worker200/BUSY503, explicit retry200 and next-small200 with OOM0;77 portable controls pass. Busy is a recoverable capacity outcome with manual retry, not a file defect or successful OCR. No byte/pixel/AS/CPU/time budget increase. PDF/crop/other-kind/fleet/shared-disk concurrency, wider temp/inode sizing, unknown historical reads and customer corpus remain open; no blanket pod/fleet capacity closure.",
       "dependencies": [
         "Per-purpose metadata/authorization/integrity contract"
-      ]
+      ],
+      "qualification": {
+        "source_commit": "e80a836",
+        "evidence": "/workspace/artifacts/backlog-sixth-wave-2026-11-05/receipt-concurrency/repair-receipt.json",
+        "scope": "Exact immutable Python3.14.8 runtime plus source overlay and declared synthetic image/auth/module fixtures; host portable Python3.12.14. Not a rebuilt final-image or production throughput qualification."
+      }
     },
     {
       "id": "CAP-STORAGE",
@@ -1709,15 +1715,27 @@
     },
     {
       "id": "BE-018",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Nonbreaking API envelope harmonization",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Inventory actual consumers, document old/new list+error contracts and migrate incrementally without blanket breaking change.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "DB-005",
@@ -1820,10 +1838,22 @@
       "title": "Bound remaining bare list endpoints",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Issued/AP history are already repaired. This branch additionally bounds Documentregistry navigation and preserves all record/kind access with compatible/page;21backend/27browser localchecks pass. LegacyAPI remains intentionallycompatible/unbounded; other list/selection/filter/export contracts still require individual measured inventory. No blanket globalpagination closure.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "PERF-014",
@@ -1832,10 +1862,22 @@
       "title": "Unbounded list rendering",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Issued/AP history are already repaired. This branch additionally bounds Documentregistry navigation and preserves all record/kind access with compatible/page;21backend/27browser localchecks pass. LegacyAPI remains intentionallycompatible/unbounded; other list/selection/filter/export contracts still require individual measured inventory. No blanket globalpagination closure.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "PERF-015",
@@ -1892,9 +1934,10 @@
       "title": "Mutation success communication",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "frontend/e2e/recurring-create-outcome.spec.ts"
       ],
-      "next": "Draft-copy failure→verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure.56-case UI union passes. Separately reproduced recurring-create missing acknowledgement is being repaired in isolated sixth checkout, not this source.",
+      "next": "Draft-copy failure→verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure. Original56-case UI union remains source-specific. Integrated sixth-wave recurring-create repair retains a verified201 parent outcome through close/reopen, ordinary row lifecycle and failed scoped GET invalidation, with pending through awaited readback and explicit GET-only recovery. Late actor/org/session/incarnation results are fenced; existing POST payload and run/toggle/remove commands are unchanged. This is bounded workflow-outcome progress, not blanket action-feedback or delivered-source CI closure.",
       "dependencies": []
     },
     {
@@ -1940,10 +1983,22 @@
       "title": "Client list bounds",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Issued/AP history are already repaired. This branch additionally bounds Documentregistry navigation and preserves all record/kind access with compatible/page;21backend/27browser localchecks pass. LegacyAPI remains intentionallycompatible/unbounded; other list/selection/filter/export contracts still require individual measured inventory. No blanket globalpagination closure.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "REBATE-MERGE-PREVIEW",
@@ -2268,7 +2323,7 @@
     },
     {
       "id": "OCR-PARSER-GAPS",
-      "status": "ACTIVE-ISOLATED-FOLLOWUP",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Integer amount and mixed net/tax/gross extraction gaps",
       "sources": [
@@ -2276,11 +2331,16 @@
         "backend/app/services/pdf_ocr.py",
         "backend/app/services/parser.py"
       ],
-      "next": "Sixth checkout independently reproduces integer-row omissions, explicit Net/VAT/Gross cell-role swaps, supplier-label errors and invented default provenance. A bounded header-aware parser/provenance repair is underway with no shared MONEY_RE/tax-policy/model/provider change. Missing original/customer corpus stays separate.",
+      "next": "Integrated bounded header-aware parser/provenance repair preserves explicit Net/VAT/Gross roles, selected integer rows, unambiguous supplier labels and honest default provenance without changing shared MONEY_RE/number normalization, model, engine or provider policy.43 focused and143 overlapping nearby controls pass; positive synthetic PDF/PNG role/precision source-overlay fixtures have no missing/extra/wrong cells. Retained3-row native PNG still misses a Tesseract VAT cell and refuses incomplete row with manual-review warning; pre-table extra-reference row and unheaded integer totals remain open. Original OCR-TABLE-01/customer corpus is absent; no customer accuracy or full parser closure.",
       "dependencies": [
         "OCR-ACCEPT for actual customer claim",
         "OCR-PAGES for page identity"
-      ]
+      ],
+      "qualification": {
+        "source_commit": "e1909ce",
+        "evidence": "/workspace/artifacts/backlog-sixth-wave-2026-11-05/ocr-parser/qualification.json",
+        "scope": "Source-bound synthetic role/precision evidence; overlapping test counts are not summed and retained negative native fixture is not rewritten."
+      }
     },
     {
       "id": "PROD-005",
