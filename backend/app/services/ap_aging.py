@@ -167,13 +167,13 @@ async def summary(db: AsyncSession, org_id: str, today: date | None = None) -> D
     return summarize(await worklist(db, org_id, today))
 
 
-def _outstanding_expr():
+def outstanding_expr():
     paid = func.coalesce(Invoice.amount_paid, 0)
     owed = Invoice.total - paid
     return case((owed > 0, owed), else_=0)
 
 
-def _overdue_cond(today: date):
+def overdue_condition(today: date):
     """`ap_status.status_of(...) == OVERDUE`, as SQL: not fully paid (PAID takes
     precedence — total > 0 and paid >= total) and due before today."""
     paid = func.coalesce(Invoice.amount_paid, 0)
@@ -195,7 +195,7 @@ async def due_summary(db: AsyncSession, org_id: str, today: date | None = None) 
     mixed dataset. `worklist` and `summarize` stay for the worklist screen,
     which genuinely needs the rows."""
     today = today or date.today()
-    overdue = _overdue_cond(today)
+    overdue = overdue_condition(today)
     due_soon = and_(
         not_(overdue),
         Invoice.due_date.is_not(None),
@@ -208,7 +208,7 @@ async def due_summary(db: AsyncSession, org_id: str, today: date | None = None) 
             Invoice.currency,
             is_overdue,
             func.count(Invoice.id),
-            func.coalesce(func.sum(_outstanding_expr()), 0),
+            func.coalesce(func.sum(outstanding_expr()), 0),
         )
         .where(
             Invoice.org_id == org_id,

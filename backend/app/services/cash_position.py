@@ -54,16 +54,16 @@ async def _ap_row(db: AsyncSession, org_id: str, today: date, currency: str):
     the narrow dashboard read and the full roll-up share ONE definition of the
     arithmetic — the extra aggregates ride the same scan and cost the narrow
     caller nothing, so there is no second, drift-prone copy of the sum."""
-    from app.services.ap_aging import _outstanding_expr, _overdue_cond
+    from app.services.ap_aging import outstanding_expr, overdue_condition
 
-    outstanding = _outstanding_expr()
+    outstanding = outstanding_expr()
     in_currency = Invoice.currency == currency
     return (
         await db.execute(
             select(
                 func.coalesce(func.sum(case((in_currency, outstanding), else_=0)), 0),
                 func.coalesce(
-                    func.sum(case((and_(in_currency, _overdue_cond(today)), outstanding), else_=0)),
+                    func.sum(case((and_(in_currency, overdue_condition(today)), outstanding), else_=0)),
                     0,
                 ),
                 func.count(Invoice.id),
