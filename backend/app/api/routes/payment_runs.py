@@ -72,10 +72,10 @@ def _run_out(run: PaymentRun, invoice_count: int) -> RunOut:
 async def _load(db: DbSession, org_id: str, run_id: str, *, lock: bool = False) -> PaymentRun:
     stmt = select(PaymentRun).where(PaymentRun.id == run_id, PaymentRun.org_id == org_id)
     if lock:
-        # Serialize concurrent state-changing operations (pay/cancel) on the run so
-        # the version check + mark_paid are atomic and can't double-settle. SQLite
+        # Serialize pay/export/cancel and refresh any identity-map copy after the
+        # lock wait so each decision sees the winner's committed state. SQLite
         # ignores FOR UPDATE (writes already serialize); Postgres takes the row lock.
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     r = await db.scalar(stmt)
     if r is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment run not found")
