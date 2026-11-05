@@ -364,13 +364,19 @@ class ExpenseComment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """A comment on an expense report — the employee↔approver thread."""
 
     __tablename__ = "expense_comments"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "report_id"],
+            ["expense_reports.org_id", "expense_reports.id"],
+            name="fk_expense_comments_report",
+            ondelete="CASCADE",
+        ),
+    )
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    report_id: Mapped[str] = mapped_column(
-        GUID(), ForeignKey("expense_reports.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    report_id: Mapped[str] = mapped_column(GUID(), nullable=False, index=True)
     author_id: Mapped[str] = mapped_column(GUID(), nullable=False)
     author_name: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
