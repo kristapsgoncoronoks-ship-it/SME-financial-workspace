@@ -35,7 +35,10 @@ JOB_LEASE = "b2e4f6a8c0d3"
 IMAGE_READING = "c3f5a7b9d1e4"
 EXPENSE_ITEM = "d5e7f9a1b3c6"
 EXPENSE_CHILDREN = "e6f8a0b2c4d7"
-EXPECTED_HEAD = EXPENSE_CHILDREN
+PARTNER_DOCUMENTS = "f7a9c1e3b5d8"
+WEBHOOK_DELIVERIES = "a8b0d2f4c6e9"
+READING_OBSERVATIONS = "b9c1e3f5a7d0"
+EXPECTED_HEAD = READING_OBSERVATIONS
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -67,6 +70,10 @@ PRESERVED_TABLES = (
     "expense_approval_steps",
     "expense_commands",
     "audit_events",
+    "partners",
+    "partner_documents",
+    "issued_invoices",
+    "recurring_invoices",
     "webhook_endpoints",
     "webhook_deliveries",
     "jobs",
@@ -162,9 +169,22 @@ def seed(connection):
 
     identities = []
     for tenant in range(2):
-        org, user, project, run, assignment, batch, report, endpoint, delivery, session = (
-            str(uuid.uuid4()) for _ in range(10)
-        )
+        (
+            org,
+            user,
+            project,
+            run,
+            assignment,
+            batch,
+            report,
+            endpoint,
+            delivery,
+            session,
+            partner,
+            partner_document,
+            issued_invoice,
+            recurring_invoice,
+        ) = (str(uuid.uuid4()) for _ in range(14))
         email = f"migration-{user}@example.invalid"
         _insert(connection, "organizations", id=org, name=f"Synthetic migration tenant {tenant}")
         _insert(
@@ -335,6 +355,68 @@ def seed(connection):
         )
         _insert(
             connection,
+            "partners",
+            id=partner,
+            org_id=org,
+            name="Synthetic retained partner",
+            requires_contract=True,
+        )
+        _insert(
+            connection,
+            "partner_documents",
+            id=partner_document,
+            org_id=org,
+            partner_id=partner,
+            kind="contract",
+            title="Synthetic retained signed contract",
+            status="signed",
+            signed_by="Synthetic migration signer",
+            signed_date=STAMP.date(),
+        )
+        _insert(
+            connection,
+            "issued_invoices",
+            id=issued_invoice,
+            org_id=org,
+            partner_id=partner,
+            buyer_name="Synthetic retained buyer",
+            seller_json='{"legal_name":"Synthetic retained seller"}',
+            issue_date=STAMP.date(),
+            currency="EUR",
+            subtotal=Decimal("35.07"),
+            tax_total=Decimal("0.00"),
+            total=Decimal("35.07"),
+        )
+        _insert(
+            connection,
+            "recurring_invoices",
+            id=recurring_invoice,
+            org_id=org,
+            partner_id=partner,
+            title="Synthetic retained cadence",
+            template_json=json.dumps(
+                {
+                    "partner_id": partner,
+                    "buyer_name": "Synthetic retained buyer",
+                    "vat_scheme": "standard",
+                    "lines": [
+                        {
+                            "description": "Synthetic retained service",
+                            "quantity": "1",
+                            "unit_price": "35.07",
+                            "vat_rate": "0",
+                        }
+                    ],
+                },
+                sort_keys=True,
+            ),
+            start_date=STAMP.date(),
+            next_run_date=(STAMP + timedelta(days=30)).date(),
+            frequency="monthly",
+            interval=1,
+        )
+        _insert(
+            connection,
             "webhook_deliveries",
             id=delivery,
             org_id=org,
@@ -364,6 +446,12 @@ def seed(connection):
                 "assignment": assignment,
                 "batch": batch,
                 "session": session,
+                "partner": partner,
+                "partner_document": partner_document,
+                "endpoint": endpoint,
+                "delivery": delivery,
+                "issued_invoice": issued_invoice,
+                "recurring_invoice": recurring_invoice,
             }
         )
     seed_feature_evidence(connection, identities)
@@ -454,6 +542,7 @@ def _records_before_additive_heads(records):
         # Historical image preparation is deliberately unknown. These tests
         # may remove only the newly added NULL, never measured provenance.
         assert run.pop("reading_preparation_json") is None
+        assert run.pop("reading_observation_json") is None
     return expected
 
 
@@ -566,14 +655,162 @@ def _expense_marker_schema(expected, head, marker, backend, revision):
         expected[table]["foreign_keys"].sort(key=lambda entry: json.dumps(entry, sort_keys=True))
 
 
+def _partner_webhook_marker_schema(expected, head, marker, backend):
+    """Project only revision161/162's exact two pair indexes and parent FKs."""
+    for parent, table, column, index_name, composite_name, legacy_name in (
+        (
+            "partners",
+            "partner_documents",
+            "partner_id",
+            "uq_partners_org_id",
+            "fk_partner_documents_partner",
+            "partner_documents_partner_id_fkey",
+        ),
+        (
+            "webhook_endpoints",
+            "webhook_deliveries",
+            "endpoint_id",
+            "uq_webhook_endpoints_org_id",
+            "fk_webhook_deliveries_endpoint",
+            "webhook_deliveries_endpoint_id_fkey",
+        ),
+    ):
+        index = {
+            "name": index_name,
+            "unique": True,
+            "column_names": ["org_id", "id"],
+            "dialect_options": {"postgresql_include": []} if backend == "postgresql" else {},
+        }
+        assert [entry for entry in head[parent]["indexes"] if entry["name"] == index_name] == [
+            index
+        ]
+        expected[parent]["indexes"].remove(index)
+        assert all(entry["name"] != index_name for entry in marker[parent]["indexes"])
+        # The SQLite161/162 downgrades restore only these target FKs using
+        # their canonical PostgreSQL-style names. Their original unnamed
+        # SQLite forms are not normalized away anywhere else in the schema.
+        legacy = {
+            "name": legacy_name,
+            "constrained_columns": [column],
+            "referred_schema": None,
+            "referred_table": parent,
+            "referred_columns": ["id"],
+            "options": {"ondelete": "CASCADE"},
+        }
+        if backend == "postgresql":
+            legacy["comment"] = None
+        assert [
+            entry for entry in marker[table]["foreign_keys"] if entry["referred_table"] == parent
+        ] == [legacy]
+        composite = deepcopy(legacy)
+        composite.update(
+            name=composite_name,
+            constrained_columns=["org_id", column],
+            referred_columns=["org_id", "id"],
+        )
+        assert [
+            entry for entry in head[table]["foreign_keys"] if entry["referred_table"] == parent
+        ] == [composite]
+        expected[table]["foreign_keys"].remove(composite)
+        expected[table]["foreign_keys"].append(deepcopy(legacy))
+        expected[table]["foreign_keys"].sort(key=lambda entry: json.dumps(entry, sort_keys=True))
+
+    # Neither target index changes the two optional partner detach contracts.
+    for table, name in (
+        ("issued_invoices", "fk_issued_partner"),
+        (
+            "recurring_invoices",
+            "recurring_invoices_partner_id_fkey" if backend == "postgresql" else None,
+        ),
+    ):
+        optional = {
+            "name": name,
+            "constrained_columns": ["partner_id"],
+            "referred_schema": None,
+            "referred_table": "partners",
+            "referred_columns": ["id"],
+            "options": {"ondelete": "SET NULL"},
+        }
+        if backend == "postgresql":
+            optional["comment"] = None
+        for snapshot_schema in (head, marker):
+            assert [
+                entry
+                for entry in snapshot_schema[table]["foreign_keys"]
+                if entry["referred_table"] == "partners"
+            ] == [optional]
+    idempotency_index = {
+        "name": "uq_webhook_deliv_idem",
+        "unique": True,
+        "column_names": ["endpoint_id", "idempotency_key"],
+        "dialect_options": {
+            "postgresql_include": [],
+            "postgresql_where": "(idempotency_key IS NOT NULL)",
+        }
+        if backend == "postgresql"
+        else {"sqlite_where": "idempotency_key IS NOT NULL"},
+    }
+    for snapshot_schema in (head, marker):
+        assert [
+            entry
+            for entry in snapshot_schema["webhook_deliveries"]["indexes"]
+            if entry["name"] == "uq_webhook_deliv_idem"
+        ] == [idempotency_index]
+
+
+def _reading_marker_schema(expected, head, marker, backend):
+    """Project only the reviewed additive163 contract, retaining unrelated drift."""
+    table = "capture_reading_observations"
+    fixture = Path(__file__).parent / "fixtures" / f"reading_observation_schema_{backend}.json"
+    assert head[table] == json.loads(fixture.read_text())
+    assert table not in marker
+    del expected[table]
+    index = {
+        "name": "uq_inbound_invoices_org_id",
+        "unique": True,
+        "column_names": ["org_id", "id"],
+        "dialect_options": {"postgresql_include": []} if backend == "postgresql" else {},
+    }
+    assert [
+        entry for entry in head["inbound_invoices"]["indexes"] if entry["name"] == index["name"]
+    ] == [index]
+    assert all(entry["name"] != index["name"] for entry in marker["inbound_invoices"]["indexes"])
+    expected["inbound_invoices"]["indexes"].remove(index)
+    for owner in ("extraction_runs", "inbound_invoices"):
+        column = ["reading_observation_json", "TEXT", True, None]
+        assert [entry for entry in head[owner]["columns"] if entry[0] == column[0]] == [column]
+        assert all(entry[0] != column[0] for entry in marker[owner]["columns"])
+        expected[owner]["columns"].remove(column)
+    if backend == "postgresql":
+        assert [row for row in head["_rls"] if row[0] == table] == [[table, True, True]]
+        policies = [row for row in head["_policies"] if row[0] == table]
+        assert policies == [
+            [
+                table,
+                "tenant_isolation",
+                "ALL",
+                "((current_setting('app.current_org'::text, true) IS NULL) OR "
+                "(current_setting('app.current_org'::text, true) = ''::text) OR "
+                "((org_id)::text = current_setting('app.current_org'::text, true)))",
+                "((current_setting('app.current_org'::text, true) IS NULL) OR "
+                "(current_setting('app.current_org'::text, true) = ''::text) OR "
+                "((org_id)::text = current_setting('app.current_org'::text, true)))",
+                ["public"],
+                "PERMISSIVE",
+            ]
+        ]
+
+
 def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert EXPECTED_HEAD in (EXPENSE_ITEM, EXPENSE_CHILDREN)
+    assert EXPECTED_HEAD == READING_OBSERVATIONS
+    assert graph.get_revision(READING_OBSERVATIONS).down_revision == WEBHOOK_DELIVERIES
     assert graph.get_heads() == [EXPECTED_HEAD]
-    if EXPECTED_HEAD == EXPENSE_CHILDREN:
-        assert graph.get_revision(EXPENSE_CHILDREN).down_revision == EXPENSE_ITEM
+    assert graph.get_revision(WEBHOOK_DELIVERIES).down_revision == PARTNER_DOCUMENTS
+    assert graph.get_revision(PARTNER_DOCUMENTS).down_revision == EXPENSE_CHILDREN
+    assert graph.get_revision(EXPENSE_CHILDREN).down_revision == EXPENSE_ITEM
     assert graph.get_revision(EXPENSE_ITEM).down_revision == IMAGE_READING
     assert graph.get_revision(IMAGE_READING).down_revision == JOB_LEASE
     assert graph.get_revision(JOB_LEASE).down_revision == PLANNING_COMMANDS
@@ -582,7 +819,7 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == {EXPENSE_ITEM: 159, EXPENSE_CHILDREN: 160}[EXPECTED_HEAD]
+    assert len(revisions) == 163
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -641,25 +878,48 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
                     "'ix_expense_commands_org_operation_target'::regclass"
                 )
             )
+            for target in ("uq_partners_org_id", "uq_webhook_endpoints_org_id"):
+                assert connection.scalar(
+                    text(
+                        "SELECT indisvalid AND indisready FROM pg_index WHERE indexrelid=CAST(:target AS regclass)"
+                    ),
+                    {"target": target},
+                )
 
     database(migration_url, index_contract)
 
     head_schema = database(migration_url, schemas)
     # Later additive heads introduce an empty planning receipt table, the
     # unused nullable job token, two unknown image-preparation fields, and
-    # report-parent constraints. Compare only these exact deltas, then test
+    # report/partner/webhook-parent constraints and empty reading facts.
+    # Compare only these exact deltas, then test
     # ambiguity AT the merge.
     # Separate tests guard destructive removal of populated evidence.
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
-    assert set(head_schema) - set(schema_before) == {"planning_commands"}
+    assert set(head_schema) - set(schema_before) == {
+        "planning_commands",
+        "capture_reading_observations",
+    }
     expected_marker_schema = deepcopy(head_schema)
+    _reading_marker_schema(
+        expected_marker_schema,
+        head_schema,
+        schema_before,
+        make_url(migration_url).get_backend_name(),
+    )
     _expense_marker_schema(
         expected_marker_schema,
         head_schema,
         schema_before,
         make_url(migration_url).get_backend_name(),
-        EXPECTED_HEAD,
+        EXPENSE_CHILDREN,
+    )
+    _partner_webhook_marker_schema(
+        expected_marker_schema,
+        head_schema,
+        schema_before,
+        make_url(migration_url).get_backend_name(),
     )
     del expected_marker_schema["planning_commands"]
     lease_columns = [c for c in head_schema["jobs"]["columns"] if c[0] == "lease_token"]
@@ -688,7 +948,9 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         assert len(policies) == 1 and policies[0][1] == "tenant_isolation"
         for key in ("_rls", "_policies"):
             expected_marker_schema[key] = [
-                row for row in head_schema[key] if row[0] != "planning_commands"
+                row
+                for row in head_schema[key]
+                if row[0] not in ("planning_commands", "capture_reading_observations")
             ]
     assert expected_marker_schema == schema_before
     marker_records = _records_before_additive_heads(after)
@@ -767,6 +1029,12 @@ def test_postgres_new_and_financial_tables_keep_force_rls(migration_url):
             "expense_transactions",
             "expense_comments",
             "expense_approval_steps",
+            "partners",
+            "partner_documents",
+            "issued_invoices",
+            "recurring_invoices",
+            "webhook_endpoints",
+            "webhook_deliveries",
             "capture_region_reads",
             "calendar_connections",
             "calendar_oauth_attempts",

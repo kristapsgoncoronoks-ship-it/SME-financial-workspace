@@ -16,7 +16,7 @@
 > model), [diagram-matrix](./diagram-matrix.md) (what we diagram and
 > why).
 
-_120 tables across 10 domains._
+_121 tables across 10 domains._
 
 ## Transport VAT recovery (23 tables)
 
@@ -79,7 +79,7 @@ Cross-domain foreign keys:
 - `vat_receipt_controls.entity_id` → `issuer_profiles` (Issued invoices (AR) & partners)
 - `vat_refund_claims.entity_id` → `issuer_profiles` (Issued invoices (AR) & partners)
 
-## Received invoices (AP) & capture (14 tables)
+## Received invoices (AP) & capture (15 tables)
 
 ```mermaid
 erDiagram
@@ -94,8 +94,10 @@ erDiagram
   inbound_channel_health {
   }
   capture_commands ||--o{ extraction_runs : "admission_command_id"
+  extraction_runs ||--o{ capture_reading_observations : "extraction_run_id"
   extraction_runs ||--o{ capture_region_reads : "extraction_run_id"
   extraction_runs ||--o{ extraction_fields : "extraction_run_id"
+  inbound_invoices ||--o{ capture_reading_observations : "inbound_invoice_id"
   invoices ||--o{ extraction_runs : "invoice_id"
   invoices ||--o{ inbound_invoices : "invoice_id"
   invoices ||--o{ line_items : "invoice_id"
