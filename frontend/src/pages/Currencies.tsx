@@ -135,10 +135,11 @@ export default function CurrenciesPage() {
                       )}
                     </td>
                     {admin && (
-                      <td className="py-1 text-right">
+                      <td className="py-1 pr-1 text-right sm:pr-0">
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="scroll-mx-1 sm:scroll-mx-0"
                           loading={toggle.isPending}
                           onClick={() => toggle.mutate(c)}
                         >
