@@ -1089,14 +1089,87 @@ const FREQUENCIES: { value: RecurringFrequency; label: string }[] = [
 
 // Recurring-invoice schedules: a template + cadence that generates real invoices.
 // "Run due now" materialises every invoice that has reached its date.
+interface RecurringCreatePayload {
+  template: { buyer_name: string; buyer_email: string | null; vat_scheme: VatScheme; lines: IssuedLineInput[] };
+  frequency: RecurringFrequency; interval: number; start_date: string; end_date: string | null; title: string | null;
+}
+interface RecurringCreateAttempt {
+  userId: string; orgId: string; generation: number; token: string | null; editor: number; payload: RecurringCreatePayload;
+}
+
+function recurringDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function verifiedRecurringSchedule(value: unknown): value is RecurringSchedule {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  const nullableString = (field: unknown) => field === null || typeof field === "string";
+  const nullableDate = (field: unknown) => field === null || recurringDate(field);
+  return typeof result.id === "string" && result.id.trim().length > 0 &&
+    nullableString(result.title) && nullableString(result.partner_id) &&
+    FREQUENCIES.some((frequency) => frequency.value === result.frequency) &&
+    typeof result.interval === "number" && Number.isInteger(result.interval) && result.interval > 0 &&
+    recurringDate(result.start_date) && recurringDate(result.next_run_date) && nullableDate(result.end_date) &&
+    typeof result.active === "boolean" &&
+    (result.payment_terms_days === null || (typeof result.payment_terms_days === "number" && Number.isInteger(result.payment_terms_days) && result.payment_terms_days >= 0)) &&
+    nullableDate(result.last_generated_at) &&
+    typeof result.generated_count === "number" && Number.isInteger(result.generated_count) && result.generated_count >= 0 &&
+    typeof result.created_at === "string" && recurringDate(result.created_at.slice(0, 10)) &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/.test(result.created_at) &&
+    Number.isFinite(Date.parse(result.created_at));
+}
+
 function RecurringSchedules({ onGenerated }: { onGenerated: () => void }) {
   const qc = useQueryClient();
+  const { user, org, hasPerm } = useAuth();
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ attempt: RecurringCreateAttempt; schedule: RecurringSchedule } | null>(null);
+  const [createError, setCreateError] = useState<{ attempt: RecurringCreateAttempt; message: string; uncertain: boolean } | null>(null);
+  const authority = useRef({ userId: user?.id, orgId: org?.id });
+  authority.current = { userId: user?.id, orgId: org?.id };
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const editor = useRef(0);
+  const createInFlight = useRef(false);
+  const ownsAttempt = (attempt: RecurringCreateAttempt) => active.current &&
+    authority.current.userId === attempt.userId && authority.current.orgId === attempt.orgId &&
+    tokenStore.generation() === attempt.generation && tokenStore.get() === attempt.token;
+  const canCreate = !!user?.id && !!org?.id && hasPerm("issued.write");
+  const visibleCreated = created && ownsAttempt(created.attempt) ? created.schedule : null;
+  const visibleCreateError = createError && ownsAttempt(createError.attempt) ? createError : null;
 
   const list = useQuery<RecurringSchedule[]>({
-    queryKey: ["recurring"],
-    queryFn: async () => (await api.get("/issued/recurring")).data,
+    queryKey: ["recurring", user?.id, org?.id],
+    enabled: !!user?.id && !!org?.id,
+    queryFn: async ({ signal }) => (await api.get("/issued/recurring", { signal, timeout: ISSUED_READ_TIMEOUT_MS })).data,
+  });
+
+  const create = useMutation<RecurringSchedule, unknown, RecurringCreateAttempt>({
+    mutationFn: async (attempt) => {
+      const response = await api.post<unknown>("/issued/recurring", attempt.payload);
+      if (response.status !== 201 || !verifiedRecurringSchedule(response.data)) {
+        throw new Error("The schedule outcome could not be verified.");
+      }
+      return response.data;
+    },
+    onSuccess: async (schedule, attempt) => {
+      if (!ownsAttempt(attempt)) return;
+      setCreateError(null);
+      setCreated({ attempt, schedule });
+      await qc.invalidateQueries({ queryKey: ["recurring", attempt.userId, attempt.orgId], exact: true });
+      if (ownsAttempt(attempt) && editor.current === attempt.editor) setOpen(false);
+    },
+    onError: (error, attempt) => {
+      if (!ownsAttempt(attempt)) return;
+      const status = (error as { response?: { status?: number } } | null)?.response?.status;
+      setCreateError({ attempt, message: apiError(error), uncertain: typeof status !== "number" || status >= 500 });
+    },
+    onSettled: () => { createInFlight.current = false; },
+    retry: false,
   });
 
   const run = useMutation({
@@ -1129,15 +1202,35 @@ function RecurringSchedules({ onGenerated }: { onGenerated: () => void }) {
           <button className="btn-ghost" disabled={run.isPending} onClick={() => { setMsg(null); run.mutate(); }}>
             {run.isPending ? "Running…" : "Run due now"}
           </button>
-          <button className="btn-primary" onClick={() => setOpen((o) => !o)}>{open ? "Close" : "New schedule"}</button>
+          <button className="btn-primary" disabled={!canCreate} onClick={() => { if (!open) editor.current += 1; setOpen((o) => !o); }}>{open ? "Close" : "New schedule"}</button>
         </div>
       </div>
 
       {msg && <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">{msg}</div>}
 
-      {open && <NewRecurring onCreated={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["recurring"] }); }} />}
+      {visibleCreated && <div className="min-w-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 [overflow-wrap:anywhere]">
+        <p role="status" aria-live="polite" aria-atomic="true" aria-label="Recurring schedule outcome">
+          Recurring schedule created: {visibleCreated.title || "Untitled schedule"}. Next run: {shortDate(visibleCreated.next_run_date)}.
+        </p>
+      </div>}
 
-      {list.isError && <ErrorState title="Couldn’t load the schedules" onRetry={() => list.refetch()} />}
+      {open && <NewRecurring pending={create.isPending} canCreate={canCreate} onCreate={(payload) => {
+        if (!canCreate || createInFlight.current || !user || !org) return;
+        createInFlight.current = true;
+        create.mutate({ userId: user.id, orgId: org.id, generation: tokenStore.generation(), token: tokenStore.get(), editor: editor.current, payload });
+      }} />}
+
+      {visibleCreateError && <div role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">
+        <p>{visibleCreateError.message}</p>
+        {visibleCreateError.uncertain && <p>The creation outcome is unknown. Check the schedules before creating another; the request may have been saved.</p>}
+      </div>}
+
+      {(visibleCreated || visibleCreateError?.uncertain) && <div className="space-y-2 text-sm text-text-secondary">
+        {list.isFetching && <p>Refreshing the schedule list…</p>}
+        <button type="button" className="btn-ghost" disabled={create.isPending || list.isFetching} onClick={() => { void list.refetch(); }}>Refresh schedules</button>
+      </div>}
+
+      {list.isError && <ErrorState title="Couldn’t load the schedules" description="The schedule list could not be refreshed. Retrying this read will not create another schedule." onRetry={create.isPending || list.isFetching ? undefined : () => list.refetch()} />}
       {(list.data?.length ?? 0) > 0 && (
         <div className="overflow-x-auto rounded-lg border border-slate-200">
           <table className="w-full text-sm">
@@ -1187,7 +1280,7 @@ function RecurringSchedules({ onGenerated }: { onGenerated: () => void }) {
   );
 }
 
-function NewRecurring({ onCreated }: { onCreated: () => void }) {
+function NewRecurring({ onCreate, pending, canCreate }: { onCreate: (payload: RecurringCreatePayload) => void; pending: boolean; canCreate: boolean }) {
   const [title, setTitle] = useState("");
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -1197,27 +1290,10 @@ function NewRecurring({ onCreated }: { onCreated: () => void }) {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState("");
   const [lines, setLines] = useState<IssuedLineInput[]>([emptyLine()]);
-  const [error, setError] = useState<string | null>(null);
 
   const zero = scheme !== "standard";
   const setLine = (i: number, patch: Partial<IssuedLineInput>) =>
     setLines(lines.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
-
-  const create = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        template: { buyer_name: buyerName, buyer_email: buyerEmail || null, vat_scheme: scheme, lines },
-        frequency,
-        interval: Number(interval) || 1,
-        start_date: startDate,
-        end_date: endDate || null,
-        title: title || null,
-      };
-      return (await api.post("/issued/recurring", payload)).data;
-    },
-    onSuccess: onCreated,
-    onError: (e) => setError(apiError(e)),
-  });
 
   return (
     <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
@@ -1283,15 +1359,20 @@ function NewRecurring({ onCreated }: { onCreated: () => void }) {
       </div>
       <button className="btn-ghost" onClick={() => setLines([...lines, emptyLine()])}>+ Add line</button>
 
-      {error && <div role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</div>}
-
       <div className="flex justify-end">
         <button
           className="btn-primary"
-          disabled={create.isPending || !buyerName || lines.some((l) => !l.description)}
-          onClick={() => create.mutate()}
+          disabled={pending || !canCreate || !buyerName || lines.some((l) => !l.description)}
+          onClick={() => onCreate({
+            template: { buyer_name: buyerName, buyer_email: buyerEmail || null, vat_scheme: scheme, lines },
+            frequency,
+            interval: Number(interval) || 1,
+            start_date: startDate,
+            end_date: endDate || null,
+            title: title || null,
+          })}
         >
-          {create.isPending ? "Creating…" : "Create schedule"}
+          {pending ? "Creating…" : "Create schedule"}
         </button>
       </div>
     </div>

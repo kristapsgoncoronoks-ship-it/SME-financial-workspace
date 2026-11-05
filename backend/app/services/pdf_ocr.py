@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import math
 import re
+from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -99,6 +100,22 @@ _CURRENCY_LABEL_RE = re.compile(
     r"([A-Z]{3})[ \t]*(?:[.;,][ \t]*)?\r?$",
     re.IGNORECASE | re.MULTILINE,
 )
+_SUPPLIER_LABEL_RE = re.compile(r"^supplier\s*:\s*(.*?)\s*$", re.IGNORECASE)
+_TABLE_ROLE_RE = re.compile(
+    r"(description|quantity|qty|unit\s+price|net\s+amount|vat\s+amount|tax\s+amount|"
+    r"gross\s+amount|amount)(?:\s+|$)",
+    re.IGNORECASE,
+)
+# Only complete numeric cells under explicit column roles. Keep the shared
+# decimal money signal unchanged for unheaded invoices/receipts/statements.
+_TABLE_NUMBER = r"(?:\d+(?:[.,]\d+)?|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d+)?)"
+_TABLE_NUMBER_RE = re.compile(rf"(?:[-+]?{_TABLE_NUMBER}|\({_TABLE_NUMBER}\))\Z")
+
+
+@dataclass
+class _RowReading:
+    item: LineItemIn
+    originals: dict[str, str | None]
 
 
 class OcrUnavailable(RuntimeError):
@@ -402,7 +419,7 @@ def _find_localized_amount(lines: list[str], labels: frozenset[str]) -> Decimal 
     return None
 
 
-def _parse_row(line: str) -> LineItemIn | None:
+def _read_legacy_row(line: str) -> _RowReading | None:
     """Parse ONE reconstructed row into a line item, or None if it isn't one.
 
     Transaction-aware: a leading date is kept as part of the description (so a
@@ -426,21 +443,28 @@ def _parse_row(line: str) -> LineItemIn | None:
     unit = amounts[-2] if len(amounts) >= 2 else amount
 
     qty = Decimal("1")
+    quantity_original = None
     qm = re.search(r"^(.*?)(\d+(?:[.,]\d+)?)\s*$", desc_core)
     if len(amounts) >= 2 and qm and qm.group(1).strip():
         desc_core = qm.group(1).strip()
         qty = _num(qm.group(2))
+        if qty > 0:
+            quantity_original = qm.group(2)
 
     description = (f"{date_prefix} {desc_core}".strip() if date_prefix else desc_core).strip()
+    description_original = description or None
     if not description or description.replace(" ", "").isdigit():
         description = desc_core or date_prefix or "Item"
+        if description == "Item":
+            description_original = None
 
+    amount_original = money[-1].group() if amount > 0 else None
     if amount <= 0 and qty and unit:
         amount = qty * unit
     if amount <= 0:
         return None
 
-    return LineItemIn(
+    item = LineItemIn(
         description=description[:500],
         category="uncategorized",
         quantity=qty if qty > 0 else Decimal("1"),
@@ -448,15 +472,135 @@ def _parse_row(line: str) -> LineItemIn | None:
         amount=amount,
         tax_rate=Decimal("0"),
     )
+    return _RowReading(
+        item,
+        {
+            "description": description_original,
+            "quantity": quantity_original,
+            "unit_price": money[-2].group() if len(amounts) >= 2 and unit > 0 else None,
+            "amount": amount_original,
+        },
+    )
+
+
+def _parse_row(line: str) -> LineItemIn | None:
+    reading = _read_legacy_row(line)
+    return reading.item if reading is not None else None
+
+
+def _table_roles(line: str) -> tuple[str, ...] | None:
+    text = re.sub(r"\s+", " ", line.replace("|", " ")).strip()
+    roles = []
+    while text:
+        match = _TABLE_ROLE_RE.match(text)
+        if match is None:
+            return None
+        role = re.sub(r"\s+", " ", match.group(1).lower())
+        role = {
+            "qty": "quantity",
+            "unit price": "unit_price",
+            "net amount": "amount",
+            "vat amount": "captured_tax_amount",
+            "tax amount": "captured_tax_amount",
+            "gross amount": "captured_gross_amount",
+        }.get(role, role)
+        roles.append(role)
+        text = text[match.end() :]
+    if len(roles) < 2 or roles[0] != "description":
+        return None
+    return tuple(roles)
+
+
+def _read_table_row(line: str, roles: tuple[str, ...]) -> _RowReading | None:
+    if "amount" not in roles or len(set(roles)) != len(roles) or _is_summary_row(line):
+        return None
+    tokens = list(re.finditer(r"\S+", _mask(line)))
+    numeric_roles = roles[1:]
+    if len(tokens) <= len(numeric_roles):
+        return None
+    cells = tokens[-len(numeric_roles) :]
+    if any(_TABLE_NUMBER_RE.fullmatch(cell.group()) is None for cell in cells):
+        return None
+    description = line[: cells[0].start()].strip(" \t|")
+    if not description:
+        return None
+    values: dict[str, Decimal] = {}
+    originals: dict[str, str | None] = {"description": description}
+    amount_cell = cells[numeric_roles.index("amount")].group()
+    decimal_mark = re.search(r"([.,])\d{2}\)?$", amount_cell)
+    separator = decimal_mark.group(1) if decimal_mark is not None else None
+    for role, cell in zip(numeric_roles, cells, strict=True):
+        original = cell.group()
+        normalized = original
+        if role in {"quantity", "unit_price"} and "," in original and "." not in original:
+            if separator == ",":
+                # A stated q2 amount disambiguates 0,815 as a fractional
+                # unit/quantity in this row; no shared money rule changes.
+                normalized = original.replace(",", ".")
+            elif separator is None and re.fullmatch(r"[-+]?\d+,\d{3}", original):
+                return None  # No source evidence distinguishes decimal/thousands.
+        # Preserve source precision; only q2 amount roles may be normalized to
+        # cents, never silently rounded or manufactured by a zero fallback.
+        try:
+            value = _num(normalized)
+            if value < 0 or not value.is_finite():
+                return None
+            if value == 0 and any(char in "123456789" for char in original):
+                return None
+            if role in {"amount", "captured_tax_amount", "captured_gross_amount"}:
+                rounded = value.quantize(Decimal("0.01"))
+                if rounded != value:
+                    return None
+                value = rounded
+        except InvalidOperation:
+            return None
+        values[role] = value
+        originals[role] = original
+    if values["amount"] <= 0:
+        return None
+    try:
+        item = LineItemIn(
+            description=description[:500],
+            quantity=values.get("quantity", Decimal("1")),
+            unit_price=values.get("unit_price", values["amount"]),
+            amount=values["amount"],
+            captured_tax_amount=values.get("captured_tax_amount"),
+            captured_gross_amount=values.get("captured_gross_amount"),
+        )
+    except ValueError:
+        return None
+    return _RowReading(item, originals)
+
+
+def _read_line_items(lines: list[str]) -> tuple[list[_RowReading], list[str], bool]:
+    readings = []
+    warnings = []
+    roles = None
+    table_seen = False
+    for line in lines:
+        header = _table_roles(line)
+        if header is not None:
+            roles, table_seen = header, True
+            if "amount" not in roles or len(set(roles)) != len(roles):
+                warnings.append(
+                    "Table columns do not identify one net/line amount; review the original and enter these rows manually."
+                )
+            continue
+        if _SUPPLIER_LABEL_RE.fullmatch(line) or _is_summary_row(line):
+            continue
+        reading = _read_table_row(line, roles) if roles is not None else _read_legacy_row(line)
+        if reading is not None:
+            readings.append(reading)
+        elif roles is not None and any(character.isdigit() for character in _mask(line)):
+            warning = "Some table column cells could not be mapped; review the original and enter missing rows manually."
+            if warning not in warnings:
+                warnings.append(warning)
+    return readings, warnings, table_seen
 
 
 def _extract_line_items(lines: list[str]) -> list[LineItemIn]:
-    items: list[LineItemIn] = []
-    for line in lines:
-        item = _parse_row(line)
-        if item is not None:
-            items.append(item)
-    return items
+    readings, _, _ = _read_line_items(lines)
+    return [reading.item for reading in readings]
 
 
 def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDraft:
@@ -477,6 +621,27 @@ def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDr
         ),
         None,
     )
+    supplier_labels = [
+        match.group(1) for line in lines if (match := _SUPPLIER_LABEL_RE.fullmatch(line))
+    ]
+    suppliers = list(dict.fromkeys(label for label in supplier_labels if label))
+    if len(suppliers) == 1 and len(suppliers[0]) <= 200:
+        vendor = suppliers[0]
+    elif len(suppliers) == 1:
+        vendor = None
+        warnings.append(
+            "The supplier name does not fit the name field; review the original and enter it manually."
+        )
+    elif suppliers:
+        vendor = None
+        warnings.append(
+            "Conflicting supplier labels were read; review the original and select the supplier manually."
+        )
+    elif supplier_labels:
+        vendor = None
+        warnings.append(
+            "The supplier label has no name; review the original and enter it manually."
+        )
 
     m = _INVOICE_NO_RE.search(text)
     invoice_number = m.group(1) if m else _stem(filename)
@@ -509,7 +674,9 @@ def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDr
         defaulted_fields["currency"] = currency
         warnings.append("Currency not detected; defaulted to EUR.")
 
-    items = _extract_line_items(lines)
+    readings, column_warnings, table_seen = _read_line_items(lines)
+    items = [reading.item for reading in readings]
+    warnings.extend(column_warnings)
 
     subtotal = _find_labeled_amount(lines, ("subtotal", "sub-total", "sub total"))
     if subtotal is None:
@@ -536,7 +703,7 @@ def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDr
             )
 
     if not items:
-        if total:
+        if total and not table_seen:
             items = [
                 LineItemIn(
                     description="Invoice total (OCR-detected)",
@@ -548,6 +715,10 @@ def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDr
                 )
             ]
             warnings.append("No line items detected; captured the document total as a single line.")
+        elif table_seen:
+            warnings.append(
+                "No table rows could be read safely — review the column warnings and enter them manually."
+            )
         else:
             warnings.append("No line items or total detected — enter them manually.")
 
@@ -564,6 +735,37 @@ def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDr
         source_filename=filename,
         line_items=items,
     )
+    line_fields = []
+    for index, item in enumerate(items):
+        # A document total copied into an invented line is a derived fill,
+        # not source line evidence (even when its numeric value was read).
+        originals = readings[index].originals if index < len(readings) else {}
+        for field in (
+            "description",
+            "quantity",
+            "unit_price",
+            "amount",
+            "category",
+            "tax_rate",
+            "captured_tax_amount",
+            "captured_gross_amount",
+        ):
+            value = getattr(item, field)
+            original = originals.get(field)
+            line_fields.append(
+                FieldProvenance(
+                    field=field,
+                    line_index=index,
+                    value=str(value) if value is not None else None,
+                    normalized_value=str(value) if value is not None else None,
+                    original_value=original,
+                    status="missing"
+                    if value is None
+                    else "extracted"
+                    if original is not None
+                    else "defaulted",
+                )
+            )
     return ParsedInvoiceDraft(
         draft=draft,
         warnings=warnings,
@@ -577,7 +779,8 @@ def parse_invoice_text(text: str, filename: str, method: str) -> ParsedInvoiceDr
                 low_confidence=True,
             )
             for name, value in defaulted_fields.items()
-        ],
+        ]
+        + line_fields,
     )
 
 

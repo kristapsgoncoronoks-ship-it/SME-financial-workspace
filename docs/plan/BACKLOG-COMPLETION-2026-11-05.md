@@ -1,9 +1,16 @@
 # Backlog completion — 5 November 2026
 
+**Combined NINTH base:**162 revisions/6,410 collected cases now include the
+tenant-parent repairs and SIXTH parser, native admission, review recovery,
+recurring notice and Documents navigation. New per-page/profile work has not
+begun. Historical branch paragraphs below retain their own source context.
+The separate historical159 test correction and fresh full CI remain required.
+No main/PR merge, deployment or complete-backlog claim.
+
 The user's instruction is to finish actionable work. The
 [execution inventory](BACKLOG-COMPLETION-2026-11-05.json) preserves197 original
-named rows and15 separately appended findings. These are differently sized
-engineering/review/policy items, not212 equivalent features or a completion
+named rows and16 separately appended findings. These are differently sized
+engineering/review/policy items, not213 equivalent features or a completion
 percentage. Source references retain their original baseline context.
 
 ## Current160 sibling follow-up
@@ -23,6 +30,15 @@ to reports by tenant and report ID while retaining mandatory CASCADE.
 checks from full graph and fresh CI qualification. It collects6,210 backend
 cases. PR107 at158 remains independently frozen; sibling160 and OCR/workflow
 follow-ups are separate. Later paragraphs describe their dated sources.
+
+## Current document registry follow-up
+
+[Bounded registry navigation](DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+adds complete kind choices and stable100-row pages without changing legacy
+clients, source downloads or financial records.21 focused backend and27 browser
+checks pass; this independent158-revision tree collects6,198 backend cases.
+Fresh delivered-source CI and combined connected readback remain required.
+Other dated wave paragraphs below retain their original source context.
 
 ## Qualified and current work
 

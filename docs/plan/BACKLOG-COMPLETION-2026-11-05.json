@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "PR1059efcd1c,PR10637b826b andPR1074fd44b8 passed all13 actualPR contexts; PR107 preserves one browserfirst-attempt flake, repaired separately. This160-revision/6256-case tree adds the two mandatory expense report child pairs.122 focused and83 fullgraph/parity/bootstrap checks pass locally; fresh delivered-source all13contexts remain required. Further partner/webhook, parser, workflow and capacity work is separate. No main/PR merge/deploy or complete-backlog claim.",
+  "qualification": "NINTH combined base:162 revisions/6410 collected cases, containing the qualified scoped tenant-parent and SIXTH OCR/parser/capacity/workflow/Documents source. New page/profile implementation has not begun. PR105/106/107 passed13 required contexts; old PR1099a47 failed two historical159 fixtures and its separate corrected head254dd9e is pending freshCI. The corrected historical fixture will be integrated before final qualification. No new-source all13 claim, main/PR merge, deploy or complete-backlog claim.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1814,26 +1814,26 @@
     },
     {
       "id": "PERF-010",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Bound remaining bare list endpoints",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Inventory current endpoints/consumers, bound top meaningful routes without silent truncation or losing explicit totals.",
+      "next": "Issued/AP history are already repaired. This branch additionally bounds Documentregistry navigation and preserves all record/kind access with compatible/page;21backend/27browser localchecks pass. LegacyAPI remains intentionallycompatible/unbounded; other list/selection/filter/export contracts still require individual measured inventory. No blanket globalpagination closure.",
       "dependencies": []
     },
     {
       "id": "PERF-014",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Unbounded list rendering",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Coordinate server bounds/pagination with large-set selection/query scope and visible partial/error state.",
+      "next": "Issued/AP history are already repaired. This branch additionally bounds Documentregistry navigation and preserves all record/kind access with compatible/page;21backend/27browser localchecks pass. LegacyAPI remains intentionallycompatible/unbounded; other list/selection/filter/export contracts still require individual measured inventory. No blanket globalpagination closure.",
       "dependencies": []
     },
     {
@@ -1934,14 +1934,14 @@
     },
     {
       "id": "FE-016",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Client list bounds",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Alias UI half of PERF014/PERF010; preserve list/filter/export selection semantics.",
+      "next": "Issued/AP history are already repaired. This branch additionally bounds Documentregistry navigation and preserves all record/kind access with compatible/page;21backend/27browser localchecks pass. LegacyAPI remains intentionallycompatible/unbounded; other list/selection/filter/export contracts still require individual measured inventory. No blanket globalpagination closure.",
       "dependencies": []
     },
     {
@@ -2969,6 +2969,19 @@
         "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
       ],
       "next": "Typed observed201 acknowledgement survives row paging/list failure and clears old error; distinct copy ID remains internal, visible buyer/source outcome plus explicit GET-only latest-list recovery. Late identity replies discarded.",
+      "dependencies": []
+    },
+    {
+      "id": "DOC-REGISTRY-PAGE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "REPRODUCED",
+      "title": "Bound document registry rows and retain complete kind choices",
+      "sources": [
+        "backend/app/api/routes/documents.py",
+        "backend/app/services/document_registry.py",
+        "frontend/src/pages/Documents.tsx"
+      ],
+      "next": "Compatible/page materializes100 default/200maximum stable rows, exact current filtered total and fulltenant kindchoices; legacyarray retained.21focusedbackend controls include actualnon-superuserPG and27browser cases cover pages/GETrecovery/URL/history/320px/2xtext.203row mock before/after payload52259\u219225686bytes and DOM203\u2192100; no realdevice/capacityclaim. Fresh finalsource CI and connected browser/APIreadback remain required.",
       "dependencies": []
     }
   ]

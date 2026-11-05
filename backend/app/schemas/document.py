@@ -16,3 +16,9 @@ class DocumentOut(BaseModel):
     filename: str | None = None
     uploaded_by: str | None = None
     created_at: datetime
+
+
+class DocumentPageOut(BaseModel):
+    items: list[DocumentOut]
+    total: int
+    kinds: list[str]

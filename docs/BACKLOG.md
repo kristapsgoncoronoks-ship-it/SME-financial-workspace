@@ -1,5 +1,12 @@
 # Engineering backlog
 
+**Combined NINTH base:**162 revisions/6,410 collected cases now include the
+tenant-parent repairs and SIXTH parser, native admission, review recovery,
+recurring notice and Documents navigation. New per-page/profile work has not
+begun. Historical branch paragraphs below retain their own source context.
+The separate historical159 test correction and fresh full CI remain required.
+No main/PR merge, deployment or complete-backlog claim.
+
 ## Current160 sibling tenant-parent follow-up
 
 [Expense comment/approval-step parent integrity](plan/EXPENSE-PARENT-TENANT-160-2026-11-05.md)
@@ -15,6 +22,14 @@ adds one mandatory composite CASCADE parent with global masked preflight and
 atomic rollback.77 focused checks pass; broad graph and fresh CI qualification
 remain required. Separate160 siblings and six dated candidates are not silently
 closed. Earlier dated wave status below retains its original source.
+
+## Current document registry follow-up
+
+[Bounded registry pages and complete kind choices](plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+preserve all originals through100-row navigation, with exact current filtered
+totals and a compatible legacy API.21 backend/27 browser checks pass; fresh
+combined-source CI and connected readback remain required. Other list contracts
+and owner/provider/operations dependencies remain explicit.
 
 ## Active backlog completion — 5 November 2026
 

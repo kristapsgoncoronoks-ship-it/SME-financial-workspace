@@ -1,5 +1,12 @@
 # TODO — Task Board
 
+**Combined NINTH base:**162 revisions/6,410 collected cases now include the
+tenant-parent repairs and SIXTH parser, native admission, review recovery,
+recurring notice and Documents navigation. New per-page/profile work has not
+begun. Historical branch paragraphs below retain their own source context.
+The separate historical159 test correction and fresh full CI remain required.
+No main/PR merge, deployment or complete-backlog claim.
+
 **Current160 sibling follow-up:** [Comment and approval-step tenant parents](docs/plan/EXPENSE-PARENT-TENANT-160-2026-11-05.md)
 retain CASCADE and historical data.122 focused and83 integration controls pass;
 fresh CI remains required. PR107 passes all13 contexts with one preserved
@@ -9,6 +16,11 @@ browser retry. Remaining links and OCR/workflow changes continue separately.
 adds the composite mandatory parent without rewriting history. Focused native
 and rollback controls pass; full graph/fresh CI remain required. Sibling160 and
 OCR/workflow repairs continue separately. No main merge or deployment.
+
+**Document registry follow-up:** [Bounded pages and complete kind choices](docs/plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+reduce the measured203-row fixture to100 rendered rows and fix mobile overflow.
+21 backend/27 browser checks pass; final-source CI and connected combined
+readback remain required. No main merge, deployment or source-byte change.
 
 **5 November current status:** PR105 `9efcd1c` and PR106 `37b826b` pass all13
 required CI contexts. The [current OCR/workflow wave](docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)

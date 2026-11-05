@@ -90,6 +90,8 @@ test("a copied outcome survives failed list refresh and recovers using only boun
   await expect(page.getByText("Couldn’t load the issued invoices", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Show latest invoices", exact: true }).click();
   await expect(page).toHaveURL(/page=1&context=kept/);
+  // URL navigation can precede rendering the new page's failed read.
+  await expect(page.getByRole("navigation", { name: "Issued invoice pages", exact: true })).toContainText("Page 1 could not be loaded.");
   await expect(page.getByText("Couldn’t load the issued invoices", { exact: true })).toBeVisible();
   await expect(notice(page)).toContainText("Observed draft buyer");
   wire.listFailure = false; await page.getByRole("button", { name: "Try again", exact: true }).click();
