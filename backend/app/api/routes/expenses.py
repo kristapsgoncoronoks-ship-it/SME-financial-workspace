@@ -14,6 +14,7 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Request,
     Response,
     UploadFile,
     status,
@@ -22,10 +23,11 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUser, DbSession, require_perm
+from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
 from app.api.upload_read import read_upload
-from app.core import authz
+from app.core import authz, storage
 from app.core.dimensions import DIMENSION_KEYS
+from app.core.errors import AppError
 from app.core.identity import Principal
 from app.core.roles import is_admin_or_above
 from app.models.document_version import OWNER_EXPENSE_RECEIPT
@@ -158,12 +160,10 @@ async def _load(db: DbSession, org_id: str, report_id: str, *, lock: bool = Fals
         .options(selectinload(ExpenseReport.items))
     )
     if lock:
-        # Serialize the decision (approve/reject/return/mark-for-reimbursement)
-        # so the version check + step/status write are atomic and
-        # two concurrent decisions on the same pending step can't both succeed
-        # (R4). SQLite ignores FOR UPDATE (writes serialize); Postgres takes the
-        # row lock — same pattern as reimbursements.py::_load.
-        stmt = stmt.with_for_update()
+        # Owner edits/transitions and decisions share one review boundary. A
+        # pre-wait identity-map instance must not authorize a stale editable
+        # state or replace the contents/approval chain of a submitted report.
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     r = await db.scalar(stmt)
     if r is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Expense report not found")
@@ -181,6 +181,15 @@ def _require_owner_editable(r: ExpenseReport, user: User | Principal):
     if not expense_state.is_editable(r.status):
         raise HTTPException(
             status.HTTP_409_CONFLICT, "Only draft or returned reports can be edited"
+        )
+
+
+async def _review_audit(db: DbSession, action: str, **kwargs) -> None:
+    if await audit.record(db, action, **kwargs) is None:
+        raise AppError(
+            "The report change could not be recorded. Refresh the report before retrying.",
+            code="expense_review_unavailable",
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
 
@@ -341,10 +350,12 @@ async def expense_command_status(command_key: str, current: CurrentUser, db: DbS
             status.HTTP_404_NOT_FOUND,
             "No committed outcome is visible yet. Check again or retry the original command key.",
         )
-    if row.operation in {"reimbursement_created", "reimbursement_paid"}:
+    if row.operation in {"reimbursement_created", "reimbursement_paid", "reimbursement_cancelled"}:
         # Receipts share one actor/key identity. A former approver must not use
         # this employee-write endpoint to recover other employees' payout data.
+        # Keep these operation guards on rollback once receipts exist.
         authz.require(current, authz.Permission.EXPENSE_APPROVE)
+        await expense_commands.lock_actor(db, current, permission=authz.Permission.EXPENSE_APPROVE)
     return ExpenseCommandOut(
         id=row.id,
         command_key=row.command_key,
@@ -363,8 +374,9 @@ async def expense_command_result(command_key: str, current: CurrentUser, db: DbS
             status.HTTP_404_NOT_FOUND,
             "No committed outcome is visible yet. Check again or retry the original key.",
         )
-    if row.operation in {"reimbursement_created", "reimbursement_paid"}:
+    if row.operation in {"reimbursement_created", "reimbursement_paid", "reimbursement_cancelled"}:
         authz.require(current, authz.Permission.EXPENSE_APPROVE)
+        await expense_commands.lock_actor(db, current, permission=authz.Permission.EXPENSE_APPROVE)
     return json.loads(row.result_json)
 
 
@@ -674,7 +686,7 @@ async def update_report(
     report_id: str, body: ExpenseReportUpdate, current: CurrentUser, db: DbSession
 ):
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     _require_owner_editable(r, current)
 
     if body.title is not None:
@@ -697,7 +709,7 @@ async def update_report(
 @router.post("/{report_id}/submit", response_model=ExpenseReportDetail, dependencies=_WRITE)
 async def submit_report(report_id: str, current: CurrentUser, db: DbSession):
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     if r.employee_id != current.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only submit your own reports")
     # State machine: submit is legal from draft or returned (409 otherwise).
@@ -747,7 +759,7 @@ async def submit_report(report_id: str, current: CurrentUser, db: DbSession):
     appr_policy = await expense_approval.evaluate(db, current.org_id, r)
     await expense_approval.build_chain(db, current.org_id, r, appr_policy)
 
-    await audit.record(
+    await _review_audit(
         db, audit.A.EXPENSE_SUBMIT, target_type="expense_report", target_id=r.id, meta={}
     )
     await webhooks.emit(
@@ -828,7 +840,7 @@ async def decide(report_id: str, body: ExpenseDecision, current: CurrentUser, db
             "reject": audit.A.EXPENSE_REJECT,
             "return_for_correction": audit.A.EXPENSE_RETURN,
         }[action]
-        await audit.record(
+        await _review_audit(
             db,
             _audit_action,
             target_type="expense_report",
@@ -842,7 +854,7 @@ async def decide(report_id: str, body: ExpenseDecision, current: CurrentUser, db
         r.decided_at = expenses.now()
         r.decided_by = current.email
         r.decision_note = body.note
-        await audit.record(
+        await _review_audit(
             db,
             audit.A.EXPENSE_TRANSITION,
             target_type="expense_report",
@@ -880,7 +892,7 @@ async def reassign_step(report_id: str, body: ReassignIn, current: CurrentUser, 
     await _guard(db, current.org_id)
     if not _is_approver(current):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only an expense approver can reassign")
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     if r.status not in expense_state.IN_APPROVAL:
         raise HTTPException(status.HTTP_409_CONFLICT, "Report is not awaiting approval")
     steps = await expense_approval.steps_for(db, current.org_id, r.id)
@@ -893,9 +905,11 @@ async def reassign_step(report_id: str, body: ReassignIn, current: CurrentUser, 
     new_approver = await db.get(User, body.approver_id)
     if new_approver is None or new_approver.org_id != current.org_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Approver not found")
+    if (step.approver_id, step.approver_email) != (new_approver.id, new_approver.email):
+        r.version += 1
     step.approver_id = new_approver.id
     step.approver_email = new_approver.email
-    await audit.record(
+    await _review_audit(
         db,
         audit.A.EXPENSE_REASSIGN,
         target_type="expense_report",
@@ -918,14 +932,17 @@ async def withdraw_report(report_id: str, current: CurrentUser, db: DbSession):
     """Pull a submitted report back to draft before any decision is made
     (owner-only)."""
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     if r.employee_id != current.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only withdraw your own reports")
     r.status = expense_state.target_for("withdraw", r.status)  # 409 if not submitted
+    # A later edited resubmission must not accept a decision reviewed against
+    # this submission. Keep the existing first-submission version convention.
+    r.version += 1
     r.submitted_at = None
     # A withdrawn report goes back to the drawing board — discard its chain.
     await expense_approval.delete_chain(db, current.org_id, r.id)
-    await audit.record(
+    await _review_audit(
         db,
         audit.A.EXPENSE_TRANSITION,
         target_type="expense_report",
@@ -947,7 +964,7 @@ async def add_item(report_id: str, body: ExpenseItemIn, current: CurrentUser, db
     """Add a manual expense entry (standard / mileage / per-diem) to a draft or
     returned report."""
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     _require_owner_editable(r, current)
     item = (await expenses.build_items(db, [body], r.currency))[0]
     r.items.append(item)
@@ -961,12 +978,12 @@ async def add_item(report_id: str, body: ExpenseItemIn, current: CurrentUser, db
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=_WRITE)
 async def delete_report(report_id: str, current: CurrentUser, db: DbSession):
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     if r.employee_id != current.id or r.status != "draft":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only your own draft reports can be deleted")
     # WO-M: binned, not destroyed — restorable from the Trash screen.
     bin_svc.stamp(r, current.email)
-    await audit.record(
+    await _review_audit(
         db,
         "expense.report_binned",
         target_type="expense_report",
@@ -1048,7 +1065,7 @@ async def update_item(
     """Edit a draft/returned item — money, flags, declarations, purpose, and
     cost dimensions. Only fields explicitly present in the body are applied."""
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     _require_owner_editable(r, current)
     item = next((i for i in r.items if i.id == item_id), None)
     if item is None:
@@ -1200,7 +1217,7 @@ async def upload_receipt(
     report_id: str, item_id: str, current: CurrentUser, db: DbSession, file: UploadFile
 ):
     await _guard(db, current.org_id)
-    r = await _load(db, current.org_id, report_id)
+    r = await _load(db, current.org_id, report_id, lock=True)
     _require_owner_editable(r, current)
     item = next((i for i in r.items if i.id == item_id), None)
     if item is None:
@@ -1243,14 +1260,36 @@ async def upload_receipt(
 
 
 @router.get("/{report_id}/items/{item_id}/receipt")
-async def get_receipt(report_id: str, item_id: str, current: CurrentUser, db: DbSession):
+async def get_receipt(
+    report_id: str, item_id: str, current: CurrentUser, db: DbSession, request: Request
+):
     await _guard(db, current.org_id)
     r = await _load(db, current.org_id, report_id)
     _require_view(r, current)
     item = next((i for i in r.items if i.id == item_id), None)
     if item is None or not item.receipt_sha256:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Receipt not found")
-    content = await documents.load(documents.RECEIPTS, current.org_id, item.receipt_sha256)
+    identity = (item.receipt_sha256, item.receipt_size)
+    try:
+        content = await documents.load_verified_original(
+            documents.RECEIPTS, current.org_id, item.receipt_sha256, size=item.receipt_size
+        )
+    except storage.StorageReadError:
+        raise
+    except storage.StorageError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stored receipt missing") from None
+    fresh, _ = await refresh_current_identity(request, db, current)
+    authz.require(fresh, authz.Permission.EXPENSE_READ)
+    await _guard(db, current.org_id)
+    r = await _load(db, current.org_id, report_id)
+    _require_view(r, fresh)
+    item = next((i for i in r.items if i.id == item_id), None)
+    if item is None or (item.receipt_sha256, item.receipt_size) != identity:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Receipt changed while preparing the download"
+        )
+    if content is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stored receipt missing")
     await audit.record(
         db,
         audit.A.DOC_DOWNLOAD,
@@ -1263,7 +1302,11 @@ async def get_receipt(report_id: str, item_id: str, current: CurrentUser, db: Db
     return Response(
         content=content,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment", "X-Content-Type-Options": "nosniff"},
+        headers={
+            "Content-Disposition": "attachment",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+        },
     )
 
 

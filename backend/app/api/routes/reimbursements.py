@@ -3,7 +3,7 @@
 A designated approver (EXPENSE_APPROVE) groups APPROVED expense reports into a
 payout batch, marks it paid (which flips each report to `reimbursed` with the
 payment method + reference), and exports it as a bank/payroll CSV. Gated behind
-the expenses module; every action is audited and emits a webhook.
+the expenses module; changes are audited. Cancellation has no external event.
 """
 
 from __future__ import annotations
@@ -19,6 +19,8 @@ from app.core.security_headers import content_disposition
 from app.models.expense import ReimbursementBatch
 from app.schemas.expense import ExpenseCommandOut
 from app.schemas.reimbursement import (
+    BatchCancel,
+    BatchCancelOut,
     BatchCreate,
     BatchDetailOut,
     BatchOut,
@@ -175,27 +177,66 @@ async def pay_batch(
     return detail
 
 
-@router.delete("/{batch_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def cancel_batch(batch_id: str, current: CurrentUser, db: DbSession):
-    """Cancel an OPEN batch, releasing its reports back to the payable pool.
-
-    Loaded FOR UPDATE like the pay path — WO-Y. `_load` has always documented
-    the lock as covering "pay/cancel"; cancel was the one state-changing route
-    that did not take it. Concurrently with a pay, the plain read decided
-    "still open" in Python, then blocked on the payer's row lock and wrote
-    `cancelled` over a batch that had just been PAID — unlinking reports the
-    payment had already stamped `reimbursed`, leaving money recorded as sent
-    against a batch recorded as never run."""
+async def _cancel(
+    batch_id: str,
+    body: BatchCancel | None,
+    current: CurrentUser,
+    db: DbSession,
+    command_key: str | None,
+) -> BatchCancelOut:
     await _guard(db, current.org_id)
+    command = await reimbursement_commands.prepare_cancel(db, current, batch_id, body, command_key)
+    if command.previous is not None:
+        return command.previous
     b = await _load(db, current.org_id, batch_id, lock=True)
+    if body is not None and body.version != b.version:
+        raise ConflictError(
+            f"Batch changed (your {body.version}, current {b.version}).",
+            code="reimbursement_cancellation_conflict",
+        )
     try:
-        await reimbursement.cancel_batch(db, current.org_id, b)
+        released = await reimbursement.cancel_batch(
+            db,
+            current.org_id,
+            b,
+            report_versions=body.report_versions if body is not None else None,
+        )
     except reimbursement.ReimbursementError as e:
-        raise HTTPException(status.HTTP_409_CONFLICT, str(e))
-    await audit.record(
-        db, audit.A.REIMBURSE_CANCEL, target_type="reimbursement_batch", target_id=b.id, meta={}
+        raise ConflictError(str(e), code="reimbursement_cancellation_conflict") from e
+    result = await reimbursement_commands.record_cancel(
+        db,
+        current,
+        b,
+        released,
+        command,
+        reason=body.reason if body is not None else None,
     )
     await db.commit()
+    return result
+
+
+@router.post("/{batch_id}/cancel", response_model=BatchCancelOut)
+async def cancel_batch_command(
+    batch_id: str,
+    body: BatchCancel,
+    current: CurrentUser,
+    db: DbSession,
+    command_key: str | None = Header(default=None, alias="Idempotency-Key", max_length=120),
+):
+    """Cancel the exact reviewed batch; replay returns its original released set."""
+    return await _cancel(batch_id, body, current, db, command_key)
+
+
+@router.delete("/{batch_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_batch(
+    batch_id: str,
+    current: CurrentUser,
+    db: DbSession,
+    body: BatchCancel | None = None,
+    command_key: str | None = Header(default=None, alias="Idempotency-Key", max_length=120),
+):
+    """Compatibility adapter; old no-key attempts retain their no-replay semantics."""
+    await _cancel(batch_id, body, current, db, command_key)
 
 
 # BE-010 (audit 2026-09-05): producing a bank file advances the export-once

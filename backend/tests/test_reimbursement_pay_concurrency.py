@@ -948,7 +948,10 @@ async def _route_state(sm, org_id, batch_id, report_id):
         ("cancel", "pay"),
     ],
 )
-async def test_route_transactions_serialize_export_pay_and_cancel(monkeypatch, first, second):
+@pytest.mark.parametrize("cancel_transport", ["legacy", "typed"])
+async def test_route_transactions_serialize_export_pay_and_cancel(
+    monkeypatch, first, second, cancel_transport
+):
     """EX19: exercise the real route locks, in both deterministic commit orders.
 
     The scheduling wrapper only pauses AFTER the route's original `_load` has
@@ -992,6 +995,22 @@ async def test_route_transactions_serialize_export_pay_and_cancel(monkeypatch, f
             client.headers["Authorization"] = f"Bearer {registered.json()['token']['access_token']}"
             activated = await client.put("/api/v1/modules/expenses", json={"enabled": True})
             assert activated.status_code == 200, activated.text
+            invitation = await client.post(
+                "/api/v1/team/invites",
+                json={"email": f"second-{stamp}@example.com", "role": "admin"},
+            )
+            assert invitation.status_code == 201, invitation.text
+            accepted = await client.post(
+                "/api/v1/auth/accept-invite",
+                json={
+                    "token": invitation.json()["token"],
+                    "name": "Second checker",
+                    "password": "supersecret",
+                },
+            )
+            assert accepted.status_code == 201, accepted.text
+            second_headers = {"Authorization": f"Bearer {accepted.json()['token']['access_token']}"}
+            cancel_key = str(uuid.uuid4())
 
             # Fixture is a previously approved report held by an OPEN batch.
             # Its maker differs from the authenticated checker: a pay refusal
@@ -1081,15 +1100,27 @@ async def test_route_transactions_serialize_export_pay_and_cancel(monkeypatch, f
             async def request(operation, actor=None):
                 token = request_actor.set(actor)
                 try:
+                    headers = second_headers if actor == "second" else {}
                     if operation == "cancel":
-                        return await client.delete(f"/api/v1/reimbursements/{batch_id}")
+                        if cancel_transport == "typed":
+                            return await client.post(
+                                f"/api/v1/reimbursements/{batch_id}/cancel",
+                                json={"version": 1, "report_versions": {report_id: 1}},
+                                headers={**headers, "Idempotency-Key": cancel_key},
+                            )
+                        return await client.delete(
+                            f"/api/v1/reimbursements/{batch_id}", headers=headers
+                        )
                     if operation == "pay":
                         return await client.post(
                             f"/api/v1/reimbursements/{batch_id}/pay",
                             json={"version": 1, "reference": "EX19-SYNTHETIC-PAYMENT"},
+                            headers=headers,
                         )
                     suffix = "export" if operation == "csv" else "sepa"
-                    return await client.post(f"/api/v1/reimbursements/{batch_id}/{suffix}")
+                    return await client.post(
+                        f"/api/v1/reimbursements/{batch_id}/{suffix}", headers=headers
+                    )
                 finally:
                     request_actor.reset(token)
 
@@ -1114,7 +1145,9 @@ async def test_route_transactions_serialize_export_pay_and_cancel(monkeypatch, f
             await asyncio.wait_for(observe_database_wait(), timeout=10)
             release_first.set()
             winner = await asyncio.wait_for(tasks[0], timeout=15)
-            assert winner.status_code == (204 if first == "cancel" else 200), winner.text
+            assert winner.status_code == (
+                204 if first == "cancel" and cancel_transport == "legacy" else 200
+            ), winner.text
             await asyncio.wait_for(second_loaded.wait(), timeout=10)
             committed_winner = await _route_state(sm, org_id, batch_id, report_id)
             release_second.set()
@@ -1595,6 +1628,152 @@ async def test_payment_commands_serialize_original_http_transactions(
 
 @pg_only
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "schedule", ["same_actor_same_key", "same_actor_different_key", "different_actor"]
+)
+@pytest.mark.parametrize("round_number", [1, 2])
+async def test_cancel_commands_serialize_original_http_transactions(
+    monkeypatch, record_property, schedule, round_number
+):
+    """Actual route requests, observed database waits and exact winner snapshots."""
+    from time import perf_counter
+
+    engine = create_async_engine(PG_URL, pool_size=6, max_overflow=0)
+    factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
+    async def get_test_session():
+        async with factory() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = get_test_session
+    request_role = ContextVar("ex19_cancel_request", default=None)
+    first_locked, second_entered, second_loaded = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    release_first, release_second = asyncio.Event(), asyncio.Event()
+    original_load, original_actor = routes._load, expense_commands.lock_actor
+    pids, tasks = {}, []
+    start = perf_counter()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            fixture = await _ex20_fixture(client, factory)
+            body = {
+                "version": fixture["body"]["version"],
+                "report_versions": fixture["body"]["report_versions"],
+                "reason": "Synthetic duplicate selection",
+            }
+            same_actor = schedule != "different_actor"
+
+            async def actor_lock(db, current, **kwargs):
+                role = request_role.get()
+                if role == "second" and same_actor:
+                    pids[role] = await db.scalar(text("SELECT pg_backend_pid()"))
+                    second_entered.set()
+                await original_actor(db, current, **kwargs)
+                if role == "second" and same_actor:
+                    second_loaded.set()
+                    await release_second.wait()
+
+            async def batch_load(db, org_id, batch_id, *, lock=False):
+                role = request_role.get()
+                if role == "second" and not same_actor:
+                    pids[role] = await db.scalar(text("SELECT pg_backend_pid()"))
+                    second_entered.set()
+                row = await original_load(db, org_id, batch_id, lock=lock)
+                if role == "first":
+                    pids[role] = await db.scalar(text("SELECT pg_backend_pid()"))
+                    first_locked.set()
+                    await release_first.wait()
+                elif role == "second" and not same_actor:
+                    second_loaded.set()
+                    await release_second.wait()
+                return row
+
+            monkeypatch.setattr(expense_commands, "lock_actor", actor_lock)
+            monkeypatch.setattr(routes, "_load", batch_load)
+            first_key = str(uuid.uuid4())
+            second_key = first_key if schedule == "same_actor_same_key" else str(uuid.uuid4())
+
+            async def request(role=None):
+                headers = (
+                    fixture["first_headers"]
+                    if role == "first" or same_actor
+                    else fixture["second_headers"]
+                )
+                key = first_key if role == "first" else second_key
+                token = request_role.set(role)
+                try:
+                    return await client.post(
+                        f"/api/v1/reimbursements/{fixture['batch_id']}/cancel",
+                        json=body,
+                        headers={**headers, "Idempotency-Key": key},
+                    )
+                finally:
+                    request_role.reset(token)
+
+            tasks.append(asyncio.create_task(request("first")))
+            await asyncio.wait_for(first_locked.wait(), 10)
+            tasks.append(asyncio.create_task(request("second")))
+            await asyncio.wait_for(second_entered.wait(), 10)
+            count = await asyncio.wait_for(
+                _ex20_observe_wait(factory, pids["first"], pids["second"], finished=tasks[1]), 10
+            )
+            release_first.set()
+            winner = await asyncio.wait_for(tasks[0], 15)
+            assert winner.status_code == 200, winner.text
+            await asyncio.wait_for(second_loaded.wait(), 10)
+            committed = await _create_command_state(factory, fixture["org_id"])
+            release_second.set()
+            second = await asyncio.wait_for(tasks[1], 15)
+            if schedule == "same_actor_same_key":
+                assert second.status_code == 200 and second.json() == winner.json(), second.text
+            else:
+                assert (
+                    second.status_code == 409
+                    and second.json()["code"] == "reimbursement_cancellation_conflict"
+                ), second.text
+            assert await _create_command_state(factory, fixture["org_id"]) == committed
+            replay = await request()
+            assert replay.status_code == second.status_code, replay.text
+            if schedule == "same_actor_same_key":
+                assert replay.json() == winner.json()
+            assert await _create_command_state(factory, fixture["org_id"]) == committed
+            assert committed["reimbursement_batches"][0]["status"] == "cancelled"
+            assert committed["reimbursement_batches"][0]["version"] == 4
+            assert committed["reimbursement_batches"][0]["total_eur"] == Decimal("0.30")
+            assert len(committed["expense_commands"]) == 1
+            assert len(committed["webhook_deliveries"]) == len(committed["jobs"]) == 0
+            assert winner.json()["batch"]["reports"] == []
+            assert {r["id"]: r["version"] for r in winner.json()["released_reports"]} == {
+                rid: version + 1 for rid, version in body["report_versions"].items()
+            }
+            assert (
+                sum(r["action"] == audit.A.REIMBURSE_CANCEL for r in committed["audit_events"]) == 1
+            )
+            assert all(
+                r["status"] == "approved"
+                and r["payment_reference"] is None
+                and r["payout_batch_id"] is None
+                for r in committed["expense_reports"]
+            )
+            assert sorted(r["version"] for r in committed["expense_reports"]) == [8, 9]
+            record_property("schedule", schedule)
+            record_property("round", round_number)
+            record_property("observed_real_block", True)
+            record_property("observer_queries", count)
+            record_property("elapsed_seconds", round(perf_counter() - start, 6))
+    finally:
+        release_first.set()
+        release_second.set()
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        app.dependency_overrides.clear()
+        await engine.dispose()
+
+
+@pg_only
+@pytest.mark.asyncio
 @pytest.mark.parametrize("changed", ["role", "report_version", "report_total"])
 async def test_payment_rechecks_after_actual_authority_or_report_wait(
     monkeypatch, record_property, changed
@@ -1699,9 +1878,118 @@ async def test_payment_rechecks_after_actual_authority_or_report_wait(
 
 @pg_only
 @pytest.mark.asyncio
+@pytest.mark.parametrize("changed", ["role", "report_version"])
+async def test_cancel_rechecks_after_actual_authority_or_report_wait(
+    monkeypatch, record_property, changed
+):
+    engine = create_async_engine(PG_URL, pool_size=5, max_overflow=0)
+    factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
+    async def get_test_session():
+        async with factory() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = get_test_session
+    entered, pids, task = asyncio.Event(), {}, None
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            fixture = await _ex20_fixture(client, factory)
+            body = {
+                "version": fixture["body"]["version"],
+                "report_versions": fixture["body"]["report_versions"],
+            }
+            before = await _create_command_state(factory, fixture["org_id"])
+            async with factory() as blocker:
+                pids["holder"] = await blocker.scalar(text("SELECT pg_backend_pid()"))
+                if changed == "role":
+                    row = await blocker.scalar(
+                        select(Membership)
+                        .where(
+                            Membership.org_id == fixture["org_id"],
+                            Membership.user_id == fixture["actor_id"],
+                        )
+                        .with_for_update()
+                    )
+                    original = expense_commands.lock_actor
+
+                    async def at_actor(db, current, **kwargs):
+                        pids["waiter"] = await db.scalar(text("SELECT pg_backend_pid()"))
+                        entered.set()
+                        return await original(db, current, **kwargs)
+
+                    monkeypatch.setattr(expense_commands, "lock_actor", at_actor)
+                else:
+                    row = await blocker.scalar(
+                        select(ExpenseReport)
+                        .where(
+                            ExpenseReport.org_id == fixture["org_id"],
+                            ExpenseReport.id == fixture["report_ids"][0],
+                        )
+                        .with_for_update()
+                    )
+                    original = reimbursement._locked_batch_reports
+
+                    async def at_reports(db, org_id, batch_id):
+                        pids["waiter"] = await db.scalar(text("SELECT pg_backend_pid()"))
+                        entered.set()
+                        return await original(db, org_id, batch_id)
+
+                    monkeypatch.setattr(reimbursement, "_locked_batch_reports", at_reports)
+                task = asyncio.create_task(
+                    client.post(
+                        f"/api/v1/reimbursements/{fixture['batch_id']}/cancel",
+                        json=body,
+                        headers={**fixture["first_headers"], "Idempotency-Key": str(uuid.uuid4())},
+                    )
+                )
+                await asyncio.wait_for(entered.wait(), 10)
+                count = await asyncio.wait_for(
+                    _ex20_observe_wait(factory, pids["holder"], pids["waiter"], finished=task), 10
+                )
+                if changed == "role":
+                    row.role, row.is_expense_approver = UserRole.user, False
+                elif changed == "report_version":
+                    row.version += 1
+                else:
+                    row.total = Decimal("0.11")
+                await blocker.commit()
+                response = await asyncio.wait_for(task, 15)
+            assert response.status_code == (403 if changed == "role" else 409), response.text
+            if changed != "role":
+                assert response.json()["code"] == (
+                    "reimbursement_selection_conflict"
+                    if changed == "report_version"
+                    else "reimbursement_total_conflict"
+                )
+            after = await _create_command_state(factory, fixture["org_id"])
+            if changed != "role":
+                expected = next(
+                    r for r in before["expense_reports"] if r["id"] == fixture["report_ids"][0]
+                )
+                actual = next(r for r in after["expense_reports"] if r["id"] == expected["id"])
+                expected["updated_at"] = actual["updated_at"]
+                if changed == "report_version":
+                    expected["version"] = 8
+                else:
+                    expected["total"] = Decimal("0.11")
+            assert after == before
+            record_property("changed", changed)
+            record_property("observed_real_block", True)
+            record_property("observer_queries", count)
+    finally:
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        app.dependency_overrides.clear()
+        await engine.dispose()
+
+
+@pg_only
+@pytest.mark.asyncio
 @pytest.mark.parametrize("first", ["pay", "cancel"])
+@pytest.mark.parametrize("cancel_transport", ["legacy", "typed"])
 async def test_keyed_payment_and_cancel_are_serialized_through_original_route(
-    monkeypatch, record_property, first
+    monkeypatch, record_property, first, cancel_transport
 ):
     engine = create_async_engine(PG_URL, pool_size=6, max_overflow=0)
     factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
@@ -1747,6 +2035,15 @@ async def test_keyed_payment_and_cancel_are_serialized_through_original_route(
                             json=fixture["body"],
                             headers={**fixture["first_headers"], "Idempotency-Key": key},
                         )
+                    if cancel_transport == "typed":
+                        return await client.post(
+                            f"/api/v1/reimbursements/{fixture['batch_id']}/cancel",
+                            json={
+                                "version": fixture["body"]["version"],
+                                "report_versions": fixture["body"]["report_versions"],
+                            },
+                            headers={**fixture["second_headers"], "Idempotency-Key": key},
+                        )
                     return await client.delete(
                         f"/api/v1/reimbursements/{fixture['batch_id']}",
                         headers=fixture["second_headers"],
@@ -1763,7 +2060,9 @@ async def test_keyed_payment_and_cancel_are_serialized_through_original_route(
             )
             release_first.set()
             winner = await asyncio.wait_for(tasks[0], 15)
-            assert winner.status_code == (200 if first == "pay" else 204), winner.text
+            assert winner.status_code == (
+                204 if first == "cancel" and cancel_transport == "legacy" else 200
+            ), winner.text
             await asyncio.wait_for(second_loaded.wait(), 10)
             committed = await _create_command_state(factory, fixture["org_id"])
             release_second.set()
@@ -1778,7 +2077,7 @@ async def test_keyed_payment_and_cancel_are_serialized_through_original_route(
             assert committed["reimbursement_batches"][0]["status"] == (
                 "paid" if first == "pay" else "cancelled"
             )
-            assert len(committed["expense_commands"]) == (1 if first == "pay" else 0)
+            assert len(committed["expense_commands"]) == 1
             assert (
                 len(committed["webhook_deliveries"])
                 == len(committed["jobs"])
@@ -1920,6 +2219,132 @@ async def test_override_payment_waits_for_report_before_taking_audit_lock(
             )
             record_property("observed_real_report_block", True)
             record_property("payer_audit_before_required_report", False)
+            record_property("observer_queries", count)
+    finally:
+        release_decision.set()
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        app.dependency_overrides.clear()
+        await engine.dispose()
+
+
+@pg_only
+@pytest.mark.asyncio
+async def test_cancel_waits_for_report_before_taking_audit_lock(monkeypatch, record_property):
+    """Actual report decision can finish while cancellation awaits its row.
+
+    Restoring audit-before-report ordering would hold the advisory audit lock
+    while waiting on the report, blocking this decision in the opposite order.
+    """
+    from app.api.routes import expenses as expense_routes
+
+    engine = create_async_engine(PG_URL, pool_size=6, max_overflow=0)
+    factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
+    async def get_test_session():
+        async with factory() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = get_test_session
+    name = ContextVar("ex19_cancel_audit_order", default=None)
+    decision_locked, payer_entered = asyncio.Event(), asyncio.Event()
+    release_decision = asyncio.Event()
+    original_report, original_batch_reports, original_audit = (
+        expense_routes._load,
+        reimbursement._locked_batch_reports,
+        audit.record,
+    )
+    pids, tasks, payer_audits = {}, [], []
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            fixture = await _ex20_fixture(client, factory)
+            body = {
+                "version": fixture["body"]["version"],
+                "report_versions": fixture["body"]["report_versions"],
+            }
+
+            async def decision_load(db, org_id, report_id, *, lock=False):
+                row = await original_report(db, org_id, report_id, lock=lock)
+                if name.get() == "decision":
+                    pids["decision"] = await db.scalar(text("SELECT pg_backend_pid()"))
+                    decision_locked.set()
+                    await release_decision.wait()
+                return row
+
+            async def payer_load(db, org_id, batch_id):
+                if name.get() == "cancel":
+                    pids["cancel"] = await db.scalar(text("SELECT pg_backend_pid()"))
+                    payer_entered.set()
+                return await original_batch_reports(db, org_id, batch_id)
+
+            async def observed_audit(db, action, *args, **kwargs):
+                if name.get() == "cancel":
+                    payer_audits.append(action)
+                return await original_audit(db, action, *args, **kwargs)
+
+            monkeypatch.setattr(expense_routes, "_load", decision_load)
+            monkeypatch.setattr(reimbursement, "_locked_batch_reports", payer_load)
+            monkeypatch.setattr(audit, "record", observed_audit)
+
+            async def decide():
+                token = name.set("decision")
+                try:
+                    return await client.post(
+                        f"/api/v1/expenses/{fixture['report_ids'][0]}/decision",
+                        json={"action": "mark_for_reimbursement", "version": 7},
+                        headers=fixture["first_headers"],
+                    )
+                finally:
+                    name.reset(token)
+
+            async def pay():
+                token = name.set("cancel")
+                try:
+                    return await client.post(
+                        f"/api/v1/reimbursements/{fixture['batch_id']}/cancel",
+                        json=body,
+                        headers={**fixture["first_headers"], "Idempotency-Key": str(uuid.uuid4())},
+                    )
+                finally:
+                    name.reset(token)
+
+            tasks.append(asyncio.create_task(decide()))
+            await asyncio.wait_for(decision_locked.wait(), 10)
+            tasks.append(asyncio.create_task(pay()))
+            await asyncio.wait_for(payer_entered.wait(), 10)
+            count = await asyncio.wait_for(
+                _ex20_observe_wait(factory, pids["decision"], pids["cancel"], finished=tasks[1]), 10
+            )
+            assert payer_audits == [], (
+                "cancellation acquired/wrote audit before its required report row"
+            )
+            release_decision.set()
+            decision = await asyncio.wait_for(tasks[0], 15)
+            assert decision.status_code == 200, decision.text
+            refused = await asyncio.wait_for(tasks[1], 15)
+            assert (
+                refused.status_code == 409
+                and refused.json()["code"] == "reimbursement_selection_conflict"
+            ), refused.text
+            state = await _create_command_state(factory, fixture["org_id"])
+            assert state["reimbursement_batches"][0]["status"] == "open"
+            assert (
+                len(state["expense_commands"])
+                == len(state["webhook_deliveries"])
+                == len(state["jobs"])
+                == 0
+            )
+            assert not any(
+                r["action"] in (audit.A.REIMBURSE_CANCEL,) for r in state["audit_events"]
+            )
+            assert (
+                sum(r["action"] == audit.A.EXPENSE_TRANSITION for r in state["audit_events"]) == 1
+            )
+            record_property("observed_real_report_block", True)
+            record_property("cancel_audit_before_required_report", False)
             record_property("observer_queries", count)
     finally:
         release_decision.set()

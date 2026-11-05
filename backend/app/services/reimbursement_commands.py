@@ -23,6 +23,8 @@ from app.models.base import new_uuid
 from app.models.expense import BATCH_PAID, ExpenseCommand, ExpenseReport, ReimbursementBatch
 from app.schemas.expense import ExpenseCommandOut
 from app.schemas.reimbursement import (
+    BatchCancel,
+    BatchCancelOut,
     BatchCreate,
     BatchDetailOut,
     BatchOut,
@@ -38,7 +40,86 @@ from app.services.issued_commands import fingerprint
 
 CREATE_OPERATION = "reimbursement_created"
 PAY_OPERATION = "reimbursement_paid"
-REIMBURSEMENT_OPERATIONS = frozenset({CREATE_OPERATION, PAY_OPERATION})
+CANCEL_OPERATION = "reimbursement_cancelled"
+REIMBURSEMENT_OPERATIONS = frozenset({CREATE_OPERATION, PAY_OPERATION, CANCEL_OPERATION})
+
+
+@dataclass
+class CancelCommand:
+    key: str
+    payload_hash: str
+    previous: BatchCancelOut | None = None
+
+
+async def prepare_cancel(
+    db: AsyncSession,
+    current: Principal,
+    batch_id: str,
+    body: BatchCancel | None,
+    supplied_key: str | None,
+) -> CancelCommand:
+    if supplied_key is not None and body is None:
+        raise ValidationError(
+            "Refresh the batch and send its reviewed version and every report version.",
+            code="reimbursement_cancellation_evidence_required",
+        )
+    try:
+        canonical_batch_id = str(UUID(batch_id))
+    except ValueError as exc:
+        raise ValidationError("Select a valid reimbursement batch") from exc
+    digest = fingerprint(
+        {
+            "batch_id": canonical_batch_id,
+            **(body.model_dump(mode="json") if body else {"legacy": True}),
+        }
+    )
+    # Old DELETE clients mean a fresh attempt, never an implicit replay of an
+    # earlier cancellation after the released reports have been batched again.
+    key = (
+        f"legacy-reimbursement-cancel:{new_uuid()}"
+        if supplied_key is None
+        else expense_commands.command_key(supplied_key, CANCEL_OPERATION, digest)
+    )
+    await expense_commands.lock_actor(db, current, permission=authz.Permission.EXPENSE_APPROVE)
+    previous = await expense_commands.lookup(
+        db, current.org_id, current.id, key, operation=CANCEL_OPERATION, expected=digest
+    )
+    return CancelCommand(
+        key,
+        digest,
+        BatchCancelOut.model_validate(json.loads(previous.result_json))
+        if previous is not None
+        else None,
+    )
+
+
+async def record_cancel(
+    db: AsyncSession,
+    current: Principal,
+    batch: ReimbursementBatch,
+    released: list[ExpenseReport],
+    command: CancelCommand,
+    *,
+    reason: str | None,
+) -> BatchCancelOut:
+    await db.flush()
+    result = BatchCancelOut(
+        batch=await batch_detail(db, current.org_id, batch),
+        released_reports=[ReimbursementReportOut.model_validate(r) for r in released],
+        reason=reason,
+    )
+    await expense_commands.record(
+        db,
+        current,
+        command.key,
+        CANCEL_OPERATION,
+        command.payload_hash,
+        batch.id,
+        result.model_dump(mode="json"),
+    )
+    # Cancellation has no external event. Receipt and strict audit are its
+    # durable transaction; do not invent a webhook or a no-op job.
+    return result
 
 
 def batch_summary(

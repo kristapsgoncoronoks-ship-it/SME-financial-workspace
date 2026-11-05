@@ -94,6 +94,23 @@ def _loads_with_lock(fn: ast.AST, loader: str) -> bool | None:
     return False if seen else None
 
 
+def _local_calls(fn: ast.AST, functions: dict[str, ast.AST]) -> list[ast.AST]:
+    """Follow shared route adapters so a helper cannot hide a missing lock."""
+    pending, seen, result = [fn], set(), []
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        result.append(current)
+        pending.extend(
+            functions[call.func.id]
+            for call in _calls(current)
+            if isinstance(call.func, ast.Name) and call.func.id in functions
+        )
+    return result
+
+
 def test_every_mutating_payout_route_takes_the_row_lock():
     checked: list[str] = []
     unlocked: list[str] = []
@@ -101,28 +118,53 @@ def test_every_mutating_payout_route_takes_the_row_lock():
         path = ROUTES / filename
         assert path.exists(), f"payout router moved: {path}"
         tree = ast.parse(path.read_text(encoding="utf-8"))
+        functions = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef)
+        }
         for node in ast.walk(tree):
             if not isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef):
                 continue
             if not _is_route(node):
                 continue
-            if not (_called_names(node) & MUTATORS):
+            components = _local_calls(node, functions)
+            if not any(_called_names(component) & MUTATORS for component in components):
                 continue  # a read-only route has nothing to serialize on
-            locked = _loads_with_lock(node, loader)
-            if locked is None:
+            locks = [_loads_with_lock(component, loader) for component in components]
+            locks = [locked for locked in locks if locked is not None]
+            if not locks:
                 continue  # loads some other way; not this gate's business
             checked.append(f"{filename}::{node.name}")
-            if not locked:
+            if not all(locks):
                 unlocked.append(f"{filename}::{node.name}")
 
     # Positive anchor: if the AST walk silently matched nothing, an empty
     # `unlocked` would look exactly like success.
     assert len(checked) >= 3, f"expected to find the payout mutators, found {checked}"
+    assert {"reimbursements.py::cancel_batch", "reimbursements.py::cancel_batch_command"} <= set(
+        checked
+    )
     assert not unlocked, (
         "these payout routes change money state without loading the row FOR UPDATE: "
         f"{unlocked}. A plain read does not block, so the decision is made on a "
         "value another transaction may already have replaced."
     )
+
+
+def test_shared_cancel_adapter_does_not_hide_a_removed_lock():
+    tree = ast.parse((ROUTES / "reimbursements.py").read_text(encoding="utf-8"))
+    functions = {node.name: node for node in tree.body if isinstance(node, ast.AsyncFunctionDef)}
+    for call in _calls(functions["_cancel"]):
+        if isinstance(call.func, ast.Name) and call.func.id == "_load":
+            for keyword in call.keywords:
+                if keyword.arg == "lock":
+                    keyword.value = ast.Constant(value=False)
+    for route in ("cancel_batch", "cancel_batch_command"):
+        locks = [
+            _loads_with_lock(node, "_load") for node in _local_calls(functions[route], functions)
+        ]
+        assert False in locks, f"{route} stopped following its cancellation helper"
 
 
 def test_the_loader_still_documents_what_it_covers():
