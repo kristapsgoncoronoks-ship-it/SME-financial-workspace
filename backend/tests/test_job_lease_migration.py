@@ -105,11 +105,13 @@ def seed_legacy(connection):
     return org_ids
 
 
-def test_generation_migration_has_one_additive_157th_head():
+def test_generation_migration_is_the_additive_157th_revision():
     revisions = graph()
-    assert revisions.get_heads() == [HEAD]
+    # This suite exercises the historical lease revision explicitly. The
+    # complete graph/head is checked by test_planning_ocr_migration_integration.
+    assert len(revisions.get_heads()) == 1
     assert revisions.get_revision(HEAD).down_revision == PARENT
-    assert len(list(revisions.walk_revisions())) == 157
+    assert len(list(revisions.walk_revisions(head=HEAD))) == 157
 
 
 @pytest.mark.slow
@@ -134,8 +136,14 @@ def test_legacy_rows_null_column_data_rls_and_downgrade_roundtrip(migration_url)
 
     assert database(migration_url, upgraded) == before
     assert database(migration_url, job_catalog) == before_catalog
+    # Current model parity belongs at the current graph head. Later additive
+    # revisions must not change this historical lease/data contract either.
+    migrate(migration_url, "upgrade", "head")
+    assert database(migration_url, upgraded) == before
+    assert database(migration_url, job_catalog) == before_catalog
     parity = _run_alembic(["check"], migration_url)
     assert parity.returncode == 0, parity.stdout + parity.stderr
+    migrate(migration_url, "downgrade", HEAD)
     migrate(migration_url, "downgrade", PARENT)
     assert database(migration_url, job_rows) == before
     assert database(migration_url, job_catalog) == before_catalog
