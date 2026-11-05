@@ -26,12 +26,12 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
     && chmod 0755 /usr/local/share/python-system-expat /usr/local/share/licenses /usr/local/share/licenses/python-system-expat \
     && python -I -B /usr/local/share/python-system-expat/build_system_expat.py
 
-COPY requirements.txt .
+COPY requirements-runtime.txt .
 # Optional public CA bundle for corporate build proxies; never stored in the image.
 RUN --mount=type=secret,id=build_ca \
     if [ -f /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi; \
     uv pip install --python /usr/local/bin/python --prefix /opt/backend \
-        --link-mode copy --no-python-downloads -r requirements.txt
+        --link-mode copy --no-python-downloads -r requirements-runtime.txt
 COPY build-licenses/uv/ /usr/local/share/licenses/uv/
 
 # ---------- runtime stage ----------
@@ -69,7 +69,7 @@ COPY --from=build /opt/python-system-expat/provenance/ /usr/local/share/licenses
 COPY --chmod=0644 scripts/verify_system_expat.py /usr/local/share/python-system-expat/verify_system_expat.py
 COPY --chmod=0644 build-licenses/python-system-expat/README.md build-licenses/python-system-expat/EXPAT-COPYING /usr/local/share/licenses/python-system-expat/
 COPY --from=build /opt/backend/ /usr/local/
-COPY requirements.txt .
+COPY requirements-runtime.txt .
 
 COPY . .
 

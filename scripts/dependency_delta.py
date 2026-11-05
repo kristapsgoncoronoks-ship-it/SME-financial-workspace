@@ -12,13 +12,81 @@ from __future__ import annotations
 
 import argparse
 import json
+import posixpath
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REQUIREMENT_ROOTS = ("backend/requirements.txt", "backend/requirements-dev.txt")
+MAX_REQUIREMENT_FILES = 32
+MAX_REQUIREMENT_DEPTH = 8
+MAX_REQUIREMENT_FILE_BYTES = 64 * 1024
+MAX_REQUIREMENT_TOTAL_BYTES = 256 * 1024
+
+
+def requirement_closure(read: Callable[[str], bytes]) -> dict[str, bytes]:
+    """Read the bounded local .txt graph pip will resolve, preserving its layout."""
+    files: dict[str, bytes] = {}
+    total = 0
+
+    def visit(path: str, ancestors: tuple[str, ...]) -> None:
+        nonlocal total
+        if path in ancestors:
+            raise ValueError("Cyclic requirement include")
+        if path in files:
+            return
+        if (
+            len(ancestors) >= MAX_REQUIREMENT_DEPTH
+            or len(files) >= MAX_REQUIREMENT_FILES
+        ):
+            raise ValueError("Requirement include graph exceeds its file/depth budget")
+        content = read(path)
+        total += len(content)
+        if (
+            len(content) > MAX_REQUIREMENT_FILE_BYTES
+            or total > MAX_REQUIREMENT_TOTAL_BYTES
+        ):
+            raise ValueError("Requirement include graph exceeds its byte budget")
+        text = content.decode("utf-8")
+        if "\x00" in text:
+            raise ValueError("Invalid requirement manifest")
+        files[path] = content
+        for line in re.sub(r"\\\r?\n", "", text).splitlines():
+            tokens = shlex.split(line, comments=True)
+            if not tokens or not tokens[0].startswith("-"):
+                continue
+            option, *arguments = tokens
+            if option in ("-r", "--requirement", "-c", "--constraint"):
+                if len(arguments) != 1:
+                    raise ValueError("Invalid requirement include")
+                include = arguments[0]
+            elif (
+                option.startswith(("--requirement=", "--constraint=")) and not arguments
+            ):
+                include = option.split("=", 1)[1]
+            elif option.startswith(("-r", "-c")) and not arguments:
+                include = option[2:]
+            else:
+                raise ValueError("Unsupported requirement manifest option")
+            if not re.fullmatch(
+                r"[A-Za-z0-9_./ -]+\.txt", include
+            ) or include.startswith("/"):
+                raise ValueError("Requirement includes must be local .txt files")
+            target = posixpath.normpath(
+                posixpath.join(posixpath.dirname(path), include)
+            )
+            if not target.startswith("backend/"):
+                raise ValueError("Requirement include escapes backend")
+            visit(target, (*ancestors, path))
+
+    for root in REQUIREMENT_ROOTS:
+        visit(root, ())
+    return files
 
 
 def python_graph(report: dict) -> dict:
@@ -71,12 +139,34 @@ def main() -> None:
     def base_file(path: str) -> bytes:
         return subprocess.check_output(["git", "show", f"{args.base}:{path}"], cwd=ROOT)
 
+    def base_requirement(path: str) -> bytes:
+        entry = subprocess.check_output(
+            ["git", "ls-tree", args.base, "--", path], cwd=ROOT, text=True
+        )
+        metadata = entry.split("\t", 1)[0].split()
+        if (
+            len(metadata) != 3
+            or metadata[0] not in ("100644", "100755")
+            or metadata[1] != "blob"
+        ):
+            raise ValueError("Missing or non-regular base requirement file")
+        size = int(
+            subprocess.check_output(["git", "cat-file", "-s", metadata[2]], cwd=ROOT)
+        )
+        if size > MAX_REQUIREMENT_FILE_BYTES:
+            raise ValueError("Base requirement file exceeds its byte budget")
+        return base_file(path)
+
     with tempfile.TemporaryDirectory(prefix="dependency-base-") as folder:
-        manifests = []
-        for name in ("requirements.txt", "requirements-dev.txt"):
+        for name, content in requirement_closure(base_requirement).items():
             path = Path(folder) / name
-            path.write_bytes(base_file(f"backend/{name}"))
-            manifests += ["-r", str(path)]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+        manifests = [
+            value
+            for name in REQUIREMENT_ROOTS
+            for value in ("-r", str(Path(folder) / name))
+        ]
         audit = subprocess.run(
             [sys.executable, "-m", "pip_audit", *manifests, "--format", "json"],
             check=False,
