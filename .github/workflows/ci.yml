@@ -185,6 +185,7 @@ jobs:
           tests/test_planning_command_migration.py
           tests/test_job_lease_migration.py
           tests/test_image_reading_migration.py
+          tests/test_expense_item_parent_migration.py
       - name: Development PostgreSQL bootstrap contracts
         env:
           RLS_TEST_DATABASE_URL: postgresql+asyncpg://appuser:apppw@localhost:5432/invoiceiq
@@ -246,6 +247,7 @@ jobs:
           tests/test_jobs_manual_retry_pg.py
           tests/test_worker_metrics_recovery_pg.py
           tests/test_image_reading_metadata_pg.py
+          tests/test_expense_item_parent_tenant_pg.py
           tests/transport/test_rebate_preview_pg.py
           tests/test_payment_run_cancel_export_guard.py
           tests/test_n1_supplier_iban_pg.py

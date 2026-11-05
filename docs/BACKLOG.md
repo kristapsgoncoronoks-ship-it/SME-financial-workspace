@@ -1,5 +1,13 @@
 # Engineering backlog
 
+## Current159 tenant-parent follow-up
+
+[Expense item/report tenant integrity](plan/EXPENSE-PARENT-TENANT-159-2026-11-05.md)
+adds one mandatory composite CASCADE parent with global masked preflight and
+atomic rollback.77 focused checks pass; broad graph and fresh CI qualification
+remain required. Separate160 siblings and six dated candidates are not silently
+closed. Earlier dated wave status below retains its original source.
+
 ## Active backlog completion — 5 November 2026
 
 [Current implementation and dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)

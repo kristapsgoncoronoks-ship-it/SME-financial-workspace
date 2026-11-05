@@ -91,6 +91,20 @@ def test_wo8_fx_data_migration_corrects_multiplied_amounts(tmp_path):
             "human_validation_enabled, plan, status, region) "
             "VALUES ('org1', 'O', 0, 0, 'trial', 'active', 'eu')"
         )
+        # These reports exercise historical FX arithmetic, not a missing
+        # employee. Supply their real parent before the later global FK check.
+        from tests.test_planning_ocr_migration_integration import _insert
+
+        _insert(
+            con,
+            "users",
+            id="u1",
+            org_id="org1",
+            email="synthetic-wo8@example.invalid",
+            name="Synthetic WO8 employee",
+            hashed_password="not-a-login-hash",
+            role="user",
+        )
 
         def report(rid, status, total):
             con.exec_driver_sql(
