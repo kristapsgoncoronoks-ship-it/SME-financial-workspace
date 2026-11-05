@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Date, ForeignKey, ForeignKeyConstraint, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -23,7 +23,10 @@ class Partner(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "partners"
-    __table_args__ = (Index("ix_partners_org_name", "org_id", "name"),)
+    __table_args__ = (
+        Index("ix_partners_org_name", "org_id", "name"),
+        Index("uq_partners_org_id", "org_id", "id", unique=True),
+    )
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
@@ -63,14 +66,20 @@ class PartnerDocument(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "partner_documents"
-    __table_args__ = (Index("ix_partner_docs_partner", "partner_id", "kind"),)
+    __table_args__ = (
+        Index("ix_partner_docs_partner", "partner_id", "kind"),
+        ForeignKeyConstraint(
+            ["org_id", "partner_id"],
+            ["partners.org_id", "partners.id"],
+            name="fk_partner_documents_partner",
+            ondelete="CASCADE",
+        ),
+    )
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    partner_id: Mapped[str] = mapped_column(
-        GUID(), ForeignKey("partners.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    partner_id: Mapped[str] = mapped_column(GUID(), nullable=False, index=True)
     kind: Mapped[str] = mapped_column(String(20), nullable=False)  # contract | acceptance_act
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     reference: Mapped[str | None] = mapped_column(String(64), nullable=True)

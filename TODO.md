@@ -1,5 +1,11 @@
 # TODO — Task Board
 
+**Current162 follow-up:** [Partner document and webhook tenant integrity](docs/plan/PARTNER-WEBHOOK-TENANT-162-2026-11-05.md)
+adds two mandatory CASCADE pairs without changing optional references or money.
+118 focused,28 graph/generic and98 composed native checks pass; fresh CI remains
+required. Corrected PR109254dd9e now passes all13 contexts. Older paragraphs
+below retain their own source context. No main merge or deployment.
+
 **Current160 sibling follow-up:** [Comment and approval-step tenant parents](docs/plan/EXPENSE-PARENT-TENANT-160-2026-11-05.md)
 retain CASCADE and historical data.122 focused and83 integration controls pass;
 fresh CI remains required. PR107 passes all13 contexts with one preserved

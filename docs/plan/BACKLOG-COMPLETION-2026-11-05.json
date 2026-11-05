@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "PR1059efcd1c,PR10637b826b andPR1074fd44b8 passed all13 actualPR contexts; PR107 preserves one browserfirst-attempt flake, repaired separately. This160-revision/6256-case tree adds the two mandatory expense report child pairs.122 focused and83 fullgraph/parity/bootstrap checks pass locally; fresh delivered-source all13contexts remain required. Further partner/webhook, parser, workflow and capacity work is separate. No main/PR merge/deploy or complete-backlog claim.",
+  "qualification": "PR105/106/107/108 and correctedPR109254dd9e each passed all13 actualPR contexts. OriginalPR1099a47 failure/cancellation and earlier browser retries remain preserved. This162-revision/6330-case branch adds mandatory partner-document/webhook tenant pairs;118 focused,28 broad graph/generic and98 composed native controls pass. Fresh delivered-source CI is required; no main/PR merge, deploy, historical cleanup or complete-backlog claim.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1740,18 +1740,17 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "This tree includes159item/report plus160comment/approval-step tenant pairs, all mandatoryCASCADE.160reuses159uniqueindex, maskedglobalhistory refusal/orderedlocks/FORCERLS/atomic2linkrollback and exactunrelatedschema preservation.122focused and83 final integrationchecks pass, zero skips. Sixdated candidates remain in separate investigations; nooptionalSETNULL conversion/historyrepair.",
+      "next": "This tree includes five repaired dated mandatory links through162. Partner-document/webhook CASCADE pairs pass118 focused,28 full graph/generic and98 composed current/historical native controls. Four dated optional links need separately reviewed dual-dialect guards; additional current candidates remain outside datednine. No SETNULL action/org/history weakening.",
       "dependencies": [],
       "qualification": {
-        "source_commit": "b91db66f467f8d936f106425429cdefbf444933b",
-        "migration_head": "e6f8a0b2c4d7",
-        "focused_checks": 122,
-        "integration_checks": 83,
+        "product_source": "bd8f970",
+        "migration_head": "a8b0d2f4c6e9",
+        "focused_distinct": 118,
+        "graph_generic_passed": 28,
+        "graph_generic_skips": "3 explicit SQLite-only cases; all12 native graph cases run",
+        "native_composition": 98,
         "integrated_ci": "pending",
-        "focused_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-children160/",
-        "integration_evidence": "/workspace/artifacts/backlog-followups-2026-11-05/db010-graph-qualification/",
-        "hosted_first_failure": "9a47efa: two historical159 fixtures attempted index removal under valid160 dependents; no product/migration change",
-        "historical_fixture_correction": "Actual159 private UUID database;31 affected native and40 discovery controls pass, zero skips; fresh full CI pending"
+        "evidence": "/workspace/artifacts/backlog-seventh-wave-2026-11-05/db010-next/"
       }
     },
     {

@@ -1,5 +1,11 @@
 # Backlog completion — 5 November 2026
 
+**Current162 follow-up:** [Partner document and webhook tenant integrity](PARTNER-WEBHOOK-TENANT-162-2026-11-05.md)
+adds two mandatory CASCADE pairs without changing optional references or money.
+118 focused,28 graph/generic and98 composed native checks pass; fresh CI remains
+required. Corrected PR109254dd9e now passes all13 contexts. Older paragraphs
+below retain their own source context. No main merge or deployment.
+
 The user's instruction is to finish actionable work. The
 [execution inventory](BACKLOG-COMPLETION-2026-11-05.json) preserves197 original
 named rows and15 separately appended findings. These are differently sized
