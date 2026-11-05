@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -22,6 +31,7 @@ class WebhookEndpoint(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "webhook_endpoints"
+    __table_args__ = (Index("uq_webhook_endpoints_org_id", "org_id", "id", unique=True),)
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
@@ -43,6 +53,12 @@ class WebhookDelivery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "webhook_deliveries"
     __table_args__ = (
         Index("ix_webhook_deliv_endpoint", "endpoint_id", "created_at"),
+        ForeignKeyConstraint(
+            ["org_id", "endpoint_id"],
+            ["webhook_endpoints.org_id", "webhook_endpoints.id"],
+            name="fk_webhook_deliveries_endpoint",
+            ondelete="CASCADE",
+        ),
         # WO-W: at most ONE delivery per (endpoint, idempotency key). The unique
         # index is the dedup — not a pre-SELECT, which two concurrent callers
         # would both pass before either inserted. `emit` catches the
@@ -66,9 +82,7 @@ class WebhookDelivery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    endpoint_id: Mapped[str] = mapped_column(
-        GUID(), ForeignKey("webhook_endpoints.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    endpoint_id: Mapped[str] = mapped_column(GUID(), nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(60), nullable=False)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     #: WO-W — the caller's name for "this event, once". NULL means the caller
