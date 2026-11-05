@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.errors import ConflictError
 from app.models.extraction_field import ExtractionField
 from app.models.extraction_run import ExtractionRun
+from app.services import jobs
 
 # Job kind for async direct-upload OCR (Stage B). Defined here (the capture
 # service) so both the enqueuing route and the worker handler import it without a
@@ -383,7 +384,9 @@ async def clear_fields_for_retry(
     return reviewed
 
 
-def _progress_sink(db: AsyncSession, run: ExtractionRun):
+def _progress_sink(
+    db: AsyncSession, run: ExtractionRun, claim: jobs.CapturePublicationClaim | None = None
+):
     """Progress uses a short, separate transaction and the same attempt fence.
 
     Parser threads may outlive a handler deadline. They must never use its
@@ -398,6 +401,9 @@ def _progress_sink(db: AsyncSession, run: ExtractionRun):
         from app.services import capture_progress
 
         async with factory() as progress_db:
+            if claim is not None and not await jobs.lock_publication_claim(progress_db, claim):
+                await progress_db.rollback()
+                return
             current = await get_capture(progress_db, org_id, run_id, for_update=True)
             if (
                 not sink.active
@@ -440,7 +446,14 @@ def _progress_sink(db: AsyncSession, run: ExtractionRun):
     return sink
 
 
-async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) -> dict:
+async def extract_upload(
+    db: AsyncSession,
+    run_id: str,
+    attempt_seq: int = 0,
+    *,
+    requested_profile_id: str | None = None,
+    publication_claim: jobs.CapturePublicationClaim | None = None,
+) -> dict:
     """Parse off-lock; publish exactly once for the job's durable generation.
 
     A duplicate/reclaimed job can spend CPU, but cannot publish twice. Generation
@@ -451,6 +464,7 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
         capture_memory,
         capture_pages,
         capture_progress,
+        capture_reading,
         documents,
         image_ocr,
     )
@@ -480,6 +494,7 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
     reason = None
     prepared = None
     reading_preparation = None
+    observation = capture_reading.Collector(requested_profile_id)
     if read_failure is not None:
         failure_note = str(read_failure)
         failure_code = read_failure.code
@@ -489,12 +504,13 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
         failure_code = capture_failures.STORED_FILE_MISSING
         reason = "missing bytes"
     else:
-        sink = _progress_sink(db, run)
+        sink = _progress_sink(db, run, publication_claim)
         token = capture_progress.install(sink)
         try:
-            draft = await image_ocr.run_reading(
-                parse_invoice_file, run.source_filename or "upload", content
-            )
+            with capture_reading.collect(requested_profile_id) as observation:
+                draft = await image_ocr.run_reading(
+                    parse_invoice_file, run.source_filename or "upload", content
+                )
         except Exception as exc:  # noqa: BLE001 — deterministic parser failure
             failure_note = str(exc)[:2000] or exc.__class__.__name__
             failure_code = capture_failures.code_for(exc)
@@ -508,6 +524,11 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
 
     # Refresh the identity map under the lock. An earlier SELECT is never proof
     # that this generation is still current after asynchronous/external work.
+    if publication_claim is not None and not await jobs.lock_publication_claim(
+        db, publication_claim
+    ):
+        await db.rollback()
+        return {"skipped": "job lease lost"}
     run = await get_capture(db, org_id, run_id, for_update=True)
     if (
         run is None
@@ -526,6 +547,9 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
         run.stage = capture_progress.DONE
         run.reading_preparation_json = (
             reading_preparation.model_dump_json() if reading_preparation is not None else None
+        )
+        await capture_reading.publish(
+            db, run, observation, channel="upload", success=False, failure_code=failure_code
         )
         await db.commit()
         return {"status": "failed", "reason": reason}
@@ -551,5 +575,6 @@ async def extract_upload(db: AsyncSession, run_id: str, attempt_seq: int = 0) ->
     await capture_memory.observe_fields(
         db, org_id, draft.draft.vendor_name, [f.field for f in draft.fields], commit=False
     )
+    await capture_reading.publish(db, run, observation, channel="upload", success=True)
     await db.commit()
     return {"status": "parsed", "method": draft.method}

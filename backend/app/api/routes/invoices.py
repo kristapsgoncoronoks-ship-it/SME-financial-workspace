@@ -37,6 +37,7 @@ from app.models.organization import Organization
 from app.models.vendor import Vendor
 from app.schemas.ap_payment import SupplierPaymentOut, SupplierPaymentRecord
 from app.schemas.capture_pages import CapturePages
+from app.schemas.capture_reading import PROFILE_ID, ReadingObservationHistory
 from app.schemas.image_reading import load_preparation
 from app.schemas.invoice import (
     BatchUploadAccepted,
@@ -86,6 +87,7 @@ from app.services import (
     capture_memory,
     capture_pages,
     capture_progress,
+    capture_reading,
     costing,
     documents,
     duplicates,
@@ -927,6 +929,25 @@ async def capture_pages_manifest(run_id: str, current: CurrentUser, db: DbSessio
     return capture_pages.manifest(run)
 
 
+@router.get("/captures/{run_id}/reading-observations", response_model=ReadingObservationHistory)
+async def capture_reading_history(
+    run_id: str,
+    current: CurrentUser,
+    db: DbSession,
+    cursor: str | None = Query(default=None, max_length=128),
+):
+    try:
+        run_id = str(UUID(run_id))
+    except ValueError:
+        raise HTTPException(404, "Capture not found") from None
+    run = await extraction.get_capture(db, current.org_id, run_id)
+    if run is None:
+        raise HTTPException(404, "Capture not found")
+    return await capture_reading.history(
+        db, current.org_id, run_id, channel="upload", cursor=cursor
+    )
+
+
 @router.get("/captures/{run_id}/pages/{page_number}/doc")
 async def capture_page_document(
     run_id: str, page_number: int, current: CurrentUser, db: DbSession, request: Request
@@ -1158,11 +1179,13 @@ async def invoice_extraction(invoice_id: str, current: CurrentUser, db: DbSessio
     run's per-field provenance (Slice 5f)."""
     await _load_scoped(db, current.org_id, invoice_id)  # tenant-scoped existence check
     runs = await extraction.list_for_invoice(db, current.org_id, invoice_id)
+    summaries = await capture_reading.current_summaries(db, runs, channel="upload")
     out: list[ExtractionRunOut] = []
     for run in runs:
         fields = await extraction.fields_for_run(db, current.org_id, run.id)
         run_out = ExtractionRunOut.model_validate(run)
         run_out.reading_preparation = load_preparation(run.reading_preparation_json)
+        run_out.reading_observation = summaries[run.id]
         run_out.fields = [FieldProvenanceOut.model_validate(f) for f in fields]
         out.append(run_out)
     return out
@@ -1590,7 +1613,7 @@ async def _admit_one_upload(
         await jobs.enqueue(
             db,
             extraction.UPLOAD_EXTRACT_KIND,
-            {"run_id": run.id, "attempt_seq": run.attempt_seq},
+            {"run_id": run.id, "attempt_seq": run.attempt_seq, "reading_profile_id": PROFILE_ID},
             org_id=org_id,
             idempotency_key=extraction.attempt_job_key(run),
             commit=False,
@@ -1754,6 +1777,7 @@ async def upload_status(run_id: str, current: CurrentUser, db: DbSession):
         draft=draft,
         error=(run.note if run.status == "failed" else None),
         reading_preparation=load_preparation(run.reading_preparation_json),
+        reading_observation=await capture_reading.current_summary(db, run, channel="upload"),
         # WO-X — what the parser is doing right now. `percent` is derived here
         # and never stored, so it cannot come to disagree with the counts it is
         # computed from.
@@ -1808,6 +1832,7 @@ async def retry_upload(
     run.failure_code = None
     run.draft_json = None
     run.reading_preparation_json = None
+    run.reading_observation_json = None
     run.field_count = 0
     run.warning_count = 0
     # WO-X: progress belongs to ONE attempt. Left at `done` from the previous
@@ -1829,7 +1854,7 @@ async def retry_upload(
     await jobs.enqueue(
         db,
         extraction.UPLOAD_EXTRACT_KIND,
-        {"run_id": run.id, "attempt_seq": run.attempt_seq},
+        {"run_id": run.id, "attempt_seq": run.attempt_seq, "reading_profile_id": PROFILE_ID},
         org_id=current.org_id,
         idempotency_key=extraction.attempt_job_key(run),
         commit=False,

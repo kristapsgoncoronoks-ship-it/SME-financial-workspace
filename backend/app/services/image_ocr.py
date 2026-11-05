@@ -16,7 +16,7 @@ import tempfile
 import threading
 import time
 from collections.abc import Callable
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
@@ -220,6 +220,7 @@ def read(content: bytes) -> ImageReading:
 def _read(content: bytes) -> ImageReading:
     """Read complete bounded native output, never a clipped or partial success."""
     from app.core.config import settings
+    from app.services import capture_reading
 
     if len(content) > filesec.max_bytes():
         raise ValueError(filesec.too_large_message())
@@ -233,12 +234,15 @@ def _read(content: bytes) -> ImageReading:
         "LANG": os.environ.get("LANG", "C.UTF-8"),
         "PYTHONPATH": str(Path(__file__).resolve().parents[2]),
         "MAX_UPLOAD_MB": str(settings.max_upload_mb),
-        "OCR_PROCESS_TIMEOUT_SECONDS": str(settings.ocr_process_timeout_seconds),
+        "OCR_PROCESS_TIMEOUT_SECONDS": str(
+            capture_reading.timeout_seconds(settings.ocr_process_timeout_seconds)
+        ),
         "OMP_THREAD_LIMIT": "1",
         "OPENBLAS_NUM_THREADS": "1",
         "MKL_NUM_THREADS": "1",
         "NUMEXPR_NUM_THREADS": "1",
     }
+    env.update(capture_reading.native_environment())
     if os.environ.get("TESSDATA_PREFIX"):
         env["TESSDATA_PREFIX"] = os.environ["TESSDATA_PREFIX"]
     descriptor = _slot_fd.get()
@@ -267,7 +271,9 @@ def _read(content: bytes) -> ImageReading:
             )
             offset, result = 0, None
             deadline = (
-                time.monotonic() + settings.ocr_process_timeout_seconds + DECODE_GRACE_SECONDS
+                time.monotonic()
+                + capture_reading.timeout_seconds(settings.ocr_process_timeout_seconds)
+                + DECODE_GRACE_SECONDS
             )
             try:
                 while True:
@@ -289,6 +295,8 @@ def _read(content: bytes) -> ImageReading:
                                 preparation = ImageReadingPreparation.model_validate(
                                     message["preparation"]
                                 )
+                            if "reading" in message:
+                                capture_reading.record(message["reading"])
                             if "text" in message or "error" in message:
                                 result = message
                         except (ValueError, TypeError) as exc:
@@ -446,6 +454,7 @@ def _child() -> None:
     import resource
 
     from app.core.config import settings
+    from app.services import capture_reading
 
     memory = filesec.RESOURCE_BYTES["image_ocr_memory"]
     temporary = filesec.RESOURCE_BYTES["image_ocr_temp_file"]
@@ -454,34 +463,43 @@ def _child() -> None:
     resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
     resource.setrlimit(resource.RLIMIT_FSIZE, (temporary, temporary))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    descriptor = None
-    token = None
-    try:
-        raw_descriptor = os.environ.get(_SLOT_FD_ENV, "")
-        if not raw_descriptor.isdecimal() or int(raw_descriptor) < 3:
-            raise ImageOcrError(capture_failures.CAPTURE_UNAVAILABLE)
-        descriptor = int(raw_descriptor)
-        if not _private_inode(os.fstat(descriptor), stat.S_IFREG, 0o600):
-            raise ImageOcrError(capture_failures.CAPTURE_UNAVAILABLE)
-        token = _slot_fd.set(descriptor)
-        content = sys.stdin.buffer.read(filesec.max_bytes() + 1)
-        if len(content) > filesec.max_bytes():
-            raise ImageOcrError(capture_failures.IMAGE_PROCESSING_LIMIT)
-        reading = _local_read(content)
-        _emit({"text": reading.text})
-    except ImageOcrError as exc:
-        _emit({"error": exc.code})
-    except MemoryError:
-        _emit({"error": capture_failures.IMAGE_PROCESSING_LIMIT})
-    except ImportError:
-        _emit({"error": capture_failures.CAPTURE_UNAVAILABLE})
-    except Exception:
-        _emit({"error": capture_failures.UNREADABLE_SCAN})
-    finally:
-        if token is not None:
-            _slot_fd.reset(token)
-        if descriptor is not None:
-            os.close(descriptor)
+    context = (
+        capture_reading.collect(os.environ.get(capture_reading.NATIVE_PROFILE_ENV), emit=_emit)
+        if os.environ.get(capture_reading.NATIVE_ENABLED_ENV) == "1"
+        else nullcontext()
+    )
+    with context:
+        descriptor = None
+        token = None
+        capture_reading.record({"page_state": "not_applicable"})
+        try:
+            raw_descriptor = os.environ.get(_SLOT_FD_ENV, "")
+            if not raw_descriptor.isdecimal() or int(raw_descriptor) < 3:
+                raise ImageOcrError(capture_failures.CAPTURE_UNAVAILABLE)
+            descriptor = int(raw_descriptor)
+            if not _private_inode(os.fstat(descriptor), stat.S_IFREG, 0o600):
+                raise ImageOcrError(capture_failures.CAPTURE_UNAVAILABLE)
+            token = _slot_fd.set(descriptor)
+            content = sys.stdin.buffer.read(filesec.max_bytes() + 1)
+            if len(content) > filesec.max_bytes():
+                raise ImageOcrError(capture_failures.IMAGE_PROCESSING_LIMIT)
+            reading = _local_read(content)
+            capture_reading.complete_stream(reading.text)
+            _emit({"text": reading.text})
+        except ImageOcrError as exc:
+            _emit({"error": exc.code})
+        except MemoryError:
+            _emit({"error": capture_failures.IMAGE_PROCESSING_LIMIT})
+        except ImportError:
+            _emit({"error": capture_failures.CAPTURE_UNAVAILABLE})
+        except Exception:
+            _emit({"error": capture_failures.UNREADABLE_SCAN})
+        finally:
+            capture_reading.observe_profile("image")
+            if token is not None:
+                _slot_fd.reset(token)
+            if descriptor is not None:
+                os.close(descriptor)
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from app.models.calendar_token import CalendarFeedToken
 from app.models.capture_acknowledgement import CaptureAcknowledgement
 from app.models.capture_command import CaptureCommand
 from app.models.capture_field_memory import CaptureFieldMemory
+from app.models.capture_reading import CaptureReadingObservation
 from app.models.capture_region import CaptureRegionRead
 from app.models.costing import CostCenter, Department, Project
 from app.models.crm import CustomerNote, OfferStageEvent
@@ -94,6 +95,7 @@ __all__ = [
     "Base",
     "CaptureCommand",
     "CaptureRegionRead",
+    "CaptureReadingObservation",
     "ActionDismissal",
     "CalendarFeedToken",
     "CalendarConnection",

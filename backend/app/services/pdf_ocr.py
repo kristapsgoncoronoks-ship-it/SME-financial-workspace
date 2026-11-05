@@ -20,6 +20,7 @@ from __future__ import annotations
 import io
 import math
 import re
+import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -131,9 +132,11 @@ OCR_TIMED_OUT_DETAIL = (
 
 
 class OcrTimedOut(RuntimeError):
-    """One native Tesseract invocation exceeded `ocr_process_timeout_seconds`
-    (STIR-P2-01). Distinct from `OcrUnavailable`: the stack IS installed; this
-    document (or this worker's load) blew the per-page budget."""
+    """Legacy timeout classification; a factual timeout needs a native witness."""
+
+    def __init__(self, message: str, *, observed_timeout: bool = False) -> None:
+        super().__init__(message)
+        self.observed_timeout = observed_timeout
 
 
 def ocr_image_to_data(pytesseract, image, *, page: int | None = None) -> dict:
@@ -141,14 +144,32 @@ def ocr_image_to_data(pytesseract, image, *, page: int | None = None) -> dict:
     budget applied. pytesseract signals a timeout with a bare `RuntimeError`
     (its `timeout_manager`), which is re-raised here as `OcrTimedOut`;
     `TesseractError` (a real engine failure) passes through unchanged."""
-    budget = settings.ocr_process_timeout_seconds
-    try:
-        return pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, timeout=budget)
-    except pytesseract.TesseractError:
-        raise
-    except RuntimeError as exc:
-        where = f" on page {page}" if page is not None else ""
-        raise OcrTimedOut(f"OCR exceeded {budget:g} seconds{where}") from exc
+    from app.services import capture_reading
+
+    budget = capture_reading.timeout_seconds(settings.ocr_process_timeout_seconds)
+    with capture_reading.engine_execution(pytesseract) as execution:
+        try:
+            data = pytesseract.image_to_data(
+                image, output_type=pytesseract.Output.DICT, timeout=budget
+            )
+        except pytesseract.TesseractError:
+            capture_reading.observe_profile(
+                "pdf" if page is not None else "image",
+                used_engine=pytesseract if execution["started"] else None,
+            )
+            raise
+        except RuntimeError as exc:
+            capture_reading.observe_profile(
+                "pdf" if page is not None else "image",
+                used_engine=pytesseract if execution["started"] else None,
+            )
+            where = f" on page {page}" if page is not None else ""
+            raise OcrTimedOut(
+                f"OCR exceeded {budget:g} seconds{where}",
+                observed_timeout=execution["timed_out"],
+            ) from exc
+    capture_reading.observe_profile("pdf" if page is not None else "image", used_engine=pytesseract)
+    return data
 
 
 def _num(s: str) -> Decimal:
@@ -259,23 +280,56 @@ def _to_date(value: str) -> date | None:
 # --------------------------------------------------------------------------- #
 # Text extraction
 # --------------------------------------------------------------------------- #
-def _extract_text_layer(content: bytes) -> str:
+@dataclass(frozen=True)
+class _NativePage:
+    index: int
+    text: str
+    width: float
+    height: float
+
+
+def _native_pages(content: bytes) -> list[_NativePage]:
     import pdfplumber
 
-    with pdfplumber.open(io.BytesIO(content)) as pdf:
-        from app.services import filesec
+    from app.schemas.capture_reading import PdfPageFact
+    from app.services import capture_reading, filesec
 
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        capture_reading.record({"page_count": len(pdf.pages)})
         if len(pdf.pages) > _MAX_OCR_PAGES:
             raise ValueError("PDF exceeds the 50-page processing limit.")
         parts = []
         used = 0
-        for page in pdf.pages:
+        for index, page in enumerate(pdf.pages):
+            started = time.monotonic()
+            width, height = float(page.width), float(page.height)
+            if not all(math.isfinite(value) and value > 0 for value in (width, height)):
+                raise ValueError("PDF page has invalid dimensions.")
             text = page.extract_text() or ""
             used += len(text.encode("utf-8"))
             if used > filesec.RESOURCE_BYTES["pdf_decoded_text"]:
                 raise ValueError("PDF decoded text exceeds the processing limit.")
-            parts.append(text)
-    return "\n".join(parts).strip()
+            parts.append(_NativePage(index, text, width, height))
+            if len(text.strip()) >= _TEXT_LAYER_MIN_CHARS:
+                fact = PdfPageFact(
+                    page=index + 1,
+                    status="native",
+                    cause="native_text_selected",
+                    selected_kind="native",
+                    source_width=width,
+                    source_height=height,
+                    source_unit="points",
+                    elapsed_ms=int((time.monotonic() - started) * 1000),
+                    **capture_reading.text_facts(text, "native"),
+                    **capture_reading.text_facts(text, "selected"),
+                )
+                capture_reading.record({"page": fact.model_dump(mode="json")})
+    return parts
+
+
+def _extract_text_layer(content: bytes) -> str:
+    """Compatibility helper; ordinary reading selects each measured page."""
+    return "\n".join(page.text for page in _native_pages(content)).strip()
 
 
 def _reconstruct_lines(data: dict) -> str:
@@ -323,71 +377,137 @@ def _reconstruct_lines(data: dict) -> str:
     return "\n".join(lines)
 
 
-def _ocr(content: bytes) -> str:
+def _ocr_pages(
+    content: bytes, indices: list[int] | None = None, native: list[_NativePage] | None = None
+) -> dict[int, str]:
     try:
         import pypdfium2 as pdfium
         import pytesseract
     except ImportError as e:  # pragma: no cover - env guard
         raise OcrUnavailable(str(e)) from e
 
-    from app.services import capture_progress
+    from app.schemas.capture_reading import PageStartCheckpoint, PdfPageFact
+    from app.services import capture_progress, capture_reading, filesec
 
     pdf = pdfium.PdfDocument(content)
     try:
-        out: list[str] = []
+        out: dict[int, str] = {}
         scale = _OCR_DPI / 72.0
-        # WO-X: this loop is the only genuinely slow phase of a capture, and the
-        # only one that is divisible into countable units — so it is the only one
-        # that reports a page count. The total is what will ACTUALLY be read (the
-        # DoS cap applied), not the document's page count, so "page 20 of 20" on a
-        # 60-page file is not a lie about work still to come.
+        collector = capture_reading.active()
+        if collector is not None and collector.page_count is None:
+            capture_reading.record({"page_count": len(pdf)})
         if len(pdf) > _MAX_OCR_PAGES:
             raise ValueError("PDF exceeds the 50-page processing limit.")
-        total = len(pdf)
+        selected = list(range(len(pdf))) if indices is None else indices
+        total = len(selected)
         capture_progress.report(capture_progress.OCR, pages_done=0, pages_total=total)
-        for i in range(total):  # cap pages (DoS guard)
+        for done, i in enumerate(selected):
+            started = time.monotonic()
             page = pdf[i]
-            width, height = page.get_width(), page.get_height()
-            if not all(math.isfinite(value) and value > 0 for value in (width, height)):
-                raise ValueError("PDF page has invalid dimensions.")
-            bounded_scale = min(
-                scale, math.sqrt(40_000_000 / (width * height)), 20_000 / max(width, height)
-            )
-            bitmap = page.render(scale=bounded_scale)
-            image = bitmap.to_pil()
-            data = ocr_image_to_data(pytesseract, image, page=i + 1)
-            out.append(_reconstruct_lines(data))
-            from app.services import filesec
-
-            if (
-                sum(len(text.encode("utf-8")) for text in out)
-                > filesec.RESOURCE_BYTES["pdf_decoded_text"]
-            ):
-                raise ValueError("PDF decoded text exceeds the processing limit.")
-            image.close()
-            bitmap.close()
-            page.close()
-            capture_progress.report(capture_progress.OCR, pages_done=i + 1, pages_total=total)
-        return "\n".join(out).strip()
+            bitmap = image = None
+            geometry: dict = {}
+            native_facts = capture_reading.text_facts(native[i].text, "native") if native else {}
+            try:
+                width, height = page.get_width(), page.get_height()
+                if not all(math.isfinite(value) and value > 0 for value in (width, height)):
+                    raise ValueError("PDF page has invalid dimensions.")
+                bounded_scale = min(
+                    scale, math.sqrt(40_000_000 / (width * height)), 20_000 / max(width, height)
+                )
+                geometry = {"source_width": width, "source_height": height, "source_unit": "points"}
+                capture_reading.record(
+                    {
+                        "page_started": PageStartCheckpoint(page=i + 1, **geometry).model_dump(
+                            mode="json", exclude_none=True
+                        )
+                    }
+                )
+                bitmap = page.render(scale=bounded_scale)
+                image = bitmap.to_pil()
+                if image.width * image.height > 40_000_000 or max(image.size) > 20_000:
+                    raise ValueError("PDF page raster exceeds the processing limit.")
+                geometry.update(
+                    raster_width=image.width,
+                    raster_height=image.height,
+                    render_scale=bounded_scale,
+                    render_dpi=_OCR_DPI,
+                )
+                data = ocr_image_to_data(pytesseract, image, page=i + 1)
+                text = _reconstruct_lines(data)
+                if (
+                    sum(len(value.encode("utf-8")) for value in (*out.values(), text))
+                    > filesec.RESOURCE_BYTES["pdf_decoded_text"]
+                ):
+                    raise ValueError("PDF decoded text exceeds the processing limit.")
+                fact = PdfPageFact(
+                    page=i + 1,
+                    status="ocr_complete",
+                    cause="short_native_text",
+                    selected_kind="ocr",
+                    **geometry,
+                    **native_facts,
+                    **capture_reading.text_facts(text, "ocr"),
+                    **capture_reading.text_facts(text, "selected"),
+                    elapsed_ms=int((time.monotonic() - started) * 1000),
+                )
+                capture_reading.record({"page": fact.model_dump(mode="json")})
+                out[i] = text
+            except Exception as exc:
+                timed_out = isinstance(exc, OcrTimedOut) and exc.observed_timeout
+                unknown = (isinstance(exc, OcrTimedOut) and not timed_out) or isinstance(
+                    exc, pytesseract.TesseractNotFoundError
+                )
+                fact = PdfPageFact(
+                    page=i + 1,
+                    status="timed_out"
+                    if timed_out
+                    else ("outcome_unknown" if unknown else "failed"),
+                    cause="engine_timeout"
+                    if timed_out
+                    else ("unknown" if unknown else "classified_native_failure"),
+                    selected_kind="ocr",
+                    **geometry,
+                    **native_facts,
+                    elapsed_ms=int((time.monotonic() - started) * 1000),
+                )
+                capture_reading.record({"page": fact.model_dump(mode="json")})
+                raise
+            finally:
+                if image is not None:
+                    image.close()
+                if bitmap is not None:
+                    bitmap.close()
+                page.close()
+            capture_progress.report(capture_progress.OCR, pages_done=done + 1, pages_total=total)
+        return out
     finally:
         pdf.close()
 
 
+def _ocr(content: bytes) -> str:
+    """Compatibility adapter for callers explicitly requesting all-page OCR."""
+    return "\n".join(_ocr_pages(content).values()).strip()
+
+
 def _extract_text(content: bytes) -> tuple[str, str]:
     """Return (text, method) where method is 'text-layer' or 'ocr'."""
-    from app.services import capture_progress
+    from app.services import capture_progress, capture_reading, filesec
 
     capture_progress.report(capture_progress.READING)
     try:
-        text = _extract_text_layer(content)
+        pages = _native_pages(content)
     except ImportError as e:  # pragma: no cover - env guard
         raise OcrUnavailable(str(e)) from e
 
-    if len(text) >= _TEXT_LAYER_MIN_CHARS:
-        return text, "text-layer"
-
-    # Scanned / image-only PDF → OCR.
-    return _ocr(content), "ocr"
+    selected_ocr = [page.index for page in pages if len(page.text.strip()) < _TEXT_LAYER_MIN_CHARS]
+    recognized = _ocr_pages(content, selected_ocr, pages) if selected_ocr else {}
+    text = "\n".join(recognized.get(page.index, page.text) for page in pages).strip()
+    if len(text.encode("utf-8")) > filesec.RESOURCE_BYTES["pdf_decoded_text"]:
+        raise ValueError("PDF decoded text exceeds the processing limit.")
+    if not selected_ocr:
+        capture_reading.observe_profile("pdf", not_needed=True)
+    capture_reading.complete_stream(text)
+    return text, "ocr" if selected_ocr else "text-layer"
 
 
 # --------------------------------------------------------------------------- #
@@ -805,6 +925,10 @@ def _parse_pdf(filename: str, content: bytes) -> ParsedInvoiceDraft:
     except Exception:  # corrupt optional metadata may fall back to text
         embedded = None
     if embedded:
+        from app.services import capture_reading
+
+        capture_reading.record({"page_state": "not_observed"})
+        capture_reading.observe_profile("pdf", not_needed=True)
         result = einvoice.parse_xml_bytes(embedded, filename)
         result.warnings.insert(
             0, "Read the e-invoice XML embedded in this PDF (Factur-X/ZUGFeRD) — no OCR needed."
