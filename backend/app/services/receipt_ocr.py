@@ -9,13 +9,13 @@ the bank-statement import.
 
 from __future__ import annotations
 
-import io
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
-from app.services import pdf_ocr
+from app.schemas.image_reading import ImageReadingPreparation, preparation_warning
+from app.services import image_ocr, pdf_ocr
 
 _MONEY_RE = pdf_ocr._MONEY_RE
 
@@ -49,6 +49,8 @@ class ReceiptSuggestion:
     currency: str | None
     method: str  # text-layer | ocr
     text_preview: str
+    reading_preparation: ImageReadingPreparation | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 def _labeled_money(
@@ -121,31 +123,34 @@ def parse_receipt_text(text: str) -> ReceiptSuggestion:
     )
 
 
-def _text_from(filename: str, content: bytes) -> tuple[str, str]:
+def _text_from(filename: str, content: bytes) -> tuple[str, str, ImageReadingPreparation | None]:
     """(text, method). PDFs go through the pdf_ocr engine; images are OCR'd
     directly with Tesseract."""
     lower = (filename or "").lower()
     if lower.endswith(".pdf") or content[:4] == b"%PDF":
-        return pdf_ocr.extract_text(content)
+        text, method = pdf_ocr.extract_text(content)
+        return text, method, None
     try:
-        import pytesseract
-        from PIL import Image
-    except ImportError as e:  # pragma: no cover - env guard
-        raise pdf_ocr.OcrUnavailable(str(e)) from e
-    try:
-        img = Image.open(io.BytesIO(content))
-        data = pdf_ocr.ocr_image_to_data(pytesseract, img)  # STIR-P2-01: bounded
-    except pytesseract.TesseractNotFoundError as e:  # pragma: no cover
-        raise pdf_ocr.OcrUnavailable(str(e)) from e
-    return pdf_ocr._reconstruct_lines(data), "ocr"
+        reading = image_ocr.read(content)
+    except image_ocr.ImageOcrError as exc:
+        if exc.code == "processing_timeout":
+            raise pdf_ocr.OcrTimedOut(str(exc)) from exc
+        if exc.code == "capture_unavailable":
+            raise pdf_ocr.OcrUnavailable(str(exc)) from exc
+        raise
+    return reading.text, "ocr", reading.preparation
 
 
 def suggest(filename: str, content: bytes) -> ReceiptSuggestion:
     """Read a receipt image/PDF → a field suggestion. Raises OcrUnavailable if the
     OCR stack is missing; ValueError if no text could be read."""
-    text, method = _text_from(filename, content)
+    text, method, preparation = _text_from(filename, content)
     if not text or not text.strip():
         raise ValueError("Could not read any text from the receipt.")
     s = parse_receipt_text(text)
     s.method = method
+    s.reading_preparation = preparation
+    warning = preparation_warning(preparation)
+    if warning:
+        s.warnings.append(warning)
     return s

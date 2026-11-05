@@ -9,6 +9,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from app.core import bank_id
 from app.models.invoice import InvoiceStatus
 from app.schemas.dimensions import DimensionFields
+from app.schemas.image_reading import ImageReadingPreparation
 from app.schemas.received_vat import ReceivedVatBreakdown
 from app.schemas.validation import ValidationFinding
 
@@ -189,6 +190,7 @@ class ParsedInvoiceDraft(BaseModel):
 
     draft: InvoiceCreate
     warnings: list[str] = Field(default_factory=list)
+    reading_preparation: ImageReadingPreparation | None = None
     # How the invoice was read: e-invoice-xml | text-layer | ocr | csv | json.
     method: str = "unknown"
     # Slice 5b: the recorded capture run; echo it back on save to link the lineage.
@@ -445,6 +447,7 @@ class ExtractionResult(BaseModel):
     method: str | None = None
     draft: ParsedInvoiceDraft | None = None
     error: str | None = None
+    reading_preparation: ImageReadingPreparation | None = None
     # WO-X — how far along the parse is, so a long capture can be told apart
     # from a stuck one. `stage` is a code from `capture_progress.STAGES`, or
     # None for a run recorded before the contract existed. `percent` is present
@@ -521,5 +524,6 @@ class ExtractionRunOut(BaseModel):
     field_count: int
     warning_count: int
     note: str | None = None
+    reading_preparation: ImageReadingPreparation | None = None
     created_at: datetime
     fields: list[FieldProvenanceOut] = []

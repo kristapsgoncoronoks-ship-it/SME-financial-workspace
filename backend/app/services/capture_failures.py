@@ -104,6 +104,7 @@ class FailureKind:
 UNSUPPORTED_FORMAT = "unsupported_format"
 MALFORMED_DOCUMENT = "malformed_document"
 UNREADABLE_SCAN = "unreadable_scan"
+IMAGE_PROCESSING_LIMIT = "image_processing_limit"
 CAPTURE_UNAVAILABLE = "capture_unavailable"
 STORED_FILE_MISSING = "stored_file_missing"
 STORED_FILE_TOO_LARGE = "stored_file_too_large"
@@ -141,6 +142,17 @@ KINDS: dict[str, FailureKind] = {
         remediation=(
             "Rescan the page straight, in full, at 300 dpi or better and send it again — "
             "or enter this invoice by hand."
+        ),
+        retry_helps=False,
+        user_fixable=True,
+    ),
+    IMAGE_PROCESSING_LIMIT: FailureKind(
+        code=IMAGE_PROCESSING_LIMIT,
+        summary="This image reached the safe reading limits.",
+        remediation=(
+            "Use a smaller image or read a smaller area from the original, "
+            "or enter the invoice manually. Check any suggested fields against the original. "
+            "The original is still stored. Retrying unchanged will not help."
         ),
         retry_helps=False,
         user_fixable=True,

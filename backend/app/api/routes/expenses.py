@@ -82,6 +82,7 @@ from app.services import (
     expenses,
     filesec,
     fx,
+    image_ocr,
     modules,
     receipt_ocr,
     webhooks,
@@ -289,7 +290,16 @@ async def receipt_scan(current: CurrentUser, db: DbSession, file: UploadFile):
     except filesec.FileRejected as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(exc))
     try:
-        s = await run_in_threadpool(receipt_ocr.suggest, file.filename or "receipt", content)
+        s = await image_ocr.run_reading(receipt_ocr.suggest, file.filename or "receipt", content)
+    except image_ocr.ImageOcrError as exc:
+        if exc.code == "processing_timeout":
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, OCR_TIMED_OUT_DETAIL) from exc
+        raise AppError(
+            str(exc),
+            code=exc.code,
+            status=(503 if exc.code == "capture_unavailable" else 422),
+            headers={"Cache-Control": "private, no-store"},
+        ) from exc
     except receipt_ocr.pdf_ocr.OcrUnavailable as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"OCR unavailable: {exc}")
     except receipt_ocr.pdf_ocr.OcrTimedOut as exc:
@@ -305,6 +315,8 @@ async def receipt_scan(current: CurrentUser, db: DbSession, file: UploadFile):
         currency=s.currency,
         method=s.method,
         text_preview=s.text_preview,
+        reading_preparation=s.reading_preparation,
+        warnings=s.warnings,
     )
 
 

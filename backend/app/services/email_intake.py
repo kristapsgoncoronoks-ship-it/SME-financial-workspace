@@ -14,7 +14,6 @@ import hashlib
 import secrets
 from datetime import UTC, datetime
 
-from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -181,6 +180,7 @@ def _extraction_base(row: InboundInvoice) -> tuple:
         row.filename,
         row.size,
         row.draft_json,
+        row.reading_preparation_json,
         row.failure_seq,
         row.invoice_id,
         row.updated_at,
@@ -193,7 +193,13 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
     Loads the stored bytes, runs the deterministic-first parser, and updates the
     review-inbox row to `pending` (a draft awaits review) or `failed` (with the
     reason). Runs in the job's tenant scope, off the API tier."""
-    row = await db.scalar(select(InboundInvoice).where(InboundInvoice.id == inbound_id))
+    from app.services import image_ocr
+
+    row = await db.scalar(
+        select(InboundInvoice)
+        .where(InboundInvoice.id == inbound_id)
+        .execution_options(populate_existing=True)
+    )
     if row is None:
         return {"skipped": "row gone"}
     if row.status not in ("queued", "failed"):
@@ -203,6 +209,7 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
     org_id, filename, source_sha = row.org_id, row.filename, row.sha256
     draft = None
     error = failure_code = failure_reason = None
+    reading_preparation = None
     try:
         content = await documents.load_capture(documents.EMAIL_ATTACHMENTS, org_id, source_sha)
     except capture_failures.CaptureError as exc:
@@ -215,9 +222,12 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
 
     if content is not None:
         try:
-            draft = await run_in_threadpool(parse_invoice_file, filename or "attachment", content)
+            draft = await image_ocr.run_reading(
+                parse_invoice_file, filename or "attachment", content
+            )
         except ValueError as exc:
             error, failure_code = str(exc), capture_failures.code_for(exc)
+            reading_preparation = image_ocr.preparation_for_error(exc)
 
     # Parse without holding a document row lock, then join the same publication
     # boundary as confirm/discard/delete. Refresh the identity-map instance:
@@ -238,11 +248,15 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
         row.status = "pending"
         row.error = None
         row.failure_code = None
+        reading_preparation = draft.reading_preparation
     else:
         row.status = "failed"
         row.error = error
         row.failure_code = failure_code
         row.failure_seq = (row.failure_seq or 0) + 1
+    row.reading_preparation_json = (
+        reading_preparation.model_dump_json() if reading_preparation is not None else None
+    )
     await db.commit()
     if failure_reason is not None:
         return {"status": "failed", "reason": failure_reason}
