@@ -9,7 +9,7 @@ unchanged. Work is on `dev/backlog-completion-20261105`.
 
 Seven subsequently identified entries are appended separately, preserving the
 197-row baseline inventory. Current schema: 120 tables, 156 revisions, single
-head `8d1f3a5c7e90`; current collection is 5,895 backend cases.
+head `8d1f3a5c7e90`; current collection is 5,897 backend cases.
 
 ## Current implementation
 
@@ -87,3 +87,25 @@ requirements. Native OCR/font/PDF/zlib/timezone/ECB XML probes pass. The extra
 local image-to-PostgreSQL smoke could not start because the local Docker daemon
 ran out of disk; no database test ran in that attempt. Its failed context is
 retained. Hosted native/image/visual qualification remains mandatory.
+
+## Delivered-source failures and repair
+
+Exact head `01a9912` completed with 5,450 backend passes, 443 skips and two
+failures. The new planning receipt lacked a tenant-probe classification; a real
+HTTP probe now tests overlapping keys, foreign-only keys and same-workspace
+actor privacy. No tenant table is exempted. The upload-cap scanner also treated
+the S3 multipart transfer buffer as an upload admission cap. Its existing named,
+stale-checked non-upload quantity register now identifies that exact buffer,
+with a negative control proving a true upload gate using it still fails.
+The combined tenancy/upload-cap/planning/storage suite passes 182 cases.
+
+All 1,071 functional browser cases passed at that source. Twelve visual cases
+passed; the mobile supplier-invoice screenshot differed by the intended 44px
+target height. The user explicitly approved only that reviewed screenshot on
+5 November. Its exact CI actual bytes replace one baseline; no other image,
+assertion, tolerance, retry or timeout changes. The old failed run, all image
+hashes and the approval receipt remain preserved. New full CI is mandatory.
+
+Finance and lease follow-ups are in draft PR #106; main remains unchanged.
+Those source gaps and external policy/provider/corpus/capacity dependencies
+remain separate from this repair wave's qualification.

@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "Reviewable first repair wave with scoped local/native/image evidence; delivered-source all13 hosted CI pending. Known next-wave finance/lease gaps remain open: this is not release clearance or full-backlog completion. No merge/deploy/settings/production migrations.",
+  "qualification": "First repair wave has preserved exact01a9912 CI failures: missing planning-receipt tenant probe, multipart-buffer false-positive classification and the intentional mobile target screenshot change. All182 focused guard/storage/planning cases pass after repair; user explicitly approved only the reviewed mobile baseline. Fresh delivered-source all13 contexts remain required. Finance/lease fixes are in stacked draftPR106; no release clearance/merge/deploy/settings/production migrations.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1447,14 +1447,14 @@
     },
     {
       "id": "IMPECCABLE-FINAL-AUDIT",
-      "status": "READY-AFTER-DEPENDENCY",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-AFTER-DEPENDENCY",
       "title": "Final same-source polish and design acceptance",
       "sources": [
         "docs/BACKLOG.md:569",
         "inventory/ui-source.md"
       ],
-      "next": "Finish retained repairs, run appropriate named design skill/polish and audit same fixtures; old score is historical, not current acceptance.",
+      "next": "User explicitly approved only mobile supplier-invoice44px screenshot. Exact CI actual bytes replace that single baseline; otherimages/assertions/tolerances unchanged. Fresh visual/full CI remains required.",
       "dependencies": [
         "Open IMP/CTX/UI engineering"
       ]
