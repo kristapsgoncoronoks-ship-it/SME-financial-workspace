@@ -80,6 +80,7 @@ async def run_forever(
     log.info("worker %s started; lane=%s; handlers=%s", worker_id, lane, jobs.registered_kinds())
     tick = 0
     last_scheduled: date | None = None
+    metrics_failed = False
     while not stop.is_set():
         tick += 1
         try:
@@ -103,15 +104,31 @@ async def run_forever(
                         log.info("scheduled %s daily job(s) for %s", created, today)
                 # Refresh the queue-health gauges (dead-letter depth, queue lag)
                 # so /metrics stays warm even when the API tier is idle.
+                metrics_session_usable = True
                 try:
                     from app.services import queue_health
 
                     await queue_health.snapshot(db)
                 except Exception:  # noqa: BLE001 — never let metrics break the loop
-                    pass
+                    if not metrics_failed:
+                        # Exceptions may contain SQL, bound tenant data or DB
+                        # credentials. Emit one fixed warning per outage only.
+                        log.warning("queue health metrics snapshot failed; recovering transaction")
+                    metrics_failed = True
+                    try:
+                        # Snapshot only reads. Reclaim and the scheduler have
+                        # already committed before this point, so a failed PG
+                        # read can be recovered without undoing business work.
+                        await db.rollback()
+                    except Exception:  # noqa: BLE001 — discard an unrecoverable session
+                        metrics_session_usable = False
+                else:
+                    if metrics_failed:
+                        log.info("queue health metrics snapshot recovered")
+                    metrics_failed = False
                 # Drain everything currently ready before sleeping.
                 processed = 0
-                while not stop.is_set():
+                while metrics_session_usable and not stop.is_set():
                     job = await jobs.run_once(
                         db,
                         worker_id,
