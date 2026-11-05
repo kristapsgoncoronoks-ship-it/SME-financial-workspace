@@ -6,6 +6,15 @@ named rows and15 separately appended findings. These are differently sized
 engineering/review/policy items, not212 equivalent features or a completion
 percentage. Source references retain their original baseline context.
 
+## Current160 sibling follow-up
+
+[Expense comment and approval-step parents](EXPENSE-PARENT-TENANT-160-2026-11-05.md)
+now include the tenant/report pair, retaining mandatoryCASCADE and the159 index.
+122 focused and83 fullgraph/parity/bootstrap checks pass with zero skips; this
+tree collects6,256 cases. Fresh delivered-source CI remains required. PR107 now
+passes all13 required contexts with its one browser retry preserved. Later
+paragraphs describe earlier or isolated source scopes.
+
 ## Current tenant-parent follow-up
 
 This fourth-wave tree adds revision159 `d5e7f9a1b3c6`, binding expense items

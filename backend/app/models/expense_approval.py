@@ -6,8 +6,8 @@ approval run — the report is the run, its ordered steps the instance; "the cur
 step" is the lowest-`seq` step still pending. No policy ⇒ one generic open step, so
 the legacy single-approver behaviour is preserved unchanged.
 
-Tenant isolation is via the denormalised `org_id` + the ORM guard + Postgres RLS
-(same as ExpenseComment) — no composite FK needed.
+The report parent link includes the denormalised `org_id`, alongside the ORM
+guard and Postgres RLS, so each step belongs to its report's tenant.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -71,6 +72,12 @@ class ExpenseApprovalStep(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "expense_approval_steps"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "report_id"],
+            ["expense_reports.org_id", "expense_reports.id"],
+            name="fk_expense_approval_steps_report",
+            ondelete="CASCADE",
+        ),
         UniqueConstraint("org_id", "report_id", "seq", name="uq_expense_approval_steps_seq"),
         Index("ix_expense_approval_steps_report", "org_id", "report_id"),
         Index("ix_expense_approval_steps_inbox", "org_id", "approver_id", "status"),
@@ -79,9 +86,7 @@ class ExpenseApprovalStep(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    report_id: Mapped[str] = mapped_column(
-        GUID(), ForeignKey("expense_reports.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    report_id: Mapped[str] = mapped_column(GUID(), nullable=False, index=True)
     policy_id: Mapped[str | None] = mapped_column(GUID(), nullable=True)
     seq: Mapped[int] = mapped_column(Integer, nullable=False)  # 0-based order
     kind: Mapped[str] = mapped_column(String(20), default=KIND_APPROVER, nullable=False)
