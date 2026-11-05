@@ -15,9 +15,25 @@ from app.core.config import settings
 from app.core.errors import ConflictError, NotFoundError
 from app.models.email_message import EmailMessage
 from app.models.issued_invoice import IssuedInvoice
-from app.services import audit, documents, issued_commands, jobs, mailer
+from app.services import audit, document_registry, documents, issued_commands, jobs, mailer
 
 KIND = "invoice.deliver"
+
+
+async def _invoice(db: AsyncSession, org_id: str, invoice_id: str | None) -> IssuedInvoice | None:
+    return await db.scalar(
+        select(IssuedInvoice)
+        .where(IssuedInvoice.org_id == org_id, IssuedInvoice.id == invoice_id)
+        .execution_options(populate_existing=True)
+    )
+
+
+def _eligible(invoice: IssuedInvoice | None) -> bool:
+    return (
+        invoice is not None
+        and invoice.voided_at is None
+        and invoice.lifecycle in {"issued", "disputed", "written_off"}
+    )
 
 
 async def lookup(db: AsyncSession, org_id: str, key: str) -> EmailMessage | None:
@@ -117,6 +133,7 @@ async def deliver(db: AsyncSession, org_id: str, message_id: str) -> dict:
         select(EmailMessage)
         .where(EmailMessage.org_id == org_id, EmailMessage.id == message_id)
         .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if message is None:
         raise NotFoundError("Delivery intent not found.")
@@ -134,18 +151,24 @@ async def deliver(db: AsyncSession, org_id: str, message_id: str) -> dict:
         message.error = "SMTP is not configured. Restore the mail relay and request a new delivery."
         await db.commit()
         return {"status": "blocked"}
-    invoice = await db.scalar(
-        select(IssuedInvoice).where(
-            IssuedInvoice.org_id == org_id, IssuedInvoice.id == message.invoice_id
-        )
-    )
-    if invoice is None or invoice.lifecycle not in {"issued", "disputed", "written_off"}:
+    invoice = await _invoice(db, org_id, message.invoice_id)
+    if not _eligible(invoice):
         message.status = "blocked"
         message.error = "The invoice is no longer eligible for delivery. Review its current state."
         await db.commit()
         return {"status": "blocked"}
+    size = await document_registry.admitted_size(
+        db, org_id, sha256=message.attachment_sha256, kind="invoice-delivery"
+    )
     try:
-        pdf = await documents.load("invoice-delivery", org_id, message.attachment_sha256)
+        pdf = await documents.load_verified_original(
+            "invoice-delivery", org_id, message.attachment_sha256, size=size
+        )
+    except documents.OriginalIntegrityError as exc:
+        message.status = "failed"
+        message.error = "The delivery attachment failed its integrity check. Restore storage before requesting a new delivery."
+        await db.commit()
+        raise jobs.PermanentJobError("Delivery attachment integrity check failed.") from exc
     except storage.StorageError as exc:
         message.status = "failed"
         message.error = (
@@ -158,11 +181,24 @@ async def deliver(db: AsyncSession, org_id: str, message_id: str) -> dict:
         message.error = "The delivery attachment is missing. Request a new delivery."
         await db.commit()
         raise jobs.PermanentJobError("Delivery attachment is missing.")
-    if storage.sha256_hex(pdf) != message.attachment_sha256:
+    if (
+        await document_registry.admitted_size(
+            db, org_id, sha256=message.attachment_sha256, kind="invoice-delivery"
+        )
+        != size
+    ):
         message.status = "failed"
         message.error = "The delivery attachment failed its integrity check. Restore storage before requesting a new delivery."
         await db.commit()
         raise jobs.PermanentJobError("Delivery attachment integrity check failed.")
+    # The message lock protects its frozen intent; invoice eligibility and
+    # admission metadata may change while the object store is being read.
+    invoice = await _invoice(db, org_id, message.invoice_id)
+    if not _eligible(invoice):
+        message.status = "blocked"
+        message.error = "The invoice is no longer eligible for delivery. Review its current state."
+        await db.commit()
+        return {"status": "blocked"}
     recipient, subject, body = message.to_email, message.subject, message.body
     sender, filename = (
         message.from_email or settings.smtp_from,
