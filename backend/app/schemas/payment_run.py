@@ -61,3 +61,10 @@ class RunOut(BaseModel):
 
 class RunDetailOut(RunOut):
     invoices: list[RunInvoiceOut] = []
+
+
+class RunPageOut(BaseModel):
+    """Bounded history display; the legacy array endpoint remains compatible."""
+
+    items: list[RunOut]
+    total: int = Field(ge=0)

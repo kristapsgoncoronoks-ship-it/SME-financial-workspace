@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import { Badge, Button, Card, ConfirmDialog, EmptyState, PageHeader, QueryState, Skeleton, type Tone } from "../components/ui";
 import { api, apiError, apiErrorCode, downloadFile } from "../lib/api";
 import { money, shortDate } from "../lib/format";
@@ -14,6 +15,13 @@ const STATUS_TONE: Record<PaymentRun["status"], Tone> = {
 };
 
 type ExportKind = "csv" | "sepa";
+const HISTORY_PAGE_SIZE = 200;
+interface RunPage { items: PaymentRun[]; total: number }
+
+function historyPage(raw: string | null): number {
+  const value = raw && /^[1-9]\d*$/.test(raw) ? Number(raw) : 1;
+  return Number.isSafeInteger(value) && value <= Math.floor(Number.MAX_SAFE_INTEGER / HISTORY_PAGE_SIZE) ? value : 1;
+}
 interface PendingExport {
   run: PaymentRun;
   kind: ExportKind;
@@ -27,6 +35,11 @@ function hasExportRecord(run: PaymentRun): boolean {
 
 export default function PaymentRunsPage() {
   const qc = useQueryClient();
+  const { user, org } = useAuth();
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const rawPage = params.get("runs_page");
+  const page = historyPage(rawPage);
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [refs, setRefs] = useState<Record<string, string>>({});
@@ -44,10 +57,34 @@ export default function PaymentRunsPage() {
     queryKey: ["payment-runs", "payable"],
     queryFn: async () => (await api.get("/payment-runs/payable")).data,
   });
-  const runs = useQuery<PaymentRun[]>({
-    queryKey: ["payment-runs"],
-    queryFn: async () => (await api.get("/payment-runs")).data,
+  const runs = useQuery<RunPage>({
+    queryKey: ["payment-runs", "history", user?.id, org?.id, page, HISTORY_PAGE_SIZE],
+    enabled: !!user?.id && !!org?.id,
+    queryFn: async ({ signal }) => {
+      const result = (await api.get("/payment-runs/page", {
+        params: { limit: HISTORY_PAGE_SIZE, offset: (page - 1) * HISTORY_PAGE_SIZE },
+        signal, timeout: 15_000,
+      })).data as RunPage;
+      if (!result || !Array.isArray(result.items) || result.items.length > HISTORY_PAGE_SIZE ||
+        !Number.isSafeInteger(result.total) || result.total < 0) throw new Error("Invalid payment run page");
+      return result;
+    },
+    retry: false,
+    meta: { errorHandled: true },
   });
+  const lastPage = runs.data ? Math.max(1, Math.ceil(runs.data.total / HISTORY_PAGE_SIZE)) : null;
+  const clamping = runs.isSuccess && !runs.isFetching && lastPage !== null && page > lastPage;
+  const changePage = (next: number, replace = false) => setParams((current) => {
+    const updated = new URLSearchParams(current); updated.set("runs_page", String(next)); return updated;
+  }, { replace, state: location.state });
+  useEffect(() => {
+    const next = clamping ? lastPage : page;
+    if (next === null || (!clamping && (rawPage === null || rawPage === String(page)))) return;
+    setParams((current) => {
+      if (historyPage(current.get("runs_page")) !== page) return current;
+      const updated = new URLSearchParams(current); updated.set("runs_page", String(next)); return updated;
+    }, { replace: true, state: location.state });
+  }, [clamping, lastPage, page, rawPage, setParams, location.state]);
 
   const invalidate = () => {
     setErr(null);
@@ -198,16 +235,25 @@ export default function PaymentRunsPage() {
       {/* Existing runs */}
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-slate-700">Runs</h2>
+        <nav aria-label="Payment run history pages" className="mb-4 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          {runs.isSuccess && !runs.isFetching && !clamping && <span aria-live="polite" aria-atomic="true">
+            Showing {runs.data.items.length ? `${(page - 1) * HISTORY_PAGE_SIZE + 1}–${(page - 1) * HISTORY_PAGE_SIZE + runs.data.items.length}` : "0"} of {runs.data.total} runs
+          </span>}
+          <Button size="sm" variant="secondary" disabled={page <= 1 || runs.isFetching || clamping} onClick={() => changePage(page - 1)}>Previous runs</Button>
+          <span>Page {page}{lastPage !== null && !runs.isError ? ` of ${lastPage}` : ""}</span>
+          <Button size="sm" variant="secondary" disabled={runs.isError || runs.isFetching || clamping || lastPage === null || page >= lastPage} onClick={() => changePage(page + 1)}>Next runs</Button>
+        </nav>
         <QueryState
-          query={runs}
+          query={{ ...runs, isLoading: runs.isLoading || runs.isFetching || clamping }}
           loading={<Skeleton className="h-24 w-full" />}
-          isEmpty={(d) => d.length === 0}
+          isEmpty={(d) => d.total === 0}
           empty={<EmptyState title="No payment runs yet" />}
           errorTitle="Couldn’t load payment runs"
         >
           {(runData) => (
         <div className="space-y-3">
-          {runData.map((r) => (
+          {runData.items.length === 0 && <p className="text-sm text-slate-600">This page has no runs. <button type="button" className="underline" disabled={runs.isFetching} onClick={() => runs.refetch()}>Refresh this page</button> to check the current list.</p>}
+          {runData.items.map((r) => (
             <div key={r.id} className="rounded-lg border border-slate-200 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
