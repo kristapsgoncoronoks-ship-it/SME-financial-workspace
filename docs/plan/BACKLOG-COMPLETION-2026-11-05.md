@@ -7,9 +7,9 @@ It includes historical carry-forwards; it is not 197 equally sized features.
 Baseline: `47baca2bc45d7772f54f3bb51ee832408bd4459d` (PR #104). Main remains
 unchanged. Work is on `dev/backlog-completion-20261105`.
 
-Seven subsequently identified entries are appended separately, preserving the
-197-row baseline inventory. Current schema: 120 tables, 156 revisions, single
-head `8d1f3a5c7e90`; current collection is 5,895 backend cases.
+Nine subsequently identified entries are appended separately, preserving the
+197-row baseline inventory. Current schema: 120 tables, 157 revisions, single
+head `b2e4f6a8c0d3`; current collection is 6,099 backend cases.
 
 ## Current implementation
 
@@ -48,17 +48,20 @@ and wiring are corrected; merge checks now explicitly reach the merge, retain
 all unrelated schema/RLS comparisons and restore the additive head. This partial
 run is not final source qualification. Delivered-source CI remains required.
 
-Next wave, in an isolated checkout while this candidate is qualified:
+The finance/lease follow-up wave now implements all four reproduced gaps below,
+with scoped local/native/connected evidence in the
+[follow-up report](FINANCE-LEASE-FOLLOWUPS-2026-11-05.md): fresh expense authority,
+exclusive AP selection, conserved AP settlement and per-claim job-generation
+fencing. It also repairs stale manual retry, finishes the delivery/claim-pack
+verified reads, adds complete issued-invoice pagination and read-only rebate
+preview. Fresh hosted qualification is required.
 
-- `FIN-EXPENSE-AUTHORITY-WAIT`: actual reviewer-flag revocation during a row wait
-  still allowed approval; preserve mandatory flag and membership→report ordering.
-- `FIN-AP-CREATE-SELECTION` and `FIN-AP-SETTLEMENT-BOUNDARY`: reproduce selection
-  and settlement races, then repair exact ownership/ledger invariants.
-- `JOBS-LATE-GENERATION`: real PostgreSQL old success/failure attempts overwrote
-  newer lease-generation outcomes; fence terminal and retry publication.
-
-These existing gaps remain release-relevant. A green first-wave check will not
-close them or clear the whole application for production.
+PR #105's latest functional and image jobs pass, but one mobile supplier-invoice
+visual check fails. Its expected/actual images and original trace are preserved;
+no baseline is regenerated. The image resource investigation reproduced a valid
+80Mpx upload exhausting a 768MiB process. A separate isolated OCR wave is now
+implementing supervised decoding with visible derivative warnings; this is not
+production-capacity or customer-extraction acceptance.
 
 Finish the active source and connected tests, then qualify an integrated candidate
 using the existing lint, types, migration, PostgreSQL, browser, image, storage and
