@@ -33,6 +33,9 @@ MERGE = "f0b2d4e6a8c1"
 PLANNING_COMMANDS = "8d1f3a5c7e90"
 JOB_LEASE = "b2e4f6a8c0d3"
 IMAGE_READING = "c3f5a7b9d1e4"
+EXPENSE_ITEM = "d5e7f9a1b3c6"
+EXPENSE_CHILDREN = "e6f8a0b2c4d7"
+EXPECTED_HEAD = EXPENSE_ITEM
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -59,6 +62,9 @@ PRESERVED_TABLES = (
     "reimbursement_batches",
     "expense_reports",
     "expense_items",
+    "expense_transactions",
+    "expense_comments",
+    "expense_approval_steps",
     "expense_commands",
     "audit_events",
     "webhook_endpoints",
@@ -239,7 +245,7 @@ def seed(connection):
             payment_reference="Synthetic original payment evidence",
             version=3,
         )
-        _insert(
+        item = _insert(
             connection,
             "expense_items",
             org_id=org,
@@ -252,6 +258,40 @@ def seed(connection):
             fx_rate=Decimal("1"),
             fx_source="eur",
             project_id=project,
+        )
+        _insert(
+            connection,
+            "expense_transactions",
+            org_id=org,
+            employee_id=user,
+            item_id=item,
+            txn_date=date(2026, 10, 28),
+            description="Synthetic retained statement link",
+            amount=Decimal("35.07"),
+            currency="EUR",
+            source="card",
+            status="assigned",
+        )
+        _insert(
+            connection,
+            "expense_comments",
+            org_id=org,
+            report_id=report,
+            author_id=user,
+            author_name="Synthetic migration employee",
+            body="Synthetic retained review evidence",
+        )
+        _insert(
+            connection,
+            "expense_approval_steps",
+            org_id=org,
+            report_id=report,
+            seq=0,
+            status="approved",
+            decided_by=user,
+            decided_by_email=email,
+            decided_at=STAMP,
+            note="Synthetic retained approval evidence",
         )
         _insert(
             connection,
@@ -427,6 +467,9 @@ def schemas(connection):
             ],
             "indexes": inspector.get_indexes(name),
             "foreign_keys": inspector.get_foreign_keys(name),
+            "unique_constraints": inspector.get_unique_constraints(name),
+            "check_constraints": inspector.get_check_constraints(name),
+            "primary_key": inspector.get_pk_constraint(name),
         }
         for name in inspector.get_table_names()
         if name != "alembic_version"
@@ -455,14 +498,83 @@ def schemas(connection):
     # Inspector dialect options can contain equivalent TextClause objects that
     # compare by Python identity. Preserve their complete SQL text rather than
     # treating a fresh reflection object as a physical schema change.
-    return json.loads(json.dumps(result, default=str, sort_keys=True))
+    result = json.loads(json.dumps(result, default=str, sort_keys=True))
+    for name, table in result.items():
+        if name.startswith("_"):
+            continue
+        for key in ("indexes", "foreign_keys", "unique_constraints", "check_constraints"):
+            # Reflection order is not a constraint attribute. Preserve every
+            # field in each entry, including physical names and dialect options.
+            table[key].sort(key=lambda entry: json.dumps(entry, sort_keys=True))
+    return result
+
+
+def _expense_marker_schema(expected, head, marker, backend, revision):
+    """Project only the exact report-parent constraints added after revision158."""
+    assert revision in (EXPENSE_ITEM, EXPENSE_CHILDREN)
+    index = {
+        "name": "uq_expense_reports_org_id",
+        "unique": True,
+        "column_names": ["org_id", "id"],
+        "dialect_options": {"postgresql_include": []} if backend == "postgresql" else {},
+    }
+    assert [
+        entry for entry in head["expense_reports"]["indexes"] if entry["name"] == index["name"]
+    ] == [index]
+    expected["expense_reports"]["indexes"].remove(index)
+    assert all(entry["name"] != index["name"] for entry in marker["expense_reports"]["indexes"])
+    links = [("expense_items", "fk_expense_items_report")]
+    if revision == EXPENSE_CHILDREN:
+        links.extend(
+            [
+                ("expense_comments", "fk_expense_comments_report"),
+                ("expense_approval_steps", "fk_expense_approval_steps_report"),
+            ]
+        )
+    for table, name in links:
+        legacy = [
+            entry
+            for entry in marker[table]["foreign_keys"]
+            if entry["referred_table"] == "expense_reports"
+        ]
+        # SQLite revision159 restores the canonical report FK name, rather
+        # than the unnamed original. Keep that recorded physical-name fact.
+        legacy_contract = {
+            "name": f"{table}_report_id_fkey",
+            "constrained_columns": ["report_id"],
+            "referred_schema": None,
+            "referred_table": "expense_reports",
+            "referred_columns": ["id"],
+            "options": {"ondelete": "CASCADE"},
+        }
+        if backend == "postgresql":
+            legacy_contract["comment"] = None
+        assert legacy == [legacy_contract]
+        composite = deepcopy(legacy[0])
+        composite.update(
+            name=name,
+            constrained_columns=["org_id", "report_id"],
+            referred_columns=["org_id", "id"],
+        )
+        assert [
+            entry
+            for entry in head[table]["foreign_keys"]
+            if entry["referred_table"] == "expense_reports"
+        ] == [composite]
+        expected[table]["foreign_keys"].remove(composite)
+        expected[table]["foreign_keys"].append(deepcopy(legacy[0]))
+        expected[table]["foreign_keys"].sort(key=lambda entry: json.dumps(entry, sort_keys=True))
 
 
 def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert graph.get_heads() == [IMAGE_READING]
+    assert EXPECTED_HEAD in (EXPENSE_ITEM, EXPENSE_CHILDREN)
+    assert graph.get_heads() == [EXPECTED_HEAD]
+    if EXPECTED_HEAD == EXPENSE_CHILDREN:
+        assert graph.get_revision(EXPENSE_CHILDREN).down_revision == EXPENSE_ITEM
+    assert graph.get_revision(EXPENSE_ITEM).down_revision == IMAGE_READING
     assert graph.get_revision(IMAGE_READING).down_revision == JOB_LEASE
     assert graph.get_revision(JOB_LEASE).down_revision == PLANNING_COMMANDS
     assert graph.get_revision(PLANNING_COMMANDS).down_revision == MERGE
@@ -470,7 +582,7 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 158
+    assert len(revisions) == {EXPENSE_ITEM: 159, EXPENSE_CHILDREN: 160}[EXPECTED_HEAD]
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -534,13 +646,21 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
 
     head_schema = database(migration_url, schemas)
     # Later additive heads introduce an empty planning receipt table, the
-    # unused nullable job token and two unknown image-preparation fields.
-    # Compare only their exact removal, then test ambiguity AT the merge.
+    # unused nullable job token, two unknown image-preparation fields, and
+    # report-parent constraints. Compare only these exact deltas, then test
+    # ambiguity AT the merge.
     # Separate tests guard destructive removal of populated evidence.
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
     assert set(head_schema) - set(schema_before) == {"planning_commands"}
     expected_marker_schema = deepcopy(head_schema)
+    _expense_marker_schema(
+        expected_marker_schema,
+        head_schema,
+        schema_before,
+        make_url(migration_url).get_backend_name(),
+        EXPECTED_HEAD,
+    )
     del expected_marker_schema["planning_commands"]
     lease_columns = [c for c in head_schema["jobs"]["columns"] if c[0] == "lease_token"]
     lease_type = (
@@ -642,6 +762,11 @@ def test_postgres_new_and_financial_tables_keep_force_rls(migration_url):
         ).one() == (False, False)
         guarded = (
             "expense_commands",
+            "expense_reports",
+            "expense_items",
+            "expense_transactions",
+            "expense_comments",
+            "expense_approval_steps",
             "capture_region_reads",
             "calendar_connections",
             "calendar_oauth_attempts",
