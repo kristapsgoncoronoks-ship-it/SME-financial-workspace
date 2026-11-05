@@ -1,6 +1,7 @@
+import { ProjectPhoto } from "../components/ProjectPhoto";
 import { canShowProjectFigures } from "../lib/projectProfit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Badge, Button, PageHeader, QueryState, Skeleton } from "../components/ui";
 import { api, apiError, downloadFile } from "../lib/api";
@@ -48,6 +49,7 @@ export default function ProjectDetail() {
   const [label, setLabel] = useState("");
   const [category, setCategory] = useState("wages");
   const [amount, setAmount] = useState("");
+  const documentInput = useRef<HTMLInputElement>(null);
 
   const pnl = useQuery<ProjectPnl>({
     queryKey: ["project-pnl", id],
@@ -298,8 +300,17 @@ export default function ProjectDetail() {
           </form>
 
           {(entries.data?.length ?? 0) > 0 && (
-            <div role="region" aria-label="Manual cost entries" tabIndex={0} className="max-w-full overflow-x-auto">
+            <div role="region" aria-label="Manual cost entries" tabIndex={0} className="relative max-w-full overflow-x-auto">
             <table className="w-full text-sm [overflow-wrap:normal]">
+              <caption className="sr-only">Manual cost entries</caption>
+              <thead className="text-left text-xs text-text-secondary">
+                <tr>
+                  <th scope="col" className="py-2 font-medium">Label</th>
+                  <th scope="col" className="py-2 font-medium">Category</th>
+                  <th scope="col" className="py-2 text-right font-medium">Amount (EUR)</th>
+                  <th scope="col" className="py-2 pl-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
               <tbody className="divide-y divide-slate-100">
                 {entries.data?.map((e) => (
                   <tr key={e.id}>
@@ -336,21 +347,33 @@ export default function ProjectDetail() {
             onDone={() => qc.invalidateQueries({ queryKey: ["project-documents", id] })}
             onError={(m) => setErr(m || null)}
           />
-          <label className="btn-secondary inline-block max-w-full cursor-pointer">
+          <button type="button" className="btn-secondary inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center max-w-full" disabled={upload.isPending} onClick={() => documentInput.current?.click()}>
             Attach document
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) upload.mutate(f);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          </button>
+          <input
+            ref={documentInput}
+            type="file"
+            aria-label="Choose project document"
+            disabled={upload.isPending}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) upload.mutate(f);
+              e.target.value = "";
+            }}
+          />
           {(docs.data?.filter((d) => d.kind !== "photo").length ?? 0) > 0 && (
-            <div role="region" aria-label="Project documents" tabIndex={0} className="max-w-full overflow-x-auto">
+            <div role="region" aria-label="Project documents" tabIndex={0} className="relative max-w-full overflow-x-auto">
             <table className="w-full text-sm [overflow-wrap:normal]">
+              <caption className="sr-only">Project documents</caption>
+              <thead className="text-left text-xs text-text-secondary">
+                <tr>
+                  <th scope="col" className="py-2 font-medium">Document</th>
+                  <th scope="col" className="py-2 font-medium">Type</th>
+                  <th scope="col" className="py-2 font-medium">Uploaded</th>
+                  <th scope="col" className="py-2 pl-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
               <tbody className="divide-y divide-slate-100">
                 {docs.data?.filter((d) => d.kind !== "photo").map((d) => (
                   <tr key={d.id}>
@@ -415,38 +438,7 @@ export default function ProjectDetail() {
   );
 }
 
-/** WO-F: job photos — the phone-first evidence trail. Capture goes straight
- * from the camera into the project's content-addressed document store as
- * kind='photo' (EXIF kept as shot — the timestamp IS the evidence); the grid
- * fetches bytes through the same authenticated download route as every other
- * document, so no second serving surface exists. "Signed acceptance + the
- * pictures" is the dispute-killer the design doc promised. */
-function PhotoThumb({ projectId, doc }: { projectId: string; doc: ProjectDocument }) {
-  const blob = useQuery<string>({
-    queryKey: ["project-photo", projectId, doc.id],
-    staleTime: Infinity,
-    queryFn: async () => {
-      const r = await api.get(`/masters/projects/${projectId}/documents/${doc.id}/download`, {
-        responseType: "blob",
-      });
-      return URL.createObjectURL(
-        new Blob([r.data], { type: doc.content_type || "image/jpeg" }),
-      );
-    },
-  });
-  if (!blob.data)
-    return <div className="h-28 w-28 animate-pulse rounded-md bg-slate-100" aria-hidden />;
-  return (
-    <a href={blob.data} target="_blank" rel="noreferrer" title={doc.filename}>
-      <img
-        src={blob.data}
-        alt={doc.filename}
-        className="h-28 w-28 rounded-md border border-slate-200 object-cover"
-      />
-    </a>
-  );
-}
-
+/** Job-photo previews are bounded derivatives. Originals remain an explicit action. */
 function PhotosCard({
   projectId,
   photos,
@@ -458,6 +450,7 @@ function PhotosCard({
   onChanged: () => void;
   onError: (m: string) => void;
 }) {
+  const photoInput = useRef<HTMLInputElement>(null);
   const upload = useMutation({
     mutationFn: async (file: File) => {
       const form = new FormData();
@@ -485,20 +478,23 @@ function PhotosCard({
             and back up the acceptance when it matters.
           </p>
         </div>
-        <label className="btn-secondary inline-block max-w-full cursor-pointer">
+        <button type="button" className="btn-secondary inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center max-w-full" disabled={upload.isPending} onClick={() => photoInput.current?.click()}>
           {upload.isPending ? "Uploading…" : "+ Add photo"}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload.mutate(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        </button>
+        <input
+          ref={photoInput}
+          type="file"
+          aria-label="Choose project photo"
+          accept="image/*"
+          capture="environment"
+          disabled={upload.isPending}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) upload.mutate(f);
+            e.target.value = "";
+          }}
+        />
       </div>
       {photos.length === 0 ? (
         <p className="text-sm text-text-secondary">
@@ -507,7 +503,7 @@ function PhotosCard({
       ) : (
         <div className="flex flex-wrap gap-3">
           {photos.map((d) => (
-            <PhotoThumb key={d.id} projectId={projectId} doc={d} />
+            <ProjectPhoto key={d.id} projectId={projectId} doc={d} />
           ))}
         </div>
       )}
@@ -727,21 +723,22 @@ function AcceptanceAndFinalInvoice({
           credit note instead.
         </p>
         {adjustments.map((a, i) => (
-          <div key={i} className="flex flex-wrap gap-2">
+          <div key={i} role="group" aria-label={`Final invoice adjustment ${i + 1}`} className="flex flex-wrap gap-2">
             <input
               className="input min-w-0 max-w-full grow"
-              placeholder="Adjustment label — e.g. extra work agreed on site" aria-label="Adjustment label — e.g. extra work agreed on site"
+              placeholder="Adjustment label — e.g. extra work agreed on site" aria-label={`Adjustment ${i + 1} description`}
               value={a.label}
               onChange={(e) => setAdj(i, { label: e.target.value })}
             />
             <input
               className="input min-w-0 w-32 max-w-full"
-              placeholder="±0.00" aria-label="±0.00"
+              placeholder="±0.00" aria-label={`Adjustment ${i + 1} amount (EUR)`}
               value={a.amount}
               onChange={(e) => setAdj(i, { amount: e.target.value })}
             />
             <button
               className="btn-ghost text-xs text-rose-500"
+              aria-label={`Remove adjustment ${i + 1}`}
               onClick={() => setAdjustments(adjustments.filter((_, j) => j !== i))}
             >
               Remove
@@ -872,8 +869,18 @@ function OffersCard({
         </Button>
       </form>
       {(offers.data?.length ?? 0) > 0 && (
-        <div role="region" aria-label="Project offers" tabIndex={0} className="max-w-full overflow-x-auto">
+        <div role="region" aria-label="Project offers" tabIndex={0} className="relative max-w-full overflow-x-auto">
         <table className="w-full text-sm [overflow-wrap:normal]">
+          <caption className="sr-only">Project offers</caption>
+          <thead className="text-left text-xs text-text-secondary">
+            <tr>
+              <th scope="col" className="py-2 font-medium">Offer</th>
+              <th scope="col" className="py-2 font-medium">Title</th>
+              <th scope="col" className="py-2 text-right font-medium">Total (EUR)</th>
+              <th scope="col" className="py-2 pl-2 font-medium">Status</th>
+              <th scope="col" className="py-2 pl-2 text-right font-medium">Actions</th>
+            </tr>
+          </thead>
           <tbody className="divide-y divide-slate-100">
             {offers.data?.map((o) => (
               <tr key={o.id}>
@@ -968,8 +975,16 @@ function PlanCard({ projectId, onError }: { projectId: string; onError: (m: stri
         </p>
       )}
       {rows.length > 0 && (
-        <div role="region" aria-label="Invoicing plan entries" tabIndex={0} className="max-w-full overflow-x-auto">
+        <div role="region" aria-label="Invoicing plan entries" tabIndex={0} className="relative max-w-full overflow-x-auto">
         <table className="w-full text-sm [overflow-wrap:normal]">
+          <caption className="sr-only">Invoicing plan entries</caption>
+          <thead className="text-left text-xs text-text-secondary">
+            <tr>
+              <th scope="col" className="py-2 font-medium">Instalment</th>
+              <th scope="col" className="py-2 text-right font-medium">Amount (EUR)</th>
+              <th scope="col" className="py-2 pl-3 text-right font-medium">Actions</th>
+            </tr>
+          </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((r) => (
               <tr key={r.id}>

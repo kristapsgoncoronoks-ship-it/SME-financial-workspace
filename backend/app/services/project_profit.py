@@ -44,6 +44,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import money
 from app.models.costing import Project
+from app.models.document import Document
 from app.models.invoice import Invoice, LineItem
 from app.models.invoice_project_split import InvoiceProjectSplit
 from app.models.project_link import (
@@ -228,21 +229,52 @@ async def list_documents(db: AsyncSession, org_id: str, project_id: str) -> list
     )
 
 
-async def load_document(
+async def get_document(
     db: AsyncSession, org_id: str, project_id: str, document_id: str
-) -> tuple[ProjectDocument, bytes]:
+) -> ProjectDocument:
     row = await db.scalar(
-        select(ProjectDocument).where(
+        select(ProjectDocument)
+        .where(
             ProjectDocument.org_id == org_id,
             ProjectDocument.project_id == project_id,
             ProjectDocument.id == document_id,
         )
+        .execution_options(populate_existing=True)
     )
     if row is None:
         raise NotFoundError("Document not found")
-    data = await documents.load(PROJECT_DOCS, org_id, row.sha256)
+    return row
+
+
+async def load_document(
+    db: AsyncSession,
+    org_id: str,
+    project_id: str,
+    document_id: str,
+    *,
+    expected_identity: tuple[str, int] | None = None,
+) -> tuple[ProjectDocument, bytes]:
+    row = await get_document(db, org_id, project_id, document_id)
+    sha = row.sha256
+    registry_size = select(Document.size).where(
+        Document.org_id == org_id, Document.kind == PROJECT_DOCS, Document.sha256 == sha
+    )
+    size = await db.scalar(registry_size)
+    if expected_identity is not None:
+        # Optional processing callers admit one exact source/size before
+        # entering this loader. A fresh lookup cannot widen that read budget.
+        if sha != expected_identity[0]:
+            raise NotFoundError("Document not found")
+        if size != expected_identity[1]:
+            raise documents.OriginalIntegrityError()
+    data = await documents.load_verified_original(PROJECT_DOCS, org_id, sha, size=size)
     if data is None:
         raise NotFoundError("Stored document missing")
+    row = await get_document(db, org_id, project_id, document_id)
+    if row.sha256 != sha:
+        raise NotFoundError("Document not found")
+    if await db.scalar(registry_size) != size:
+        raise documents.OriginalIntegrityError()
     return row, data
 
 

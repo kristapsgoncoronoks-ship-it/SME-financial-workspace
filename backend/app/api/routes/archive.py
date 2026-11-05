@@ -24,10 +24,10 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from app.api.deps import CurrentUser, DbSession, require_perm
-from app.core import authz
+from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
+from app.core import authz, storage
 from app.core.security_headers import content_disposition
 from app.schemas.archive import (
     ArchivedInvoiceOut,
@@ -36,7 +36,7 @@ from app.schemas.archive import (
 )
 from app.services import archive as svc
 from app.services import archive_export as export_svc
-from app.services import documents, plans
+from app.services import document_registry, documents, plans
 
 router = APIRouter(
     prefix="/archive",
@@ -147,7 +147,9 @@ async def get_archived(archive_id: str, current: CurrentUser, db: DbSession):
 
 
 @router.get("/{archive_id}/document")
-async def download_archived_document(archive_id: str, current: CurrentUser, db: DbSession):
+async def download_archived_document(
+    archive_id: str, current: CurrentUser, db: DbSession, request: Request
+):
     """The original invoice PDF, kept with the record.
 
     This is most of the value of the archive: the record says what the invoice
@@ -158,12 +160,29 @@ async def download_archived_document(archive_id: str, current: CurrentUser, db: 
     row = await svc.get(db, current.org_id, archive_id)
     if row is None or not row.source_sha256:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+    sha = row.source_sha256
+    doc = await document_registry.find(db, current.org_id, sha256=sha, kind=documents.UPLOADS)
+    size = doc.size if doc is not None else None
     try:
-        data = await documents.load(documents.UPLOADS, current.org_id, row.source_sha256)
-    except FileNotFoundError:
+        data = await documents.load_verified_original(
+            documents.UPLOADS, current.org_id, sha, size=size
+        )
+    except storage.StorageReadError:
+        raise
+    except storage.StorageError:
         # The row outlived its bytes. A 404 says so without leaking storage
         # internals; the integrity sweep is where this should be noticed.
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Stored document missing") from None
+    fresh, _ = await refresh_current_identity(request, db, current)
+    authz.require(fresh, authz.Permission.ARCHIVE_READ)
+    row = await svc.get(db, current.org_id, archive_id)
+    if row is None or row.source_sha256 != sha:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Archived document changed while preparing the download"
+        )
+    doc = await document_registry.find(db, current.org_id, sha256=sha, kind=documents.UPLOADS)
+    if doc is not None and data is not None and len(data) != doc.size:
+        raise documents.OriginalIntegrityError()
     if data is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Stored document missing")
     return Response(
@@ -174,5 +193,6 @@ async def download_archived_document(archive_id: str, current: CurrentUser, db: 
                 row.source_filename or "document", fallback="attachment"
             ),
             "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
         },
     )

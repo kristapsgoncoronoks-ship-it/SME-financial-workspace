@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
-import { api } from "./api";
-import type { ScopeSwitcherReadState, SwitcherOption } from "../components/shell/EntitySwitcher";
+import { api, tokenStore } from "./api";
+import type { ScopeSwitcherReadState, ScopeSwitcherWriteState, SwitcherOption } from "../components/shell/EntitySwitcher";
 
 interface OrgRow {
   org_id: string;
@@ -49,8 +49,23 @@ export function useOrgSwitcher(): {
   currentId: string;
   onSwitch: (id: string) => void;
   readState: ScopeSwitcherReadState;
+  writeState: ScopeSwitcherWriteState;
 } {
-  const { user, org } = useAuth();
+  const { user, org, cacheIdentity } = useAuth();
+  const [switchState, setSwitchState] = useState<{ phase: ScopeSwitcherWriteState["phase"]; message: string }>({ phase: "idle", message: "" });
+  const switchPhase = useRef(switchState.phase);
+  const currentIdentity = useRef(cacheIdentity);
+  currentIdentity.current = cacheIdentity;
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  function updateSwitch(phase: ScopeSwitcherWriteState["phase"], message: string) {
+    switchPhase.current = phase;
+    setSwitchState({ phase, message });
+  }
+  function ownership() {
+    const identity = cacheIdentity, generation = tokenStore.generation(), token = tokenStore.get();
+    return () => alive.current && currentIdentity.current === identity && tokenStore.generation() === generation && tokenStore.get() === token;
+  }
   const enabled = Boolean(user?.id && org?.id);
   const query = useQuery<OrgRow[]>({
     queryKey: ["my-orgs", user?.id, org?.id],
@@ -99,17 +114,45 @@ export function useOrgSwitcher(): {
   }
 
   async function onSwitch(id: string) {
-    if (!id || id === org?.id || phase !== "ready" || !orgs.some((row) => row.org_id === id)) return;
-    await api.post(`/auth/switch-org/${id}`);
-    // Full reload: AuthContext refetches /auth/me and every query re-scopes to
-    // the new org, so no stale cross-org data lingers.
-    location.assign("/");
+    if (!id || id === org?.id || phase !== "ready" || !orgs.some((row) => row.org_id === id)
+      || !["idle", "failed"].includes(switchPhase.current)) return;
+    const current = ownership();
+    updateSwitch("pending", "Switching organization… Wait for the workspace to reload.");
+    try {
+      await api.post(`/auth/switch-org/${id}`, null, { timeout: 15_000 });
+      if (current()) location.assign("/");
+    } catch (error) {
+      if (!current()) return;
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      if (status !== undefined && status >= 400 && status < 500) {
+        updateSwitch("failed", "The organization could not be switched. Check your access and choose an organization again.");
+      } else {
+        updateSwitch("uncertain", "The switch outcome is unconfirmed. Check the current organization before choosing again.");
+      }
+    }
+  }
+
+  async function checkCurrentOrganization() {
+    if (switchPhase.current !== "uncertain") return;
+    const current = ownership();
+    updateSwitch("checking", "Checking the current organization…");
+    try {
+      // Read only: never replay the switch POST after a missing response.
+      // A full document then restores AuthContext and its identity-owned cache.
+      const result = await api.get("/auth/me", { timeout: 15_000 });
+      if (!current()) return;
+      if (result.data?.user?.id !== user?.id || typeof result.data?.organization?.id !== "string") throw new Error("Unverified identity");
+      location.assign("/");
+    } catch {
+      if (current()) updateSwitch("uncertain", "The current organization could not be verified. Check your connection and try checking again.");
+    }
   }
 
   return {
     options: phase === "ready" ? orgs.map((o) => ({ id: o.org_id, name: o.name })) : [],
     currentId: org?.id ?? "",
     onSwitch,
+    writeState: { ...switchState, onCheck: () => { void checkCurrentOrganization(); } },
     readState: {
       phase,
       currentName: org?.name?.trim() || "Organization name unavailable",

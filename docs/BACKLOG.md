@@ -1,5 +1,13 @@
 # Engineering backlog
 
+## Active backlog completion — 5 November 2026
+
+[Current implementation, evidence and remaining dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)
+and the [197-row execution inventory](plan/BACKLOG-COMPLETION-2026-11-05.json)
+are the current entry points. Work continues through actionable items; local
+passes are awaiting integrated/delivered-source qualification. Owner decisions,
+external acceptance, review and deployment remain separately tracked.
+
 ## Current uv / rustls development — 3 November 2026
 
 [Current implementation and evidence boundaries](security/UV-RUSTLS-MAINTENANCE-2026-11-03.md).

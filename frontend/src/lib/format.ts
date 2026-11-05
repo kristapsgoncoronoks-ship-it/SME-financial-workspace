@@ -1,3 +1,5 @@
+import { STATE_CLASSES } from "./statusStyles";
+
 // FE-018 (audit 2026-09-05): ONE locale for the whole SPA. Money was
 // formatted with en-IE, dates with en-GB, and twelve call sites used the
 // browser's own locale (`toLocaleString()` with no argument), so the same
@@ -138,27 +140,27 @@ export function monthLabel(period: string): string {
 }
 
 export const STATUS_STYLES: Record<string, string> = {
-  paid: "bg-emerald-100 text-emerald-700",
-  pending: "bg-amber-100 text-amber-700",
-  overdue: "bg-rose-100 text-rose-700",
-  draft: "bg-slate-100 text-slate-600",
+  paid: STATE_CLASSES.success,
+  pending: STATE_CLASSES.warning,
+  overdue: STATE_CLASSES.danger,
+  draft: STATE_CLASSES.neutral,
 };
 
 // Accounts-receivable status for issued invoices.
 export const ISSUED_STATUS_STYLES: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-500",
-  approved: "bg-indigo-100 text-indigo-700",
-  sent: "bg-sky-50 text-sky-600",
-  viewed: "bg-sky-100 text-sky-700",
-  paid: "bg-emerald-100 text-emerald-700",
-  partial: "bg-sky-100 text-sky-700",
-  open: "bg-slate-100 text-slate-600",
-  overdue: "bg-rose-100 text-rose-700",
-  credited: "bg-violet-100 text-violet-700",
-  credit_note: "bg-violet-100 text-violet-700",
-  disputed: "bg-amber-100 text-amber-700",
-  written_off: "bg-slate-200 text-slate-500",
-  void: "bg-slate-200 text-slate-500 line-through",
+  draft: STATE_CLASSES.neutral,
+  approved: STATE_CLASSES.approved,
+  sent: STATE_CLASSES.infoSubtle,
+  viewed: STATE_CLASSES.info,
+  paid: STATE_CLASSES.success,
+  partial: STATE_CLASSES.info,
+  open: STATE_CLASSES.neutral,
+  overdue: STATE_CLASSES.danger,
+  credited: STATE_CLASSES.credit,
+  credit_note: STATE_CLASSES.credit,
+  disputed: STATE_CLASSES.warning,
+  written_off: STATE_CLASSES.muted,
+  void: `${STATE_CLASSES.muted} line-through`,
 };
 
 export const ISSUED_STATUS_LABELS: Record<string, string> = {
@@ -169,12 +171,12 @@ export const ISSUED_STATUS_LABELS: Record<string, string> = {
 };
 
 export const VALIDATION_STYLES: Record<string, string> = {
-  none: "bg-slate-100 text-slate-500",
-  passed: "bg-emerald-100 text-emerald-700",
-  approved: "bg-emerald-100 text-emerald-700",
-  flagged: "bg-rose-100 text-rose-700",
-  rejected: "bg-rose-100 text-rose-700",
-  pending: "bg-amber-100 text-amber-700",
+  none: STATE_CLASSES.neutral,
+  passed: STATE_CLASSES.success,
+  approved: STATE_CLASSES.success,
+  flagged: STATE_CLASSES.danger,
+  rejected: STATE_CLASSES.danger,
+  pending: STATE_CLASSES.warning,
 };
 
 export const VALIDATION_LABELS: Record<string, string> = {
@@ -201,42 +203,50 @@ export function methodLabel(method: string | null | undefined): string {
 }
 
 export const METHOD_STYLES: Record<string, string> = {
-  ocr: "bg-violet-100 text-violet-700",
-  "text-layer": "bg-sky-100 text-sky-700",
-  "e-invoice-xml": "bg-emerald-100 text-emerald-700",
-  csv: "bg-slate-100 text-slate-600",
-  json: "bg-slate-100 text-slate-600",
+  ocr: STATE_CLASSES.credit,
+  "text-layer": STATE_CLASSES.info,
+  "e-invoice-xml": STATE_CLASSES.success,
+  csv: STATE_CLASSES.neutral,
+  json: STATE_CLASSES.neutral,
 };
 
 // Categorical chart palette (was duplicated in Charts, Dashboard, Explore).
 export const CHART_PALETTE = [
-  "#3b6ef2", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#06b6d4", "#ec4899", "#64748b", "#14b8a6", "#f97316",
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+  "var(--color-chart-5)",
+  "var(--color-chart-6)",
+  "var(--color-chart-7)",
+  "var(--color-chart-8)",
+  "var(--color-chart-9)",
+  "var(--color-chart-10)",
 ];
 
 // Email-intake inbound review statuses.
 export const INBOUND_STATUS_STYLES: Record<string, string> = {
-  queued: "bg-sky-100 text-sky-700",       // stored, awaiting worker extraction
-  pending: "bg-amber-100 text-amber-700",
-  confirmed: "bg-emerald-100 text-emerald-700",
-  failed: "bg-rose-100 text-rose-700",
-  rejected: "bg-rose-100 text-rose-700",
-  discarded: "bg-slate-100 text-slate-500",
+  queued: STATE_CLASSES.info,       // stored, awaiting worker extraction
+  pending: STATE_CLASSES.warning,
+  confirmed: STATE_CLASSES.success,
+  failed: STATE_CLASSES.danger,
+  rejected: STATE_CLASSES.danger,
+  discarded: STATE_CLASSES.neutral,
 };
 
 export const SEVERITY_STYLES: Record<string, string> = {
-  error: "bg-rose-100 text-rose-700",
-  warning: "bg-amber-100 text-amber-700",
-  info: "bg-sky-100 text-sky-700",
+  error: STATE_CLASSES.danger,
+  warning: STATE_CLASSES.warning,
+  info: STATE_CLASSES.info,
 };
 
 export const EXPENSE_STATUS_STYLES: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  submitted: "bg-amber-100 text-amber-700",
-  partially_approved: "bg-amber-100 text-amber-800",
-  approved: "bg-sky-100 text-sky-700",
-  returned: "bg-orange-100 text-orange-700",
-  marked_for_reimbursement: "bg-indigo-100 text-indigo-700",
-  reimbursed: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-rose-100 text-rose-700",
+  draft: STATE_CLASSES.neutral,
+  submitted: STATE_CLASSES.warning,
+  partially_approved: STATE_CLASSES.warningStrong,
+  approved: STATE_CLASSES.info,
+  returned: STATE_CLASSES.returned,
+  marked_for_reimbursement: STATE_CLASSES.approved,
+  reimbursed: STATE_CLASSES.success,
+  rejected: STATE_CLASSES.danger,
 };

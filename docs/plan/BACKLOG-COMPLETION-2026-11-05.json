@@ -1,0 +1,2574 @@
+{
+  "date": "2026-11-05",
+  "baseline": "47baca2bc45d7772f54f3bb51ee832408bd4459d",
+  "scope": "Named current engineering backlog, current TODO entry point, Decisions1\u201333, linked findings register/OCR/reimbursement/planning/current design reports, historical development/reference/audit carry-forwards. This is an actionable source inventory, not runtime acceptance or a claim that all product vision is built.",
+  "limits": [
+    "Original large uploaded83-semantic-action register is not checked into repository and prior referenced workspace artifacts are absent; retained EX/RN/ACC01 actions require original contract refresh.",
+    "Inventory source line references belong to assigned baseline; parallel implementation may move lines.",
+    "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
+    "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
+  ],
+  "qualification": "First repair wave has preserved exact01a9912 CI failures: missing planning-receipt tenant probe, multipart-buffer false-positive classification and the intentional mobile target screenshot change. All182 focused guard/storage/planning cases pass after repair; user explicitly approved only the reviewed mobile baseline. Fresh delivered-source all13 contexts remain required. Finance/lease fixes are in stacked draftPR106; no release clearance/merge/deploy/settings/production migrations.",
+  "items": [
+    {
+      "id": "CI-IMAGE-CACHE-01",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY-DELEGATED",
+      "title": "Run/attempt-owned Trivy database cache",
+      "sources": [
+        "docs/BACKLOG.md:61",
+        ".github/workflows/ci.yml",
+        " scripts/image_audit.py"
+      ],
+      "next": "Use fresh per-run-attempt cache, normal refresh, every ten target/twenty report/failure/cleanup contract; measure DB requests/bytes/time, never assert identical DB bytes by tag.",
+      "dependencies": []
+    },
+    {
+      "id": "PERF-RUNTIME-DEV-01",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Separate runtime and test requirements",
+      "sources": [
+        "docs/BACKLOG.md:62",
+        "backend/requirements.txt",
+        "backend/requirements-dev.txt",
+        "scripts/dependency_delta.py"
+      ],
+      "next": "Remove only five measured test distributions from runtime. Add bounded recursive requirement includes to audit/cache interpretation, retain one pin per package and documented in-container pytest smoke. Qualify source/combined-dev/image behavior; disk-only benefit until measured.",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-NPM-RESIDUAL",
+      "status": "PARTIAL-SUPPORTED-FIX-CI-PENDING",
+      "inventory_status": "INVESTIGATE-DELEGATED",
+      "title": "Three global npm advisory IDs",
+      "sources": [
+        "docs/BACKLOG.md:19",
+        "docs/BACKLOG.md:81",
+        "frontend/Dockerfile",
+        " frontend/scripts/verify-npm-toolchain.mjs"
+      ],
+      "next": "npm12.2.2 fixes ip-address10.7.5 and retains undici6.29.1; supported fixed glob/minimatch parent remains unverified. Keep both advisory IDs and all ratings visible. Final source image inventories/CI required.",
+      "dependencies": []
+    },
+    {
+      "id": "EX19",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY-DELEGATED",
+      "title": "Full recoverable reimbursement cancellation",
+      "sources": [
+        "docs/BACKLOG.md:83",
+        "backend/app/api/routes/reimbursements.py",
+        "backend/app/services/reimbursement.py",
+        "backend/app/models/expense.py"
+      ],
+      "next": "Shared actor/org/key cancellation receipt; typed POST+legacy DELETE, optional reason, versions, membership\u2192batch\u2192ordered reports\u2192audit locks; frozen released IDs/child bumps; strict rollback; GET-only recovery and alias permission guards. No new event or migration implied.",
+      "dependencies": [
+        "Existing export/paid refusal and EXPENSE_APPROVE policy"
+      ]
+    },
+    {
+      "id": "CI-TIMING-FAIL-FAST",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Measure and improve failed-head CI feedback",
+      "sources": [
+        "docs/BACKLOG.md:84",
+        ".github/workflows/ci.yml:99"
+      ],
+      "next": "Record serial baseline, evaluate backend needs existing lint; retain seven core/four supply exact-success result summaries and every skipped/cancelled/missing failure. Explicitly measure valid-head critical-path tradeoff.",
+      "dependencies": []
+    },
+    {
+      "id": "CI-PROCESS-WORKERS",
+      "status": "READY-AFTER-DEPENDENCY",
+      "inventory_status": "READY-AFTER-DEPENDENCY",
+      "title": "Qualify bounded portable process workers",
+      "sources": [
+        "docs/BACKLOG.md:85",
+        "backend/tests/conftest.py",
+        "backend/requirements-dev.txt"
+      ],
+      "next": "First prove per-case DB/storage/FX isolation; pin compatible runner, bounded workers; compare exact node-ID union/skip parity and scoped CPU/RSS. Keep native lock observers/perf/auth pacing isolated.",
+      "dependencies": [
+        "TEST-GC-ISOLATION",
+        "Serial baseline and isolation proof"
+      ]
+    },
+    {
+      "id": "TEST-GC-ISOLATION",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Isolate live heap freeze test",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:312",
+        "backend/tests/test_perf016_startup_heap_freeze.py:35"
+      ],
+      "next": "Current finally unfreezes then freezes entire heap if prior frozen count existed. Move real freeze assertions to subprocess; prove parent frozen count/threshold/enabled state unchanged and retain startup/harness behavior.",
+      "dependencies": []
+    },
+    {
+      "id": "CAP-EMAIL-REPLAY",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Same-message admission race verification and repair",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:301",
+        "backend/app/api/routes/email.py:116",
+        "backend/app/api/routes/email.py:254",
+        "backend/app/services/email_intake.py:202",
+        "backend/app/models/email_intake.py:37"
+      ],
+      "next": "Reproduce concurrent generic and Mailgun same-message multi-attachment delivery. Existing SELECT-before-write with nonunique org/message index is not concurrency dedupe. Preserve distinct deliveries, missing-ID semantics, per-attachment acceptance and transaction/job/health truth.",
+      "dependencies": []
+    },
+    {
+      "id": "CAP-EMAIL-STATE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Serialize inbound extraction/review publication",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:305",
+        "backend/app/services/email_intake.py:157",
+        "backend/app/api/routes/email.py:410",
+        "backend/app/api/routes/email.py:515"
+      ],
+      "next": "Reproduce overlapping queued/failed extraction versus confirm/discard and duplicate worker failures. Worker currently checks status before await parse/read then overwrites later; choose conditional publication/shared locks from actual interleavings. Preserve confirmed invoice/evidence/audit; no invented retry workflow.",
+      "dependencies": []
+    },
+    {
+      "id": "SYS-08",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Historical PostgreSQL downgrade dialect portability",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:348",
+        "backend/alembic/versions/01160bebbd7f_quota_keyed_off_org_plan_not_user_role.py:75"
+      ],
+      "next": "sa.DATETIME() remains in PostgreSQL downgrade. Reproduce on disposable nonsuperuser DB, review intentionally discarded role/plan override semantics, correct dialect portability and prove roundtrip/parity. Never run destructive historical downgrade on live records.",
+      "dependencies": []
+    },
+    {
+      "id": "SYS-11",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Concurrent first-boot FX seed conflict",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:389",
+        "backend/app/main.py",
+        "backend/app/services/fx.py"
+      ],
+      "next": "Reproduce four-worker first boot, compare dated/provenance-bearing final rows with single worker; conflict-safe initialization without rate change, invented completeness or swallowing unrelated DB errors.",
+      "dependencies": []
+    },
+    {
+      "id": "SYS-07",
+      "status": "INVESTIGATE",
+      "inventory_status": "INVESTIGATE",
+      "title": "SQLite worker teardown warning",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:333",
+        "backend/tests/conftest.py"
+      ],
+      "next": "Reproduce warning with stated process/loop conditions and fix demonstrated lifecycle cause; no warning suppression or assertion relaxation.",
+      "dependencies": []
+    },
+    {
+      "id": "SYS-09",
+      "status": "OBSERVATION",
+      "inventory_status": "OBSERVATION",
+      "title": "Unexplained browser repeatability failures",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:361",
+        "docs/BACKLOG.md:86"
+      ],
+      "next": "Preserve original failures; instrument first-attempt asset URL/status/cause on recurrence under stated runner/cache/resource conditions. Later green repetitions do not identify old cause. No automatic retries/timeouts/assertion relaxation.",
+      "dependencies": [
+        "Recurrence/evidence required before causal repair"
+      ]
+    },
+    {
+      "id": "CAP-REVIEW-VERSION",
+      "status": "PARTIAL-READY",
+      "inventory_status": "PARTIAL-READY",
+      "title": "Finish generation-bound review/save contract",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:339",
+        "backend/app/services/capture_region.py:194",
+        "backend/app/api/routes/invoices.py:830"
+      ],
+      "next": "Current fingerprint includes attempt_seq and validates supplied token; omission is required only after region apply, deliberately optional for legacy captures. Verify current-client coverage and remaining older-completed-attempt paths before repair; preserve staged legacy compatibility explicitly.",
+      "dependencies": [
+        "OCR-CONFIRM-01 already implements region-aware boundary"
+      ]
+    },
+    {
+      "id": "CAP-CAPACITY",
+      "status": "PARTIAL-LOCAL-EVIDENCE",
+      "inventory_status": "READY",
+      "title": "Remaining stored reads and aggregate resource qualification",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:299",
+        "docs/BACKLOG.md:875",
+        "inventory/stored-read-calls.json"
+      ],
+      "next": "Known-admission original bounds, streaming exports and PDF scratch cleanup implemented; worst-case decoding/cgroup, shared disk/inodes/fleet reservations and legacy unknown-size byte/disk behavior remain open. Two raw delivery/claim-pack reads remain source-backed follow-ups.",
+      "dependencies": [
+        "Per-purpose metadata/authorization/integrity contract"
+      ]
+    },
+    {
+      "id": "CAP-STORAGE",
+      "status": "READY-PARTIAL-POLICY",
+      "inventory_status": "READY-PARTIAL-POLICY",
+      "title": "Storage fault/reference/restore evidence and cleanup boundary",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:322",
+        "backend/app/core/storage.py:113",
+        "backend/app/services/documents.py"
+      ],
+      "next": "Engineering may inventory unreferenced shared objects and qualify supported faults/durability; GC/deletion requires approved reference/retention policy. Existing protocol has no listing/sweep facility.",
+      "dependencies": [
+        "Retention/reference decision for deletion"
+      ]
+    },
+    {
+      "id": "SYS-05",
+      "status": "INVESTIGATE",
+      "inventory_status": "INVESTIGATE",
+      "title": "Kubernetes configuration qualification",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:329",
+        "deploy/k8s"
+      ],
+      "next": "Refresh32 dated candidates including false positives; qualify concrete deployment/readiness/storage/network behavior. Do not blindly apply scanner hardening; actual cluster/provider acceptance separate.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-PG-CONTRACT-02",
+      "status": "READY-OPTIONAL",
+      "inventory_status": "READY-OPTIONAL",
+      "title": "Additional native PG contract breadth",
+      "sources": [
+        "docs/BACKLOG.md:231",
+        "TODO.md:145"
+      ],
+      "next": "Optional breadth after existing DB-PG-PARITY-01 and bootstrap contracts; identify meaningful uncovered invariant rather than repeat passing checks.",
+      "dependencies": []
+    },
+    {
+      "id": "EXPORT-001",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Streaming storage upload/export delivery",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:167",
+        "backend/app/core/storage.py:114",
+        "backend/app/services/workspace_export.py:450"
+      ],
+      "next": "Finished ZIP still fh.read() and put(bytes). Add streaming digest/upload-by-parts/write-through across adapters and compatible delivery; preserve current128MiB honest limit until qualification, integrity/auth/token semantics and interruption cleanup.",
+      "dependencies": [
+        "CAP-CAPACITY per-purpose contracts"
+      ]
+    },
+    {
+      "id": "EXPORT-002",
+      "status": "READY-LOW",
+      "inventory_status": "READY-LOW",
+      "title": "Extract common one-time export rails",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:170",
+        "backend/app/services/archive_export.py:87",
+        "backend/app/services/workspace_export.py:358",
+        "backend/app/services/export_artefacts.py"
+      ],
+      "next": "Already shares verified artifact reads; remaining request/coalescing/worker/token rails duplicate. Extract only behaviorally identical rails with exact public archive versus authenticated workspace boundaries, expiry/single-use/audit/error semantics retained.",
+      "dependencies": []
+    },
+    {
+      "id": "PRIV-001",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Truthful erasure report for retained exports",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:171",
+        "backend/app/services/privacy.py:221"
+      ],
+      "next": "Current retained report lists issued_invoices/audit only. Add truthful existing bounded export retention/expiry evidence; do not silently select immediate artifact purge policy. Preserve legal hold and hashed audit.",
+      "dependencies": [
+        "Existing export retention policy",
+        "No new destructive purge without policy"
+      ]
+    },
+    {
+      "id": "R2-C3",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Stale job reclaim compare-and-set race",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:286",
+        "backend/app/services/jobs.py:518"
+      ],
+      "next": "Current select stale list then ORM overwrite can race completion/renewal. Reproduce actual PG schedule, use conditional state/lease ownership boundary, preserve max-attempt/backoff/tenant and heartbeat semantics.",
+      "dependencies": []
+    },
+    {
+      "id": "R2-A2",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY-LOW",
+      "title": "Public AP expression composition seam",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:285",
+        "backend/app/services/cash_position.py:60"
+      ],
+      "next": "cash_position still imports _outstanding_expr/_overdue_cond. Extract narrow intentional shared expression API without changing arithmetic, statement counts or money policy.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-021",
+      "status": "READY-MEASURE-FIRST",
+      "inventory_status": "READY-MEASURE-FIRST",
+      "title": "Bound database command wait",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:128",
+        "backend/app/core/database.py:22"
+      ],
+      "next": "No command_timeout currently. Measure longest legitimate archive/integrity/growth queries, qualify bounded timeout and rollback/recovery before adopting value; no guessed global limit.",
+      "dependencies": []
+    },
+    {
+      "id": "PLAN-API-DOCS",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Typed list/retry and callback303 OpenAPI",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "UI-PLANNING-FOCUS-01",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Unobscured native reverse-Tab focus",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "CTX-02-A",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Keyboard file chooser controls",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "CTX-02-B",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Four project table header relationships",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "CTX-02-C",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Adjustment amount purpose/currency/row labels",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "CTX-03",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Organization switch write uncertainty",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "CTX-04",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Viewport-contained switcher dropdown",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "CTX-05",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "INVESTIGATE",
+      "title": "Suppliers full-page overflow cause",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "IMP-11",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Bounded authenticated photo thumbnails",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "IMP-12",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Lazy optional dashboard analytics",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "IMP-13",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Settled/cancelled invoice search",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "IMP-14",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Measured mobile hit areas",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "IMP-15",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Semantic UI state roles",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "PLAN-CREATE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY",
+      "title": "Durable assignment create receipt/recovery",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "O05-UI01",
+      "status": "READY",
+      "inventory_status": "READY",
+      "title": "Remaining320px/shared-shell payout reflow",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "UI-CURRENCIES-REFLOW",
+      "status": "INVESTIGATE",
+      "inventory_status": "INVESTIGATE",
+      "title": "Currencies background-page reflow",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Follow ID-specific scope, dependencies, no-write/refusal/recovery and acceptance in ui-source.md; coordinate shared files with parallel implementers.",
+      "dependencies": []
+    },
+    {
+      "id": "OCR-TABLE-01",
+      "status": "READY",
+      "inventory_status": "READY",
+      "title": "Whole-document spurious table rows",
+      "sources": [
+        "docs/BACKLOG.md:590",
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:107",
+        "backend/app/services/pdf_ocr.py"
+      ],
+      "next": "Preserve actual two-spurious-row fixture; quantify missing/extra rows and column geometry before heuristic repair. Exact amount/currency/line completeness; no customer-quality claim.",
+      "dependencies": []
+    },
+    {
+      "id": "OCR-PROFILE",
+      "status": "READY-PARTIAL-POLICY",
+      "inventory_status": "READY-PARTIAL-POLICY",
+      "title": "Worker inventory and immutable attempt profiles",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:75",
+        "backend/app/services/pdf_ocr.py",
+        "backend/app/models/extraction_run.py"
+      ],
+      "next": "Worker language/engine inventory and stale/unavailable states can be built. Persist approved profile and requested/effective immutable settings; unsupported fail explicitly, no arbitrary CLI/path/URL/browser prompt. New languages/model distribution require reviewed artifact/terms/quality.",
+      "dependencies": [
+        "Approved available profile vocabulary",
+        "Actual worker evidence"
+      ]
+    },
+    {
+      "id": "OCR-PAGES",
+      "status": "READY",
+      "inventory_status": "READY",
+      "title": "Per-page mixed-document decisions/evidence",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:82",
+        "backend/app/services/pdf_ocr.py"
+      ],
+      "next": "Replace global heuristic with bounded page decisions; distinguish native/OCR/skipped/timeout/failure and source/derivative identity; keep source checksum/signature. Native evidence before highlights.",
+      "dependencies": [
+        "OCR-PROFILE immutable settings"
+      ]
+    },
+    {
+      "id": "OCR-RETRY",
+      "status": "PARTIAL-READY",
+      "inventory_status": "PARTIAL-READY",
+      "title": "Whole-document/page attempt comparison",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:88",
+        "backend/app/services/extraction.py",
+        "backend/app/services/capture_region.py"
+      ],
+      "next": "Durable ordinary retry fencing and selected-region read/apply already exist. Remaining page/whole-document history/comparison must preserve old results/manual corrections and deliberately apply candidates; no repeated attempts/legal invoices after loss.",
+      "dependencies": [
+        "OCR-PROFILE",
+        "OCR-PAGES",
+        "Existing CAP-RETRY/CAP-COMMAND/region receipts"
+      ]
+    },
+    {
+      "id": "OCR-ACCEPT",
+      "status": "BLOCKED-CORPUS",
+      "inventory_status": "BLOCKED-CORPUS",
+      "title": "Reproduce actual customer invoice extraction",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:70",
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:108"
+      ],
+      "next": "Need affected invoice and expected values/authorized redaction. Synthetic repair cannot certify specific customer failure.",
+      "dependencies": [
+        "Owner supplies permitted document/expected results"
+      ]
+    },
+    {
+      "id": "OCR-PADDLE",
+      "status": "BLOCKED-CORPUS-ARTIFACT",
+      "inventory_status": "BLOCKED-CORPUS-ARTIFACT",
+      "title": "Optional lean CPU OCR benchmark",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:93"
+      ],
+      "next": "Explicitly pinned lean model, bounded download/pixels/threads/jobs; same-corpus field/row/review/p50/p95/RSS comparison. No default switch from upstream benchmarks.",
+      "dependencies": [
+        "OCR-ACCEPT corpus",
+        "Model distribution/terms and resources qualified"
+      ]
+    },
+    {
+      "id": "OCR-VLM",
+      "status": "BLOCKED-ARTIFACT-HARDWARE",
+      "inventory_status": "BLOCKED-ARTIFACT-HARDWARE",
+      "title": "Optional specialist model evaluation",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:100"
+      ],
+      "next": "Resolve dots model/instructions mismatch, qualify hardware/terms, preserve partial/truncated/recovered/token/repetition states and typed financial validation. No remote-demo fallback.",
+      "dependencies": [
+        "Approved model/artifact/hardware",
+        "Authorized common corpus"
+      ]
+    },
+    {
+      "id": "O05-RB04",
+      "status": "BLOCKED-POLICY-PARTIAL-PREPARATION",
+      "inventory_status": "BLOCKED-POLICY-PARTIAL-PREPARATION",
+      "title": "Immutable reimbursement artifact foundation",
+      "sources": [
+        "docs/BACKLOG.md:149",
+        "docs/DECISIONS-NEEDED.md:1452",
+        "docs/reviews/REIMBURSEMENT-ARTIFACT-FOUNDATION-REVIEW-2026-11-01.md",
+        "docs/plan/REIMBURSEMENT-EXPORT-RELIABILITY-2026-10-29.md:26"
+      ],
+      "next": "Engineering may prepare isolated immutable source/bytes/hash/receipt and synthetic proofs. Shipping artifact retention/download audience/replacement/purge/unknown-disposition must wait reviewed contract; generic export one-time TTL and nonexistent orphan sweep cannot be assumed.",
+      "dependencies": [
+        "Decision33 retention/access/replacement",
+        "No provider selection or fabricated legacy artifact"
+      ]
+    },
+    {
+      "id": "O05-RB05",
+      "status": "BLOCKED-POLICY-DEPENDENCY",
+      "inventory_status": "BLOCKED-POLICY-DEPENDENCY",
+      "title": "Partial instruction versus whole-batch payment",
+      "sources": [
+        "docs/BACKLOG.md:208",
+        "docs/DECISIONS-NEEDED.md:1445",
+        "docs/plan/REIMBURSEMENT-EXPORT-RELIABILITY-2026-10-29.md:66",
+        "backend/app/services/reimbursement.py"
+      ],
+      "next": "Current acknowledged skip-payee option may omit reports while mark_paid pays all linked reports. Owner must select all-ready/all-included or explicit partial allocation before supported option changes; instruction never bank settlement.",
+      "dependencies": [
+        "O05-RB04",
+        "Decision33 partial/all-included contract"
+      ]
+    },
+    {
+      "id": "EX21",
+      "status": "BLOCKED-DEPENDENCY-POLICY",
+      "inventory_status": "BLOCKED-DEPENDENCY-POLICY",
+      "title": "Labelled frozen payout worksheet",
+      "sources": [
+        "docs/BACKLOG.md:210",
+        "docs/plan/REIMBURSEMENT-EXPORT-RELIABILITY-2026-10-29.md:119"
+      ],
+      "next": "Version precise IDs/amounts/currency/FX/basis with formula safety; exact-byte GET after loss. Review eligible open/paid/cancelled states/retention; no bank/payroll importer claim.",
+      "dependencies": [
+        "O05-RB04",
+        "Reviewed eligibility/retention"
+      ]
+    },
+    {
+      "id": "EX11",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action EX11",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "EX12",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action EX12",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "EX13",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action EX13",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "EX14",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action EX14",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "EX15",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action EX15",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "EX16",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action EX16",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "RN03",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action RN03",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "RN06",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action RN06",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "RN07",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action RN07",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "RN08",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action RN08",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "RN09",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action RN09",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "ACC01",
+      "status": "NEEDS-CONTRACT-REFRESH",
+      "inventory_status": "NEEDS-CONTRACT-REFRESH",
+      "title": "Retained finance action ACC01",
+      "sources": [
+        "docs/BACKLOG.md:422",
+        "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
+        "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
+      ],
+      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "dependencies": [
+        "Shared receipt/cycle boundary",
+        "Original action prompt or independently reconstructed reviewable source contract"
+      ]
+    },
+    {
+      "id": "D01",
+      "status": "BLOCKED-CREDENTIAL-POLICY",
+      "inventory_status": "BLOCKED-CREDENTIAL-POLICY",
+      "title": "Live SSO/SCIM/SAML",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:165"
+      ],
+      "next": "IdP dev tenant/access, SAML vetted library+metadata and real SCIM dialect acceptance",
+      "dependencies": []
+    },
+    {
+      "id": "D02",
+      "status": "BLOCKED-CREDENTIAL-POLICY",
+      "inventory_status": "BLOCKED-CREDENTIAL-POLICY",
+      "title": "Billing live activation",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:186"
+      ],
+      "next": "Live keys/webhook/price IDs/EveryPay account, seller VAT process and Billing Meter event; no charge activation implied",
+      "dependencies": []
+    },
+    {
+      "id": "D02B",
+      "status": "BLOCKED-POLICY-ACTIVATION",
+      "inventory_status": "BLOCKED-POLICY-ACTIVATION",
+      "title": "Dogfood seller billing",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:295"
+      ],
+      "next": "Platform org/seller/customer activation and VAT process;0% placeholder cannot become legal advice",
+      "dependencies": []
+    },
+    {
+      "id": "D03",
+      "status": "BLOCKED-POLICY-CORPUS",
+      "inventory_status": "BLOCKED-POLICY-CORPUS",
+      "title": "Localized accounting adapters",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:326"
+      ],
+      "next": "Named target market/importer version/chart/tax/account mapping and accountant corpus; current branded adapters intentionally disabled",
+      "dependencies": []
+    },
+    {
+      "id": "D04",
+      "status": "BLOCKED-INFRA-POLICY",
+      "inventory_status": "BLOCKED-INFRA-POLICY",
+      "title": "Multi-region data plane",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:340"
+      ],
+      "next": "Second regional DB/store/backups/LB plus tenant relocation ownership before enforcement",
+      "dependencies": []
+    },
+    {
+      "id": "D05",
+      "status": "BLOCKED-CREDENTIAL-INFRA",
+      "inventory_status": "BLOCKED-CREDENTIAL-INFRA",
+      "title": "Production KEK custody",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:356"
+      ],
+      "next": "Choose/provision independent env/KMS key/role, lifecycle and real restore/rotation evidence before forcing validator",
+      "dependencies": []
+    },
+    {
+      "id": "D06",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Public API GA principal/session limits",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:370"
+      ],
+      "next": "Key-versus-user principal/scopes and session TTL/rotation/revocation UX; distributed limiter only after real signal",
+      "dependencies": []
+    },
+    {
+      "id": "D07",
+      "status": "BLOCKED-HUMAN-POLICY",
+      "inventory_status": "BLOCKED-HUMAN-POLICY",
+      "title": "Compliance certification",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:386"
+      ],
+      "next": "Choose scope/auditor; vendor/access/control evidence collection; source tests do not certify",
+      "dependencies": []
+    },
+    {
+      "id": "D08",
+      "status": "BLOCKED-COUNSEL",
+      "inventory_status": "BLOCKED-COUNSEL",
+      "title": "Retired archive lawful retention",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:399"
+      ],
+      "next": "Counsel lawful basis/retention/destruction/redacted derivative and access; no archive deletion",
+      "dependencies": []
+    },
+    {
+      "id": "D09",
+      "status": "BLOCKED-FINANCE",
+      "inventory_status": "BLOCKED-FINANCE",
+      "title": "Historical approved expense FX",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:427"
+      ],
+      "next": "Authorized reconciliation/restatement-versus-compensation/cutoff/communications; keep approved/paid values",
+      "dependencies": []
+    },
+    {
+      "id": "D10",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Transport commercial remainder",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:460"
+      ],
+      "next": "Plan tier/add-on/rate/payout and fee-invoice business choices only those still outstanding; 15%/\u20ac50 default already decided",
+      "dependencies": []
+    },
+    {
+      "id": "D13",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Drifted supplier claim-back recovery",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:690"
+      ],
+      "next": "Approved refresh/reopen/refuse semantics; existing demand/evidence fail closed and frozen money must not silently move",
+      "dependencies": []
+    },
+    {
+      "id": "D14",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Excise statutory ownership",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:733"
+      ],
+      "next": "Verified country rate/eligibility/deactivation ownership and statutory source; no invented entitlement",
+      "dependencies": []
+    },
+    {
+      "id": "D15",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Report EUR provenance history",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:778"
+      ],
+      "next": "Approve legacy provenance treatment without changing approved totals; item-level FX exists",
+      "dependencies": []
+    },
+    {
+      "id": "D16",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Inbound attachment recycle behavior",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:824"
+      ],
+      "next": "Confirm wanted recoverable duplicate email bytes versus documented direct hard delete",
+      "dependencies": []
+    },
+    {
+      "id": "D18",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Subscription grace/dunning policy",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:916"
+      ],
+      "next": "Choose first-failure suspension/grace/read-only, days and recipients before engineering change",
+      "dependencies": []
+    },
+    {
+      "id": "D19",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Actual14-day trial",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:947"
+      ],
+      "next": "Choose actual clock/downgrade/notices or correct permanent-tier promise; model still no trial_ends_at",
+      "dependencies": []
+    },
+    {
+      "id": "D20",
+      "status": "BLOCKED-INFRA-HUMAN",
+      "inventory_status": "BLOCKED-INFRA-HUMAN",
+      "title": "Actual deployment operations",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:962"
+      ],
+      "next": "VPS deploy/backup/offhost cron/health/image promotion/migration/environment/legal and real-address verification; repo YAML not external outcome",
+      "dependencies": []
+    },
+    {
+      "id": "D21",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Locale/input policy",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1006"
+      ],
+      "next": "Choose single locale or reviewed language/decimal-input/i18n policy; avoid browser-driven money semantics",
+      "dependencies": []
+    },
+    {
+      "id": "D22",
+      "status": "BLOCKED-OWNER-EXTERNAL",
+      "inventory_status": "BLOCKED-OWNER-EXTERNAL",
+      "title": "Private disclosure channel",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1040"
+      ],
+      "next": "Real monitored contact or enabled+externally tested GitHub private route; cannot invent mailbox",
+      "dependencies": []
+    },
+    {
+      "id": "D23",
+      "status": "BLOCKED-OWNER-ADMIN",
+      "inventory_status": "BLOCKED-OWNER-ADMIN",
+      "title": "Branch operating/protection model",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1060"
+      ],
+      "next": "Select reviewer/solo/recovery model then authorized settings/enforcement rehearsal; no settings mutation authorized by inventory",
+      "dependencies": []
+    },
+    {
+      "id": "D24",
+      "status": "BLOCKED-HUMAN-PRIVATE-EVIDENCE",
+      "inventory_status": "BLOCKED-HUMAN-PRIVATE-EVIDENCE",
+      "title": "History PII disposition",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1095"
+      ],
+      "next": "Named verifier+owner denylist and evidence-based per-value disposition;872 scanner rows not confirmed PII; no shared-history rewrite",
+      "dependencies": []
+    },
+    {
+      "id": "D25",
+      "status": "BLOCKED-PROVIDER-POLICY",
+      "inventory_status": "BLOCKED-PROVIDER-POLICY",
+      "title": "Stripe Portal contract",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1140"
+      ],
+      "next": "Dashboard plan-switch/cancel timing/paused resumption support and truthful pricing/runbook",
+      "dependencies": []
+    },
+    {
+      "id": "D26",
+      "status": "OPTIONAL-POLICY",
+      "inventory_status": "OPTIONAL-POLICY",
+      "title": "Shared supplier bank account",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1165"
+      ],
+      "next": "Current show behavior supports legitimate shared accounts; any refuse/mandatory reason/cross-tenant comparison is new policy",
+      "dependencies": []
+    },
+    {
+      "id": "D27",
+      "status": "BLOCKED-POLICY-COUNSEL",
+      "inventory_status": "BLOCKED-POLICY-COUNSEL",
+      "title": "Workspace destructive closure",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1187"
+      ],
+      "next": "Who/confirmation/grace/legal hold/statutory archive/audit/billing before deletion build; export already implemented",
+      "dependencies": []
+    },
+    {
+      "id": "D28",
+      "status": "OPTIONAL-ADMIN-HUMAN",
+      "inventory_status": "OPTIONAL-ADMIN-HUMAN",
+      "title": "Hosted dependency service alternative",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1281"
+      ],
+      "next": "V06a replacement implemented; hosted entitlement optional if chosen; human mapping acceptance still separate",
+      "dependencies": []
+    },
+    {
+      "id": "D29",
+      "status": "BLOCKED-OWNER-INFRA",
+      "inventory_status": "BLOCKED-OWNER-INFRA",
+      "title": "Production store/provider/cutover",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1317"
+      ],
+      "next": "Maintained supported provider/license and verified historical source-target-DB restore/migration plan; tested RustFS development candidate is not production approval",
+      "dependencies": []
+    },
+    {
+      "id": "D30",
+      "status": "BLOCKED-HUMAN-EVIDENCE",
+      "inventory_status": "BLOCKED-HUMAN-EVIDENCE",
+      "title": "Historical uncertain SMTP",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1366"
+      ],
+      "next": "Operator relay/message evidence, explicit separate resend/correction; unknown stays unknown, no recipient substitution",
+      "dependencies": []
+    },
+    {
+      "id": "D31",
+      "status": "BLOCKED-POLICY-CREDENTIAL",
+      "inventory_status": "BLOCKED-POLICY-CREDENTIAL",
+      "title": "External extraction provider",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1387"
+      ],
+      "next": "Provider/region/terms/document classes/budget/quotas/credentials/corpus before sending documents or paid activation",
+      "dependencies": []
+    },
+    {
+      "id": "D32",
+      "status": "BLOCKED-HUMAN-LEGAL-EVIDENCE",
+      "inventory_status": "BLOCKED-HUMAN-LEGAL-EVIDENCE",
+      "title": "Historical credit audit links",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1407"
+      ],
+      "next": "Private authoritative event/legal-document reconciliation; no hashed audit rewrite or guessed target",
+      "dependencies": []
+    },
+    {
+      "id": "D33",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Manual/payment artifact evidence policy",
+      "sources": [
+        "docs/DECISIONS-NEEDED.md:1422"
+      ],
+      "next": "Required method/reference/evidence/date/attestation and truthful confirmation basis; exported unknown disposition and retention/access/replacement/all-included choices. Existing optional reference preserved",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-AUTH-001",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Privileged MFA/step-up",
+      "sources": [
+        "docs/security/security-controls.json"
+      ],
+      "next": "Reviewed enrollment/authenticator/recovery and sensitive-action policy before adding WebAuthn/TOTP",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-SESS-001",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Session inactivity/reauthentication",
+      "sources": [
+        "docs/security/security-controls.json"
+      ],
+      "next": "Reviewed inactivity/reauthentication/TTL/risk-event UX coordinated with MFA",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-PORTAL-001",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Standing customer capability lifetime",
+      "sources": [
+        "docs/security/security-controls.json"
+      ],
+      "next": "Owner standing-link expiry/regeneration contract before changing existing links",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-SC-002",
+      "status": "BLOCKED-HOSTED-QUALIFICATION",
+      "inventory_status": "BLOCKED-HOSTED-QUALIFICATION",
+      "title": "Hosted credential scanner failure proof",
+      "sources": [
+        "docs/security/security-controls.json",
+        ".github/workflows/security-supply-chain.yml"
+      ],
+      "next": "Existing scanner implemented; verified-only scanner needs real hosted safe synthetic detectable credential failure evidence without logging material. Successful ordinary heads do not prove failing control.",
+      "dependencies": [
+        "Hosted service synthetic verifier behavior",
+        "Human/security acceptance"
+      ]
+    },
+    {
+      "id": "B00-GH-01",
+      "status": "BLOCKED-OWNER-ADMIN",
+      "inventory_status": "BLOCKED-OWNER-ADMIN",
+      "title": "Choose protected-branch operating policy",
+      "sources": [
+        "docs/BACKLOG.md:303",
+        "docs/DECISIONS-NEEDED.md:1060"
+      ],
+      "next": "Owner selects current proposal/reviewer/solo/recovery model; read source proposals unchanged.",
+      "dependencies": [
+        "D23"
+      ]
+    },
+    {
+      "id": "B00-GH-02",
+      "status": "BLOCKED-OWNER-ADMIN",
+      "inventory_status": "BLOCKED-OWNER-ADMIN",
+      "title": "Actions/environment settings",
+      "sources": [
+        "docs/BACKLOG.md:307",
+        "docs/reviews/BRANCH-PROTECTION-INTAKE-2026-10-28.md"
+      ],
+      "next": "Prepare concrete evidence; actual external changes/rehearsal require selected policy and authorized administrators.",
+      "dependencies": [
+        "B00-GH-01"
+      ]
+    },
+    {
+      "id": "B00-GH-03",
+      "status": "BLOCKED-OWNER-ADMIN",
+      "inventory_status": "BLOCKED-OWNER-ADMIN",
+      "title": "Eligible human code owners",
+      "sources": [
+        "docs/BACKLOG.md:307",
+        "docs/reviews/BRANCH-PROTECTION-INTAKE-2026-10-28.md"
+      ],
+      "next": "Prepare concrete evidence; actual external changes/rehearsal require selected policy and authorized administrators.",
+      "dependencies": [
+        "B00-GH-01"
+      ]
+    },
+    {
+      "id": "B00-GH-04",
+      "status": "BLOCKED-OWNER-ADMIN",
+      "inventory_status": "BLOCKED-OWNER-ADMIN",
+      "title": "Enforcement and recovery rehearsal",
+      "sources": [
+        "docs/BACKLOG.md:307",
+        "docs/reviews/BRANCH-PROTECTION-INTAKE-2026-10-28.md"
+      ],
+      "next": "Prepare concrete evidence; actual external changes/rehearsal require selected policy and authorized administrators.",
+      "dependencies": [
+        "B00-GH-01"
+      ]
+    },
+    {
+      "id": "B00-CI-02",
+      "status": "DEFERRED-SIGNAL",
+      "inventory_status": "DEFERRED-SIGNAL",
+      "title": "Cross-PR acceptance automation",
+      "sources": [
+        "docs/BACKLOG.md:308"
+      ],
+      "next": "Only evaluate if human dependency ledger proves insufficient; no need to create broad workflow solely to close row.",
+      "dependencies": [
+        "Observed ledger insufficiency"
+      ]
+    },
+    {
+      "id": "F10",
+      "status": "BLOCKED-HUMAN-PRIVATE-EVIDENCE",
+      "inventory_status": "BLOCKED-HUMAN-PRIVATE-EVIDENCE",
+      "title": "PII history release control",
+      "sources": [
+        "docs/BACKLOG.md:205",
+        "docs/DECISIONS-NEEDED.md:1095"
+      ],
+      "next": "Same active external private classification boundary as D24; do not equate current-tree/feature CI with cleared history.",
+      "dependencies": [
+        "D24"
+      ]
+    },
+    {
+      "id": "READINESS",
+      "status": "BLOCKED-INFRA-HUMAN",
+      "inventory_status": "BLOCKED-INFRA-HUMAN",
+      "title": "Served revision/health/restore/accountant acceptance",
+      "sources": [
+        "docs/BACKLOG.md:205",
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:323",
+        "docs/DECISIONS-NEEDED.md:962"
+      ],
+      "next": "Need actual approved deployed source/config/images, key restore/backup/readiness and permitted accountant/provider corpus. Synthetic isolated evidence is preparation.",
+      "dependencies": [
+        "D05",
+        "D20",
+        "D29"
+      ]
+    },
+    {
+      "id": "PLAN-ACCEPT",
+      "status": "BLOCKED-CREDENTIAL-INFRA-HUMAN",
+      "inventory_status": "BLOCKED-CREDENTIAL-INFRA-HUMAN",
+      "title": "Live calendar/notice acceptance",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Protected Google/Entra registration/consent credentials and real qualified-deployment provider/email journey; no phone-refresh SLA.",
+      "dependencies": [
+        "Provider configuration",
+        "Qualified deployment"
+      ]
+    },
+    {
+      "id": "PLAN-LIFECYCLE",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Standalone unscheduled work orders",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Review unscheduled entity/backlog/in-progress/acceptance/project links/migration semantics first.",
+      "dependencies": [
+        "Product lifecycle ownership"
+      ]
+    },
+    {
+      "id": "PLAN-INBOUND",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Two-way calendar ownership",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Choose provider/source-of-truth/conflicts/deletion/recurrence contract; currently outbound only.",
+      "dependencies": [
+        "Product/provider ownership"
+      ]
+    },
+    {
+      "id": "PLAN-CAPACITY",
+      "status": "BLOCKED-CREDENTIAL-INFRA-HUMAN",
+      "inventory_status": "BLOCKED-CREDENTIAL-INFRA-HUMAN",
+      "title": "Actual VPS queue/provider latency",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Authorized VPS/provider/SMTP workload incl429/backoff/OCR/mailbox contention; local harness preparation remains possible.",
+      "dependencies": [
+        "VPS credentials/infrastructure"
+      ]
+    },
+    {
+      "id": "PLAN-RETENTION",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Remote event cleanup policy",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Current disconnect revokes credentials/fences writes but retains events; optional removal needs approved user contract.",
+      "dependencies": [
+        "Remote-deletion retention policy"
+      ]
+    },
+    {
+      "id": "UI-EXPENSE-AUTH-01",
+      "status": "BLOCKED-POLICY",
+      "inventory_status": "BLOCKED-POLICY",
+      "title": "Expense/reimbursement capability alignment",
+      "sources": [
+        "inventory/ui-source.md",
+        "docs/BACKLOG.md"
+      ],
+      "next": "Review designated approver versus general business-role permission/copy; no proven bypass and no role loosening.",
+      "dependencies": [
+        "Product authorization intent"
+      ]
+    },
+    {
+      "id": "IMPECCABLE-FINAL-AUDIT",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "READY-AFTER-DEPENDENCY",
+      "title": "Final same-source polish and design acceptance",
+      "sources": [
+        "docs/BACKLOG.md:569",
+        "inventory/ui-source.md"
+      ],
+      "next": "User explicitly approved only mobile supplier-invoice44px screenshot. Exact CI actual bytes replace that single baseline; otherimages/assertions/tolerances unchanged. Fresh visual/full CI remains required.",
+      "dependencies": [
+        "Open IMP/CTX/UI engineering"
+      ]
+    },
+    {
+      "id": "BE-013",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Org switcher query shape",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Measure current organization-list N+1 before grouped read refactor; preserve memberships and served permissions.",
+      "dependencies": []
+    },
+    {
+      "id": "BE-017",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Worker metrics exception diagnostics",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Current bare except/pass for queue metrics remains; add bounded sanitized diagnostic without breaking worker availability or log storm.",
+      "dependencies": []
+    },
+    {
+      "id": "BE-018",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Nonbreaking API envelope harmonization",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Inventory actual consumers, document old/new list+error contracts and migrate incrementally without blanket breaking change.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-005",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Duplicate supplier invoice advisory",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Hard unique constraint rejected because legitimate reuse; tighten advisory only from demonstrated false/missing signals.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-010",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Remaining composite parent links",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Refresh nine dated candidates/tenant targets; source uses single-column report parent at162. Introduce only necessary tenant-safe constraints with data preflight and native deletion/tenant proof.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-015",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Tenant index measurement",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "EXPLAIN realistic tenant-filtered queries before index change; dated org-blind index suspicion alone not measured regression.",
+      "dependencies": []
+    },
+    {
+      "id": "ARCH-005",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Incremental controller extraction",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Refactor only touched bug/behavior slices; never rewrite god controllers merely for line count.",
+      "dependencies": []
+    },
+    {
+      "id": "ARCH-006",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "CPU-heavy request work",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Inventory remaining actual inline OCR/ingest/PDF work, measure loop/resource impact, preserve response/command completion before job extraction.",
+      "dependencies": []
+    },
+    {
+      "id": "ARCH-010",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Audit lock critical-path measurement",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Measure legitimate transaction/lock contention before narrowing audit advisory lock, preserving chain/atomic rollback.",
+      "dependencies": []
+    },
+    {
+      "id": "ARCH-011",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Frontend contract generation",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "OpenAPI drift gate exists; remaining optional P3 generated types require compatibility/migration plan, not claim missing gate.",
+      "dependencies": []
+    },
+    {
+      "id": "PERF-010",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Bound remaining bare list endpoints",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Inventory current endpoints/consumers, bound top meaningful routes without silent truncation or losing explicit totals.",
+      "dependencies": []
+    },
+    {
+      "id": "PERF-014",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Unbounded list rendering",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Coordinate server bounds/pagination with large-set selection/query scope and visible partial/error state.",
+      "dependencies": []
+    },
+    {
+      "id": "PERF-015",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Pool saturation deadline qualification",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Measure current db_pool_timeout and native starvation/recovery before lower timeout; retain valid long workloads.",
+      "dependencies": []
+    },
+    {
+      "id": "QA-004",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Beyond-design visual coverage",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Add only reviewable representative real-page baseline coverage with human baseline acceptance; no self-approved screenshots.",
+      "dependencies": []
+    },
+    {
+      "id": "QA-008",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Write-path performance gate",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Write concurrency mode/expense PG already exist; refresh remaining unmeasured meaningful paths before broader gate, no duplicated historical premise.",
+      "dependencies": []
+    },
+    {
+      "id": "FE-006",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "DataTable migration ratchet",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Incremental semantics-preserving remaining hand tables; coordinate CTX02B and IMP15, no wholesale restyle.",
+      "dependencies": []
+    },
+    {
+      "id": "FE-010",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Mutation success communication",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Verify retained silent-success actions under actual payload/readback; do not announce success before committed/readback truth.",
+      "dependencies": []
+    },
+    {
+      "id": "FE-012",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Native form validation",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Inventory button-only forms where required is inert; meaningful keyboard/submission/validation proofs, preserve money input.",
+      "dependencies": []
+    },
+    {
+      "id": "FE-014",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Shared button migration",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Incremental migration of remaining button systems with domain/pending/aria behavior unchanged; coordinate IMP14.",
+      "dependencies": []
+    },
+    {
+      "id": "FE-015",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Page decomposition only with defect",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Original deferred instruction permits decomposition only where bug fixed; no independent rewrite requirement.",
+      "dependencies": []
+    },
+    {
+      "id": "FE-016",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Client list bounds",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Alias UI half of PERF014/PERF010; preserve list/filter/export selection semantics.",
+      "dependencies": []
+    },
+    {
+      "id": "REBATE-MERGE-PREVIEW",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Dry-run rebate merge",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Active plan tail still names no merge_period dry-run; propose read-only canonical comparison from actual merge logic, no financial write.",
+      "dependencies": []
+    },
+    {
+      "id": "F4-DOC-REQUEST",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Claimant document request workflow",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "WO-AB explicitly leaves F4 PoA request-note workflow unbuilt; define actual request/recipient/status/recovery action before delivery, no fake status.",
+      "dependencies": []
+    },
+    {
+      "id": "ISSUE-ACTION-GROUPING",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Issue page action grouping",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Active plan low-priority retained grouping; inspect current actions, preserve financial/readback/recovery command boundaries.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-006",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Append-only DB enforcement",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Production role model/privilege/trigger policy before REVOKE; preserve application writer and rollback/migration capability.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-016",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "FX scale normalization",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Measured precision/rounding and historical money contract before changing6/8dp storage.",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-010",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "External audit anchor",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Select external trust/anchor ownership/storage/verification/retention and operational model.",
+      "dependencies": []
+    },
+    {
+      "id": "CONC-002",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "API rate policy",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Owner per-plan/burst limits; current limiter signal alone cannot authorize arbitrary raise.",
+      "dependencies": []
+    },
+    {
+      "id": "ARCH-012",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Refresh session/browser token design",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Coordinate D06/SEC-SESS001/MFA, reviewed TTL/rotation/revocation/storage contract.",
+      "dependencies": []
+    },
+    {
+      "id": "ARCH-009",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Distributed limiter",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Only after real per-replica need signal and reviewed shared-store operational contract.",
+      "dependencies": []
+    },
+    {
+      "id": "R55",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Peer benchmarks",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Cross-entity cohort minimum/contributor privacy/permitted comparison policy.",
+      "dependencies": []
+    },
+    {
+      "id": "EXTERNAL-PRICES",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "External price ingestion",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "ADR0027 provider/source licensing, scraping/stealth stance and market series contract.",
+      "dependencies": []
+    },
+    {
+      "id": "M4",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Transport settlement modeling",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Separate milestone for cash-at-pump/MPP and lawful settlement workflow.",
+      "dependencies": []
+    },
+    {
+      "id": "G4.7-MARGIN",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Transport margin report",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Needs my_prices/wholesale_prices source/commercial scope.",
+      "dependencies": []
+    },
+    {
+      "id": "VIES-LIVE",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Live VIES lookup",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Owner explicitly chooses new external lookup/job scope, timeout/terms/quality.",
+      "dependencies": []
+    },
+    {
+      "id": "MEMBERSHIP-SOAK",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Drop legacy users.org_id/role",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Recorded soak criteria and inventory every remaining reader before migration.",
+      "dependencies": []
+    },
+    {
+      "id": "CREATE-ORG",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Create another workspace",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Multi-workspace product policy before exposing create UX.",
+      "dependencies": []
+    },
+    {
+      "id": "ESIGN",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Signature provider",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Provider/terms/data flow/legal acceptance.",
+      "dependencies": []
+    },
+    {
+      "id": "PORTAL-PAYMENT",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Customer portal payment rail",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Chosen rail/legal/payment evidence/maker-checker contract.",
+      "dependencies": []
+    },
+    {
+      "id": "SMS",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "SMS notifications",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Channel/provider/recipient consent and per-message payer.",
+      "dependencies": []
+    },
+    {
+      "id": "COUNTRY-RETENTION",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Statutory per-country floors",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Counsel verified jurisdiction/record classes and non-shortening promises.",
+      "dependencies": []
+    },
+    {
+      "id": "SUPPLIER-ENTITY-DETECTION",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Network seller-entity attribution",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Authoritative seller matching contract for Q8/DKV/TFC/Moeve/BP; no guessing.",
+      "dependencies": []
+    },
+    {
+      "id": "CUSTOMER-REONBOARD",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Reopen terminal inactive customer",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Approved lifecycle edge/re-onboarding data semantics.",
+      "dependencies": []
+    },
+    {
+      "id": "PORTONE-INGEST",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Automatic PortOne rebates",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Source/provider matching/period/duplicate/correction contract.",
+      "dependencies": []
+    },
+    {
+      "id": "CONTRACT-TERM-TYPES",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Richer supplier term types",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Approved fee%,ratio,tier money semantics and quality corpus.",
+      "dependencies": []
+    },
+    {
+      "id": "NOTE-OVERRIDE-DELETE",
+      "status": "BLOCKED-POLICY-OR-SIGNAL",
+      "inventory_status": "BLOCKED-POLICY-OR-SIGNAL",
+      "title": "Remove note overrides",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+      ],
+      "next": "Approved delete/relink/recompute behavior against locked filing history.",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-X-SYS",
+      "status": "INVESTIGATE",
+      "inventory_status": "INVESTIGATE",
+      "title": "Retained Go x/sys advisory in PostgreSQL helper roles",
+      "sources": [
+        "docs/BACKLOG.md:19",
+        "docs/BACKLOG.md:80",
+        "deploy/postgres/Dockerfile"
+      ],
+      "next": "Retain x/sys0.1.0 Windows-specific CVE2026-39824 applicability and all ratings for observed linux/amd64. Investigate compatible supported parent/source maintenance; do not suppress module or imply future-platform clearance.",
+      "dependencies": []
+    },
+    {
+      "id": "OCR-PARSER-GAPS",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Integer amount and mixed net/tax/gross extraction gaps",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:107",
+        "backend/app/services/pdf_ocr.py",
+        "backend/app/services/parser.py"
+      ],
+      "next": "Plan explicitly retains integer-only amounts, mixed amount roles, supplier/header heuristics and line defaults. Define exact missing/extra fields/rows before heuristic changes; preserve original/normalized provenance and no invented totals.",
+      "dependencies": [
+        "OCR-ACCEPT for actual customer claim",
+        "OCR-PAGES for page identity"
+      ]
+    },
+    {
+      "id": "PROD-005",
+      "status": "BLOCKED-POLICY-CREDENTIAL",
+      "inventory_status": "BLOCKED-POLICY-CREDENTIAL",
+      "title": "EveryPay customer self-service billing",
+      "sources": [
+        "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:208",
+        "docs/DECISIONS-NEEDED.md:186"
+      ],
+      "next": "Old audit explicitly defers until seller-of-record/provider policy and activation. Existing seam is not proof every self-service action exists; review approved provider contract before implementation.",
+      "dependencies": [
+        "D02",
+        "Seller-of-record VAT and provider activation"
+      ]
+    },
+    {
+      "id": "UI-DESIGN-SYSTEM-REMAINDER",
+      "status": "READY-INVESTIGATE-LOW",
+      "inventory_status": "READY-INVESTIGATE-LOW",
+      "title": "Remaining shared UI migration and form/navigation pass",
+      "sources": [
+        "TODO.md:3056",
+        "inventory/ui-source.md"
+      ],
+      "next": "Historical TODO retains incremental design-system migration/form-label/nav-collapse work. Source-confirm concrete remaining defects or agreed usability outcome before broad edits; later grouped-navigation and login-label repairs already supersede older gaps.",
+      "dependencies": [
+        "Coordinate IMP14/15 and CTX/shared-shell work"
+      ]
+    },
+    {
+      "id": "SEC-UV-RUSTLS",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Fixed uv/rustls and public license traversal",
+      "sources": [
+        "backend/Dockerfile",
+        "backend/Dockerfile",
+        "docs/security/UV-RUSTLS-MAINTENANCE-2026-11-03.md"
+      ],
+      "next": "uv0.13.7 linked fixed rustls0.23.46, license parent0755 implemented at assigned qualified source; do not restore earlier0.13.6.",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-GOSU-EXPAT",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Gosu and coherent pyexpat/ElementTree repair",
+      "sources": [
+        "docs/security/GOSU-EXPAT-MAINTENANCE-2026-11-03.md",
+        "backend/Dockerfile"
+      ],
+      "next": "Actual gosu and system+both XML extension repair already implemented; maintain overlay until directly qualified published parent.",
+      "dependencies": []
+    },
+    {
+      "id": "SEC-ALPINE-20261101",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Alpine musl/zlib/libxpm maintenance",
+      "sources": [
+        "docs/security/ALPINE-IMAGE-MAINTENANCE-2026-11-01.md",
+        "backend/Dockerfile"
+      ],
+      "next": "Fixed package floors implemented; historical scanner inventories remain dated.",
+      "dependencies": []
+    },
+    {
+      "id": "EX17",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Direct terminal reimbursement bypass closure",
+      "sources": [
+        "backend/app/services/expenses.py",
+        "docs/security/REIMBURSEMENT-TERMINAL-BOUNDARY-2026-11-01.md"
+      ],
+      "next": "Both direct aliases refused; canonical payout command owns terminal evidence. Do not repeat older open note.",
+      "dependencies": []
+    },
+    {
+      "id": "EX18",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Recoverable exact payout creation",
+      "sources": [
+        "docs/plan/REIMBURSEMENT-CREATE-COMMAND-2026-10-27.md"
+      ],
+      "next": "Exact selection, approved+queued eligible population, versions/locks/receipt/readback implemented.",
+      "dependencies": []
+    },
+    {
+      "id": "EX20",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Recoverable operator payment record",
+      "sources": [
+        "docs/plan/REIMBURSEMENT-PAYMENT-COMMAND-2026-10-27.md"
+      ],
+      "next": "Version/total/child/maker-checker/receipt recovery and membership/audit deadlock repair implemented; bank confirmation remains unknown.",
+      "dependencies": []
+    },
+    {
+      "id": "EX19-MINIMUM",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Exported cancellation refusal",
+      "sources": [
+        "docs/security/REIMBURSEMENT-CANCEL-GUARD-2026-10-27.md"
+      ],
+      "next": "Guard only implemented; fullEX19 separately active.",
+      "dependencies": []
+    },
+    {
+      "id": "ACC02/ACC03",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Adapter refusal/help integration",
+      "sources": [
+        "docs/reviews/ACCOUNTING-ADAPTER-INTEGRATION-2026-10-29.md"
+      ],
+      "next": "Existing PR96 composed onto later qualified stack; disabled provider refusal/safe help/error handling implemented, no importer accepted.",
+      "dependencies": []
+    },
+    {
+      "id": "B00-INT-01",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Planning/finance migration integration",
+      "sources": [
+        "docs/reviews/CURRENT-DEVELOPMENT-INTEGRATION-2026-10-28.md"
+      ],
+      "next": "Joined155-revision baseline retained; additive planning receipts extend the current single history to156 revisions/head8d1f3a5c7e90. Migration policy/roundtrip checks remain mandatory.",
+      "dependencies": []
+    },
+    {
+      "id": "B00-CI-01",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Fail-closed result summaries",
+      "sources": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/security-supply-chain.yml",
+        "docs/security/CI-REQUIRED-COMPLETION-2026-10-28.md"
+      ],
+      "next": "Seven/four child exact-success summary jobs implemented; source hosted proof separate from required settings.",
+      "dependencies": []
+    },
+    {
+      "id": "B00-CI-03",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Prior failed-head triage",
+      "sources": [
+        "docs/BACKLOG.md:282"
+      ],
+      "next": "Failed81/88\u201390 logs triaged; current stack inherits repairs. No blanket reimplementation of older audit failures; supported paired dependency updates still need own qualification.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-PG-PARITY-01",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Column-subset SET NULL comparison",
+      "sources": [
+        "docs/reviews/CURRENT-DEVELOPMENT-INTEGRATION-2026-10-28.md"
+      ],
+      "next": "Comparison-only correction qualified; original tenant FK behavior preserved. AliasSYS06/DB019 no longer unimplemented schema repair.",
+      "dependencies": []
+    },
+    {
+      "id": "DB-PG-BOOTSTRAP-01",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Development PG metadata startup",
+      "sources": [
+        "docs/plan/DEVELOPMENT-POSTGRES-BOOTSTRAP-2026-10-28.md"
+      ],
+      "next": "Validated dialect-specific optional links implemented; bootstrap not migratedRLS or old-schema repair.",
+      "dependencies": []
+    },
+    {
+      "id": "CI-HOST-TSC",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Verified compiler consumed in hosted build",
+      "sources": [
+        "scripts/install_ci_typescript.py",
+        ".github/workflows/ci.yml:329",
+        "backend/tests/test_ci_typescript.py"
+      ],
+      "next": "Already installs rebuilt compiler before tsc/build. Older register/TODO backlog statement is stale.",
+      "dependencies": []
+    },
+    {
+      "id": "V01a/V01b/V02/V03/V04/V05a/V05b/V06a/V07a",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Security repairs and private triage preparation",
+      "sources": [
+        "docs/BACKLOG.md:925",
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:549"
+      ],
+      "next": "Narrow package/PDF process/JWT/origin/image/dependency-review/private inventory engineering implemented; owner production/history/human controls stay open.",
+      "dependencies": []
+    },
+    {
+      "id": "R011/R012/R014/R015/R016/R017/R018/R019/R020/R021",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Financial/capture command and admission repairs",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:555",
+        "docs/BACKLOG.md:963"
+      ],
+      "next": "Existing issue/cash/ZIP/attachments/credit/cap+1/atomic quota/access/download source boundaries implemented; historical uncertainty stays explicit.",
+      "dependencies": []
+    },
+    {
+      "id": "FP-P01/FP-P02/FS16-01/02/03/04/05",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Published automation and durable children",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:558"
+      ],
+      "next": "Immutable rules/lossless editor/preview/durable mail automation implemented; historical SMTP acceptance/resend is D30.",
+      "dependencies": []
+    },
+    {
+      "id": "SYS-01/SYS-02/SYS-03/SYS-04/SYS-10",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "OIDC/readiness/volume/image/proxy repairs",
+      "sources": [
+        "docs/BACKLOG.md:735"
+      ],
+      "next": "Engineering implemented, current security maintenance supersedes old versions; human/provider release remains.",
+      "dependencies": []
+    },
+    {
+      "id": "CAP-RETRY/CAP-COMMAND/CAP-RESOURCE/CAP-INGRESS/CAP-REGISTRY/CAP-DISK-FULL/CAP-OBJECT-READ/CAP-WORKER-SOURCE-HASH",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Capture admission/source boundaries",
+      "sources": [
+        "docs/BACKLOG.md:751"
+      ],
+      "next": "Named bounded repairs implemented; broaderCAP-CAPACITY/email races remain separate.",
+      "dependencies": []
+    },
+    {
+      "id": "CAP-VERIFY-STREAM/CAP-PREVIEW-READ/CAP-ISSUED-ATTACHMENT-READ/CAP-LOCAL-READ-ERROR/CAP-DIGEST-ERROR-CLASS/CAP-S3-READ-ERROR-CLASS/CAP-EXPORT-REDEEM/CAP-EXPORT-ARTIFACT-INTEGRITY",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Stored-read/token/integrity repairs",
+      "sources": [
+        "docs/BACKLOG.md:816"
+      ],
+      "next": "Fixed digest/page/issued and error/token integrity boundaries implemented; unknown-size export buffering, purge races/response-loss remain separate.",
+      "dependencies": []
+    },
+    {
+      "id": "CI-DEPS-SQLA21/PERF-HARNESS-STARTUP/CI-DEPS-BACKEND-REST/CI-DEPS-FRONTEND/CI-LAZY-PAGE-RETRY/CI-PUBLIC-MODULE-RECOVERY/UI-PORTAL-READ-TRUTH",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Dependency/perf/module/read recovery repairs",
+      "sources": [
+        "docs/BACKLOG.md:786"
+      ],
+      "next": "Retained implemented code; do not reapply old dependency versions. Unexplained original browser failures remain observations.",
+      "dependencies": []
+    },
+    {
+      "id": "OCR-CP01/02/03/04/OCR-REGION-01/02/03/04/05/OCR-MEMORY-01/OCR-CONFIRM-01/02/OCR-LOCK-01",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "OCR control panel/regions and races",
+      "sources": [
+        "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md",
+        "docs/reviews/OCR-REGION-REVIEW-2026-10-21.md"
+      ],
+      "next": "Implemented bounded selected-region/correction/confirm/authority/deadlock repair; customer invoice/language/page/profile/model acceptance not implied.",
+      "dependencies": []
+    },
+    {
+      "id": "PLAN-BOARD/PLAN-EDIT/PLAN-DATES/PLAN-DELIVERY/PLAN-CALENDAR/PLAN-CI-CONTRACT/PLAN-CI-GO1273",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Planning source implementation",
+      "sources": [
+        "inventory/ui-source.md"
+      ],
+      "next": "Board/edit/date/outbound delivery/calendar implemented; real provider pilot and separate API schemas/create receipt stay open.",
+      "dependencies": []
+    },
+    {
+      "id": "IMP-01/02/03/04/05/06/07/08/09/10/16/17/CTX-01/CTX-02",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Bounded UI/context repairs",
+      "sources": [
+        "inventory/ui-source.md"
+      ],
+      "next": "Already implemented foundations; CTX02A/B/C, IMP11\u201315, shared shell/body remaining scope active.",
+      "dependencies": []
+    },
+    {
+      "id": "N1/N4/L2/X1/X2/X3/X4",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Capture fields/pages/VAT/upload/SSO/visual source",
+      "sources": [
+        "docs/BACKLOG.md:997",
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:560"
+      ],
+      "next": "N1 identifiers/maskedIBAN/line amounts/PO, N4 previews,L2 rate breakdown,batch/progress/keyvault/visualCI implemented.",
+      "dependencies": []
+    },
+    {
+      "id": "WO-K/WO-L/WO-M/WO-N/WO-O/WO-P/WO-Q/WO-R/WO-S/WO-T/WO-U/WO-V/WO-W/WO-AA/WO-AB/WO-AC/WO-AD/WO-AE/WO-AF/WO-AG/WO-AH/WO-AI/WO-AJ",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Historical arcs/old unchecked boxes",
+      "sources": [
+        "TODO.md:469",
+        "backend/app/services/transport/customer_lifecycle.py:540",
+        "backend/app/api/routes/transport/recovery.py:116",
+        "backend/app/services/job_handlers.py:420"
+      ],
+      "next": "Credit CORRECTS PDF/statutory advisory/MT940/ignored supplier workflow/supplier list/bin/form labels/bundle/onboarding/load/navigation/vault/readiness/deadlines/archive/receipt jobs already shipped. R19 old unchecked box stale, R14 infra decision+synthetic drill complete but real production DR acceptance separate.",
+      "dependencies": []
+    },
+    {
+      "id": "D02A/D11/D12/D17",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Historical decisions resolved/superseded",
+      "sources": [
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md:1040",
+        "TODO.md:469"
+      ],
+      "next": "Plan ladder resolved; unmatched supplier list and audited ignored/reinstate implemented byWO-L; anonymous estimate resolved authenticated-only2026-09-05. Do not reopen old decision headings.",
+      "dependencies": []
+    },
+    {
+      "id": "BE-015/ARCH-007",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Future durable native SMTP delivery",
+      "sources": [
+        "docs/plan/FP-P02-DURABLE-AUTOMATION-2026-10-16.md"
+      ],
+      "next": "Future durable mail job mechanics implemented, old generic no-retry statement superseded for this shared automation path; historical delivery truth D30 and any other direct callers require source-specific audit.",
+      "dependencies": []
+    },
+    {
+      "id": "BE-024",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Per-kind job deadlines",
+      "sources": [
+        "backend/app/services/jobs.py",
+        "backend/tests/test_be024_job_deadline.py"
+      ],
+      "next": "Implemented wait_for budgets and per-kind long-job exceptions; honest thread-work continuation boundary remains.",
+      "dependencies": []
+    },
+    {
+      "id": "OPS-012",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Pinned image sources",
+      "sources": [
+        "backend/Dockerfile",
+        ".github/workflows/ci.yml"
+      ],
+      "next": "Current immutable pins/provenance replace old floating-image premise, no blanket unpinned-tag chore.",
+      "dependencies": []
+    },
+    {
+      "id": "PERF-018/PERF-019/PERF-020/CONC-001/R15",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Prior dashboard/tenant/seed and concurrency source work",
+      "sources": [
+        "docs/plan/REFERENCE-INTEGRATION-PLAN.md",
+        "backend/scripts/perf_harness.py"
+      ],
+      "next": "Dashboard/tenant construction/seed statistics fixes and read/write concurrency measurements exist. Older TODO R15 entirely-unmeasured concurrency wording is stale; remaining resource/platform acceptance distinct.",
+      "dependencies": []
+    },
+    {
+      "id": "CAP-EXPORT-RECOVERY",
+      "status": "BLOCKED-POLICY-PARTIAL-READY",
+      "inventory_status": "BLOCKED-POLICY-PARTIAL-READY",
+      "title": "Archive artifact binding/purge/lost response remainder",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:309",
+        "docs/security/EXPORT-REDEMPTION-AND-INTEGRITY-2026-10-19.md"
+      ],
+      "next": "Workspace export binds token to row; archive still newest-ready selection. Reproduce purge races and review token/artifact-binding migration and lost-response/re-download semantics before changing single-use promise. Unknown legacy size remains bounded-contract work.",
+      "dependencies": [
+        "Reviewed response-loss/re-download and retained-artifact policy"
+      ]
+    },
+    {
+      "id": "HISTORY-RECON",
+      "status": "BLOCKED-HUMAN-EVIDENCE",
+      "inventory_status": "BLOCKED-HUMAN-EVIDENCE",
+      "title": "Legacy SMTP and credit semantic truth",
+      "sources": [
+        "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:326"
+      ],
+      "next": "Cross-reference D30/D32; no historic correction/autoresend can be inferred from passing new-code tests.",
+      "dependencies": [
+        "D30",
+        "D32"
+      ]
+    },
+    {
+      "id": "E16-05",
+      "status": "IMPLEMENTED-HUMAN-REVIEW",
+      "inventory_status": "IMPLEMENTED-HUMAN-REVIEW",
+      "title": "Bounded synthetic finance/restore pilot",
+      "sources": [
+        "docs/BACKLOG.md:971"
+      ],
+      "next": "Synthetic capped pilot implemented; accountant/provider/customer and production KEK/hardware acceptance explicitly not closed.",
+      "dependencies": [
+        "READINESS"
+      ]
+    },
+    {
+      "id": "R51",
+      "status": "DEFERRED-NO-SUBJECT",
+      "inventory_status": "DEFERRED-NO-SUBJECT",
+      "title": "Materialized metric drift guard",
+      "sources": [
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md:899"
+      ],
+      "next": "No materialized rollup exists; trigger assignment when one lands. Do not create unnecessary rollup to close task.",
+      "dependencies": []
+    },
+    {
+      "id": "ADVERTISED-PRICES",
+      "status": "SUPERSEDED-NO-TASK",
+      "inventory_status": "SUPERSEDED-NO-TASK",
+      "title": "Removed reliability-table premise",
+      "sources": [
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md:903"
+      ],
+      "next": "WO-Q deliberately derives from existing records; advertised_prices table requirement is dead, old blocker note not a build request.",
+      "dependencies": []
+    },
+    {
+      "id": "FIN-REPORT-REVIEW-CYCLE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Invalidate stale expense reviews across owner mutation cycles",
+      "sources": [
+        "backend/app/api/routes/expenses.py"
+      ],
+      "next": "112+42 portable and21 native PostgreSQL controls pass; preserve first-submit version1 and current role/money policy.",
+      "dependencies": []
+    },
+    {
+      "id": "FIN-AP-EXPORTED-CANCEL-GUARD",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Refuse cancellation after committed AP bank export evidence",
+      "sources": [
+        "backend/app/services/payment_run.py"
+      ],
+      "next": "31 portable,4 native PostgreSQL and14 browser controls pass; retain links/status/version/audit/ledger on refusal.",
+      "dependencies": []
+    },
+    {
+      "id": "CAP-PDF-SCRATCH",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Confine PDF OCR scratch to owned process staging",
+      "sources": [
+        "backend/app/services/pdf_process.py"
+      ],
+      "next": "Actual pytesseract.save timeout orphan reproduced; private TMPDIR fix passes10 process controls including child reaping and subsequent work.",
+      "dependencies": []
+    },
+    {
+      "id": "FIN-EXPENSE-AUTHORITY-WAIT",
+      "status": "READY-NEXT-WAVE",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Fresh mandatory approver authority after admission waits",
+      "sources": [
+        "backend/app/api/routes/expenses.py"
+      ],
+      "next": "Real team-API revocation while decision waits still commits; implement fresh Principal under membership\u2192report order, preserving exact flag/role policy.",
+      "dependencies": []
+    },
+    {
+      "id": "FIN-AP-CREATE-SELECTION",
+      "status": "READY-NEXT-WAVE",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Prevent overlapping AP run creation from stealing invoices",
+      "sources": [
+        "backend/app/services/payment_run.py"
+      ],
+      "next": "Reproduce HTTP overlapping selections on actual PG; deterministic invoice locks and fresh eligibility before linking, with exact no-write conflict.",
+      "dependencies": []
+    },
+    {
+      "id": "FIN-AP-SETTLEMENT-BOUNDARY",
+      "status": "READY-NEXT-WAVE",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Conserve AP ledger and cumulative balances under concurrent payment",
+      "sources": [
+        "backend/app/services/payment_run.py"
+      ],
+      "next": "Reproduce manual/manual and run/manual races before narrow existing-payment lock/balance repair; no new money/correction policy.",
+      "dependencies": []
+    },
+    {
+      "id": "JOBS-LATE-GENERATION",
+      "status": "READY-NEXT-WAVE",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Fence terminal job results to the original lease generation",
+      "sources": [
+        "backend/app/services/jobs.py"
+      ],
+      "next": "Actual run_once success/failure stale generation overwrote newer state in PG; freeze original worker/attempt through rollback and compare-and-set terminal/retry writes.",
+      "dependencies": []
+    }
+  ]
+}

@@ -5,10 +5,15 @@ import { Link } from "react-router-dom";
 import { AssignmentNotifications } from "../components/AssignmentNotifications";
 import { CalendarConnections } from "../components/CalendarConnections";
 import { Badge, Button, ConfirmDialog, EmptyState, ErrorState, QueryState, Skeleton, TabPanel, Tabs } from "../components/ui";
-import { api, apiError } from "../lib/api";
+import { api, apiError, tokenStore } from "../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { browserTimeZone, formatDate, formatTime, formatWeekday } from "../lib/format";
 import { addLocalDays, assignmentWindow, localDateValue, localTimeValue, startOfLocalWeek } from "../lib/scheduleDates";
+import {
+  checkPlanningCommand, clearPlanningCommand, PLANNING_TIMEOUT_MS, preparePlanningCommand,
+  readCurrentPlanningAssignment, readPlanningCommand, sendPlanningCommand,
+  type SavedPlanningCommand, type PlanningWriteResult,
+} from "../lib/planningCreateCommand";
 
 interface Assignment {
   id: string; project_id: string; project_code?: string | null; project_name?: string | null;
@@ -108,6 +113,7 @@ function PlanningWorkspace() {
   const qc = useQueryClient();
   const { user, org, hasPerm } = useAuth();
   const scope = `${user?.id ?? ""}:${org?.id ?? ""}`;
+  const commandScope = { userId: user?.id ?? "", orgId: org?.id ?? "" };
   const currentScope = useRef(scope); currentScope.current = scope;
   useEffect(() => { currentScope.current = scope; return () => { currentScope.current = ""; }; }, [scope]);
   const plannerPermission = hasPerm("invoice.write");
@@ -123,13 +129,26 @@ function PlanningWorkspace() {
   const [staleForm, setStaleForm] = useState(false);
   const [uncertainSave, setUncertainSave] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<Assignment | null>(null);
-  useEffect(() => { setForm(null); setErr(null); setNotice(null); setOverlapNote(null); setCancelTarget(null); setStaleForm(false); setUncertainSave(false); setFilterMember(""); setFilterProject(""); }, [scope]);
+  const createOperation = useRef<{ controller: AbortController; generation: number; token: string | null } | null>(null);
+  const [createStage, setCreateStage] = useState<"preparing" | "saving" | "checking" | "verifying" | null>(null);
+  const [createMissing, setCreateMissing] = useState(false);
+  useEffect(() => () => { createOperation.current?.controller.abort(); }, []);
+  useEffect(() => {
+    let restored: Editor | null = null;
+    try { const saved = readPlanningCommand(commandScope); if (saved) restored = { ...saved.draft, original: null }; } catch { /* The recovery alert owns unreadable storage. */ }
+    setForm(restored); setErr(null); setNotice(null); setOverlapNote(null); setCancelTarget(null); setStaleForm(false); setUncertainSave(false); setFilterMember(""); setFilterProject("");
+  }, [scope]);
+  let pendingCreate: SavedPlanningCommand | null = null;
+  let createReferenceError: string | null = null;
+  try { pendingCreate = readPlanningCommand(commandScope); }
+  catch (error) { createReferenceError = apiError(error); }
+  const frozenCreate = pendingCreate !== null || createReferenceError !== null;
   const weekEnd = addLocalDays(weekStart, 7);
   const days = Array.from({ length: 7 }, (_, i) => addLocalDays(weekStart, i));
   const timeZone = browserTimeZone();
   const assignments = useQuery<Assignment[]>({
     queryKey: ["assignments", user?.id, org?.id, weekStart.toISOString(), filterMember, filterProject],
-    queryFn: async () => (await api.get("/schedule/assignments", { params: {
+    queryFn: async ({ signal }) => (await api.get("/schedule/assignments", { signal, timeout: PLANNING_TIMEOUT_MS, params: {
       start: weekStart.toISOString(), end: weekEnd.toISOString(),
       ...(filterMember ? { assignee_user_id: filterMember } : {}), ...(filterProject ? { project_id: filterProject } : {}),
     } })).data });
@@ -145,6 +164,7 @@ function PlanningWorkspace() {
     mutationFn: async ({ draft, writeScope }: { draft: Editor; writeScope: string }) => {
       if (currentScope.current !== writeScope) throw new Error("The workspace changed. Open this assignment again.");
       const original = draft.original, base = original ? editValues(original) : null;
+      if (!original) throw new Error("Open a new assignment request before creating work.");
       const changedWindow = !base || ["date", "end_date", "start", "end", "all_day"].some((k) => draft[k as keyof Editor] !== base[k as keyof Editor]);
       const body = { ...(changedWindow ? assignmentWindow(draft) : {}), all_day: draft.all_day,
         assignee_user_id: draft.assignee_user_id, note: draft.note || null,
@@ -153,7 +173,7 @@ function PlanningWorkspace() {
         ...(original ? { clear_note: !draft.note, set_client_notice: true, expected_revision: original.revision,
           client_notice_hours_before: draft.client_notice ? Number(draft.client_notice) : null }
           : { project_id: draft.project_id, ...(draft.client_notice ? { client_notice_hours_before: Number(draft.client_notice) } : {}) }) };
-      return (original ? await api.patch<WriteResult>(`/schedule/assignments/${original.id}`, body) : await api.post<WriteResult>("/schedule/assignments", body)).data;
+      return (await api.patch<WriteResult>(`/schedule/assignments/${original.id}`, body)).data;
     },
     onSuccess: async (data, { draft, writeScope }) => {
       if (currentScope.current !== writeScope) return;
@@ -172,6 +192,73 @@ function PlanningWorkspace() {
       setErr(conflict ? "This assignment changed since you opened it. Reload the latest values before saving." : uncertain ? "The save outcome is unconfirmed. Check the saved plan before creating or changing this assignment again. Your draft is still here." : apiError(e));
     },
   });
+  const hasSavedCreate = () => {
+    try { return readPlanningCommand(commandScope) !== null; } catch { return true; }
+  };
+  const beginCreate = () => {
+    if (!canPlan || createOperation.current) return null;
+    const operation = { controller: new AbortController(), generation: tokenStore.generation(), token: tokenStore.get() };
+    createOperation.current = operation; setCreateStage("preparing"); setCreateMissing(false); setErr(null);
+    return operation;
+  };
+  const ownsCreate = (operation: NonNullable<typeof createOperation.current>) =>
+    createOperation.current === operation && !operation.controller.signal.aborted && currentScope.current === scope &&
+    operation.generation === tokenStore.generation() && operation.token === tokenStore.get();
+  const finishCreate = (operation: NonNullable<typeof createOperation.current>) => {
+    if (!ownsCreate(operation)) return;
+    createOperation.current = null; setCreateStage(null);
+  };
+  const verifyCreate = async (original: PlanningWriteResult, saved: SavedPlanningCommand, operation: NonNullable<typeof createOperation.current>) => {
+    if (!ownsCreate(operation)) return;
+    setCreateStage("verifying");
+    const current = await readCurrentPlanningAssignment(commandScope, saved, original, operation.controller.signal);
+    if (!ownsCreate(operation)) return;
+    await qc.cancelQueries({ queryKey: ["assignments", user?.id, org?.id] });
+    if (!ownsCreate(operation)) return;
+    await assignments.refetch({ throwOnError: true });
+    if (!ownsCreate(operation)) return;
+    clearPlanningCommand(commandScope, saved.key);
+    setForm(null); setStaleForm(false); setUncertainSave(false); setErr(null);
+    setNotice(current.revision > original.assignment.revision
+      ? "Assignment created. Its details have changed since the original save; review the current plan below."
+      : "Assignment saved.");
+    setOverlapNote(original.overlaps.length ? `Saved with a scheduling overlap for ${original.assignment.assignee_email}. This warning belongs to the original save; check the current assignments before work starts.` : null);
+    void qc.invalidateQueries({ queryKey: ["calendar-connections", user?.id, org?.id] });
+  };
+  const createAssignment = async (source: Editor) => {
+    if (source.original || hasSavedCreate() || createReferenceError) return;
+    const operation = beginCreate(); if (!operation) return;
+    const frozen = { ...source };
+    try {
+      const saved = await preparePlanningCommand(commandScope, frozen, user?.email ?? "", operation.controller.signal);
+      if (!ownsCreate(operation)) return;
+      setCreateStage("saving");
+      const original = await sendPlanningCommand(commandScope, saved, operation.controller.signal);
+      await verifyCreate(original, saved, operation);
+    } catch (error) {
+      if (ownsCreate(operation)) setErr(apiError(error));
+    } finally { finishCreate(operation); }
+  };
+  const checkAssignment = async (retry = false) => {
+    const operation = beginCreate(); if (!operation) return;
+    try {
+      const saved = readPlanningCommand(commandScope);
+      if (!saved) throw new Error("No saved assignment request remains. Review the plan before creating work.");
+      setCreateStage(retry ? "saving" : "checking");
+      const original = retry
+        ? await sendPlanningCommand(commandScope, saved, operation.controller.signal, true)
+        : await checkPlanningCommand(commandScope, saved, operation.controller.signal);
+      if (!ownsCreate(operation)) return;
+      if (!original) {
+        setCreateMissing(true);
+        setErr("No committed assignment is visible for this reference yet. Check again or explicitly retry the original request with its same key and details.");
+        return;
+      }
+      await verifyCreate(original, saved, operation);
+    } catch (error) {
+      if (ownsCreate(operation)) setErr(apiError(error));
+    } finally { finishCreate(operation); }
+  };
   const transition = useMutation({
     mutationFn: async ({ row, status, writeScope }: { row: Assignment; status: string; writeScope: string }) => {
       if (currentScope.current !== writeScope) throw new Error("The workspace changed. Reload your work plan.");
@@ -186,8 +273,9 @@ function PlanningWorkspace() {
     },
     onError: (e, { writeScope }) => { if (currentScope.current !== writeScope) return; setCancelTarget(null); setErr(axios.isAxiosError(e) && e.response?.status === 409 ? "This assignment changed. Refresh the plan before choosing another status." : apiError(e)); },
   });
-  const busy = save.isPending || transition.isPending;
+  const busy = save.isPending || transition.isPending || createStage !== null;
   function newAssignment() {
+    if (hasSavedCreate() || createReferenceError || createOperation.current) return;
     setErr(null); setNotice(null); setStaleForm(false); setUncertainSave(false);
     const date = localDateValue(weekStart);
     setForm({ original: null, project_id: projects.data?.[0]?.id ?? "", assignee_user_id: members.data?.[0]?.user_id ?? "",
@@ -234,8 +322,20 @@ function PlanningWorkspace() {
     <header className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight">Work planning</h1>
       <p className="text-sm text-slate-500">{plannerPermission ? "Plan assignments, see who is working and track progress." : "Your assignments. Confirm when you accept the plan; mark done when the work is finished."}</p></div>
       <div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={busy || assignments.isFetching} onClick={() => { void assignments.refetch(); }}>Refresh plan</Button>
-        {plannerPermission && members.data !== null && <Button onClick={newAssignment} disabled={busy || !!form || !canPlan || !projects.data?.length || assignments.isError}>New assignment</Button>}</div>
+        {plannerPermission && members.data !== null && <Button className="scroll-mt-24" onClick={newAssignment} disabled={busy || frozenCreate || !!form || !canPlan || !projects.data?.length || assignments.isError}>New assignment</Button>}</div>
     </header>
+    {createReferenceError && <p role="alert" className="text-sm text-rose-700">{createReferenceError}</p>}
+    {pendingCreate && <section aria-label="Saved assignment request" className="card min-w-0 space-y-3 p-4 [overflow-wrap:anywhere]">
+      <h2 className="text-sm font-semibold">An assignment request needs checking.</h2>
+      <p className="text-sm">Request reference: {pendingCreate.key}. The original dates, person and work details are kept in the locked draft.</p>
+      <p className="text-sm text-text-secondary">Check its saved outcome before creating a replacement. Checking only reads; email and calendar delivery status are separate.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" disabled={!canPlan || busy} onClick={() => void checkAssignment()}>Check assignment outcome</Button>
+        {createMissing && <Button size="sm" variant="secondary" disabled={!canPlan || busy} onClick={() => void checkAssignment(true)}>Retry original assignment request</Button>}
+      </div>
+      {createStage && <p role="status" className="text-sm text-text-secondary">{createStage === "saving" ? "Saving the original assignment request…" : createStage === "checking" ? "Checking the original assignment outcome…" : "Verifying the assignment and current plan…"}</p>}
+      {!canPlan && <p className="text-sm text-text-secondary">Planning permission is required to check this request.</p>}
+    </section>}
     {err && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{err}</div>}
     {notice && <p role="status" className="rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-800">{notice}</p>}
     {overlapNote && <p role="status" className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">{overlapNote}</p>}
@@ -254,9 +354,9 @@ function PlanningWorkspace() {
       <label className="min-w-44 flex-1 text-xs font-medium text-slate-600">Team member<select aria-label="Filter by team member" className="input mt-1" value={filterMember} disabled={busy} onChange={(e) => setFilterMember(e.target.value)}><option value="">Everyone</option>{members.data?.map((m) => <option key={m.user_id} value={m.user_id}>{m.name || m.email}</option>)}</select></label>
       <label className="min-w-44 flex-1 text-xs font-medium text-slate-600">Project<select aria-label="Filter by project" className="input mt-1" value={filterProject} disabled={busy} onChange={(e) => setFilterProject(e.target.value)}><option value="">All projects</option>{projects.data?.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}</select></label>
     </div>}
-    {form && <form aria-label="Assignment editor" className="card space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); if (!busy && !staleForm && !uncertainSave) save.mutate({ draft: form, writeScope: scope }); }}>
-      <div><h2 className="text-lg font-semibold text-slate-800">{form.original ? "Edit assignment" : "New assignment"}</h2><p className="text-xs text-slate-500">Times use {timeZone}. Overlaps are warnings; they do not block saving.</p></div>
-      <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {form && <form aria-label="Assignment editor" className="card space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); if (!busy && !staleForm && !uncertainSave && !frozenCreate) { if (form.original) save.mutate({ draft: form, writeScope: scope }); else void createAssignment(form); } }}>
+      <div><h2 className="text-lg font-semibold text-slate-800">{form.original ? "Edit assignment" : "New assignment"}</h2><p className="text-xs text-slate-500">Times use {!form.original && pendingCreate ? pendingCreate.payload.time_zone : timeZone}. Overlaps are warnings; they do not block saving.</p></div>
+      <fieldset disabled={busy || frozenCreate} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div><label className="label" htmlFor="plan-project">Project</label><select id="plan-project" className="input" required value={form.project_id} disabled={!!form.original} onChange={(e) => setForm({ ...form, project_id: e.target.value })}>{projects.data?.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}</select></div>
         <div><label className="label" htmlFor="plan-person">Person</label><select id="plan-person" className="input" required value={form.assignee_user_id} onChange={(e) => setForm({ ...form, assignee_user_id: e.target.value })}>{members.data?.map((m) => <option key={m.user_id} value={m.user_id}>{m.name || m.email}</option>)}</select></div>
         <div><label className="label" htmlFor="plan-date">Start date</label><input id="plan-date" className="input" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value, end_date: form.end_date < e.target.value ? e.target.value : form.end_date })} /></div>
@@ -265,8 +365,8 @@ function PlanningWorkspace() {
         {!form.all_day && <><div><label className="label" htmlFor="plan-from">From</label><input id="plan-from" type="time" className="input" required value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></div><div><label className="label" htmlFor="plan-to">To</label><input id="plan-to" type="time" className="input" required value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></div></>}
       </fieldset>
       {form.all_day && <p className="text-xs text-slate-500">All-day work includes the selected end date.</p>}
-      <div><label className="label" htmlFor="plan-note">Work details</label><textarea id="plan-note" className="input min-h-20" maxLength={2000} disabled={busy} value={form.note} placeholder="What needs doing, access details or equipment" onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
-      <fieldset disabled={busy} className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3"><legend className="px-1 text-sm font-semibold text-slate-700">Email notifications</legend>
+      <div><label className="label" htmlFor="plan-note">Work details</label><textarea id="plan-note" className="input min-h-20" maxLength={2000} disabled={busy || frozenCreate} value={form.note} placeholder="What needs doing, access details or equipment" onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
+      <fieldset disabled={busy || frozenCreate} className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3"><legend className="px-1 text-sm font-semibold text-slate-700">Email notifications</legend>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.notify_assignee} onChange={(e) => setForm({ ...form, notify_assignee: e.target.checked })} />Email the assigned person about changes</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.reminders_enabled} onChange={(e) => setForm({ ...form, reminders_enabled: e.target.checked })} />Send an upcoming-work reminder</label>
         <div className="grid gap-3 sm:grid-cols-2"><div><label className="label" htmlFor="plan-client-notice-enabled">Customer arrival email</label><select id="plan-client-notice-enabled" className="input" value={form.client_notice_enabled} onChange={(e) => setForm({ ...form, client_notice_enabled: e.target.value as Editor["client_notice_enabled"] })}><option value="default">Use workspace preference</option><option value="off">Off for this assignment</option><option value="on">On for this assignment</option></select></div>
@@ -274,8 +374,8 @@ function PlanningWorkspace() {
         <p className="text-xs text-slate-500">Customer email requires a customer address on the project. Email delivery status is separate from saving an assignment.</p>
       </fieldset>
       {(staleForm || (uncertainSave && form.original)) && <p role="status" className="text-sm text-amber-700">Reloading replaces this editor’s values with the current saved assignment. <Button size="sm" variant="secondary" disabled={assignments.isFetching} onClick={() => { void reloadEditor(); }}>Reload latest values</Button></p>}
-      {uncertainSave && !form.original && <div role="status" className="space-y-2 text-sm text-amber-700"><p>Saving again could create a duplicate. Check this week’s saved assignments below, including any changed filters. Close the editor after reviewing the result.</p><Button size="sm" variant="secondary" disabled={assignments.isFetching} onClick={() => { void assignments.refetch(); }}>Check saved plan</Button></div>}
-      <div className="flex flex-wrap gap-2"><Button type="submit" loading={save.isPending} disabled={busy || staleForm || uncertainSave || !form.project_id || !form.assignee_user_id}>{form.original ? "Save changes" : "Save assignment"}</Button><Button variant="secondary" disabled={busy} onClick={() => { setForm(null); setStaleForm(false); setUncertainSave(false); }}>Close editor</Button></div>
+      {uncertainSave && !form.original && !frozenCreate && <div role="status" className="space-y-2 text-sm text-amber-700"><p>Saving again could create a duplicate. Check this week’s saved assignments below, including any changed filters. Close the editor after reviewing the result.</p><Button size="sm" variant="secondary" disabled={assignments.isFetching} onClick={() => { void assignments.refetch(); }}>Check saved plan</Button></div>}
+      <div className="flex flex-wrap gap-2"><Button type="submit" loading={save.isPending || createStage === "saving"} disabled={busy || frozenCreate || staleForm || uncertainSave || !form.project_id || !form.assignee_user_id}>{form.original ? "Save changes" : "Save assignment"}</Button><Button variant="secondary" disabled={busy || frozenCreate} onClick={() => { setForm(null); setStaleForm(false); setUncertainSave(false); }}>Close editor</Button></div>
     </form>}
     <Tabs label="Work planning views" idBase={tabId} tabs={[{ value: "board", label: "Board" }, { value: "calendar", label: "Calendar" }]} value={view} onChange={setView} />
     <TabPanel idBase={tabId} value={view}><QueryState query={assignments} loading={<Skeleton className="h-64 w-full" />} errorTitle="Couldn’t load the work plan">{(rows) => <>

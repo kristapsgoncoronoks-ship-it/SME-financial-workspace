@@ -59,6 +59,8 @@ def run(operation: str, filename: str, content: bytes):
         "OCR_PROCESS_TIMEOUT_SECONDS": str(settings.ocr_process_timeout_seconds),
     }
     with tempfile.TemporaryDirectory(prefix="invoice-pdf-") as directory:
+        # A killed OCR child cannot run its library's scratch-file cleanup.
+        env["TMPDIR"] = directory
         with tempfile.TemporaryFile() as source, tempfile.TemporaryFile() as output:
             source.write(content)
             source.seek(0)

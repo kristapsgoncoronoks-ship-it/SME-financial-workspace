@@ -1,5 +1,9 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 
+// Keep the first development-loader failure, including its actual Vite asset
+// URL and browser state, rather than waiting for a retry to begin tracing.
+test.use({ trace: "retain-on-failure", screenshot: "only-on-failure" });
+
 // Synthetic browser routes qualify the action, its frozen request identity and
 // visible recovery. Real authorization, persistence and row locks are separately
 // proved by API/PostgreSQL tests and the connected acceptance journey.
@@ -54,6 +58,7 @@ type Wire = {
   holdReadback: boolean; heldReadbacks: Route[]; readbackStatus: number;
   lookupStatus: number; lookupOffline: boolean; holdLookup: boolean; heldLookup?: Route;
   receiptPatch?: (receipt: Record<string, unknown>) => Record<string, unknown>;
+  cancellationReceipts: Record<string, { batch: Batch; released_reports: Report[]; reason: string | null }>;
 };
 const wires = new WeakMap<Page, Wire>();
 async function setup(page: Page, options: { batches?: Batch[]; holdPrepare?: boolean } = {}) {
@@ -63,7 +68,7 @@ async function setup(page: Page, options: { batches?: Batch[]; holdPrepare?: boo
     commitOnFailure: true, lostResponse: false, holdPay: false, committed: false,
     holdPrepare: options.holdPrepare ?? false, heldPrepare: [], prepareStatus: 200,
     holdReadback: false, heldReadbacks: [], readbackStatus: 200,
-    lookupStatus: 200, lookupOffline: false, holdLookup: false,
+    lookupStatus: 200, lookupOffline: false, holdLookup: false, cancellationReceipts: {},
   };
   wires.set(page, wire);
   await page.addInitScript(() => {
@@ -92,6 +97,8 @@ async function setup(page: Page, options: { batches?: Batch[]; holdPrepare?: boo
     if (path.startsWith("/reimbursements/commands/")) {
       expect(req.method()).toBe("GET");
       const key = path.slice("/reimbursements/commands/".length);
+      if (wire.cancellationReceipts[key]) return route.fulfill(json({ status: "committed", command_key: key,
+        operation: "reimbursement_cancelled", target_id: wire.cancellationReceipts[key].batch.id, result: wire.cancellationReceipts[key] }));
       wire.lookups.push(key);
       expect(account).toBe("A");
       expect(req.headers()["x-expected-user-id"]).toBe(USER.id);
@@ -102,12 +109,15 @@ async function setup(page: Page, options: { batches?: Batch[]; holdPrepare?: boo
       const receipt: Record<string, unknown> = { id: "synthetic-payment-receipt", status: "committed", command_key: key, operation: "reimbursement_paid", target_id: wire.result.id, result: clone(wire.result) };
       return route.fulfill(json(wire.receiptPatch ? wire.receiptPatch(receipt) : receipt));
     }
-    const batchId = wire.batches.find((batch) => path === `/reimbursements/${batch.id}` || path === `/reimbursements/${batch.id}/pay`)?.id;
-    if (batchId && path === `/reimbursements/${batchId}` && req.method() === "DELETE") {
-      wire.deletes.push(batchId);
+    const batchId = wire.batches.find((batch) => path === `/reimbursements/${batch.id}` || path === `/reimbursements/${batch.id}/pay` || path === `/reimbursements/${batch.id}/cancel`)?.id;
+    if (batchId && path === `/reimbursements/${batchId}/cancel` && req.method() === "POST") {
+      wire.deletes.push(batchId); // Existing cross-action assertions count cancellations separately from payment POSTs.
       const batch = wire.batches.find((row) => row.id === batchId)!;
+      const released = batch.reports.map((report) => ({ ...report, version: report.version + 1 }));
       batch.status = "cancelled"; batch.version += 1; batch.report_count = 0; batch.reports = [];
-      return route.fulfill({ status: 204, body: "" });
+      const result = { batch: clone(batch), released_reports: released, reason: req.postDataJSON().reason as string | null };
+      wire.cancellationReceipts[req.headers()["idempotency-key"]] = result;
+      return route.fulfill(json(result));
     }
     if (batchId && path === `/reimbursements/${batchId}` && req.method() === "GET") {
       wire.detailReads.push(batchId);
@@ -538,8 +548,19 @@ async function setupExpenseReport(page: Page, options: { status?: string; own?: 
     if (path === "/reimbursements/eligible") return route.fulfill(json({ items: [], total: 0, page: 1, page_size: 100 }));
     return route.fulfill(json([]));
   });
+  const browserErrors: string[] = [], consoleErrors: string[] = [];
+  const failedReads: { url: string; error: string | null }[] = [], errorResponses: { url: string; status: number; contentType: string | undefined }[] = [];
+  page.on("pageerror", error => browserErrors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("requestfailed", request => failedReads.push({ url: request.url(), error: request.failure()?.errorText ?? null }));
+  page.on("response", response => { if (response.status() >= 400) errorResponses.push({ url: response.url(), status: response.status(), contentType: response.headers()["content-type"] }); });
   await page.goto(`/expenses/${EXPENSE_ID}`);
-  await expect(page.getByRole("heading", { name: report.title, level: 1, exact: true })).toBeVisible();
+  try {
+    await expect(page.getByRole("heading", { name: report.title, level: 1, exact: true })).toBeVisible();
+  } catch (error) {
+    await test.info().attach("expense-detail-setup-diagnostics", { body: JSON.stringify({ browserErrors, consoleErrors, failedReads, errorResponses, url: page.url(), body: await page.locator("body").innerText() }), contentType: "application/json" });
+    throw error;
+  }
   return wire;
 }
 test.afterEach(async ({ page }, info) => {
@@ -620,3 +641,44 @@ test("EX17 payout guidance and link stay contained at narrow enlarged text", asy
   await page.screenshot({ path: info.outputPath("expense-payout-390-root32.png"), fullPage: true });
   expect(wire.decisions).toEqual([]);
 });
+
+for (const [width, fontSize] of [[320, 16], [390, 32], [1280, 16]]) {
+  test(`payout facts, actions and shell remain contained at ${width}px/${fontSize}px text`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 });
+    const longMaker = `synthetic-${"operator".repeat(15)}@example.test`;
+    const open = { ...openBatch(), created_by: longMaker };
+    const exported = { ...openBatch(OTHER_BATCH_ID), created_by: longMaker, export_count: 1, exported_at: STAMP, last_msg_id: `synthetic-${"message".repeat(20)}` };
+    const paid = paidResult(openBatch("40000000-0000-4000-8000-000000000003"), { version: 3, reference: "Synthetic paid reference", expected_total_eur: "60.00", report_versions: {} });
+    const wire = await setup(page, { batches: [open, exported, paid] });
+    await page.evaluate(size => { document.documentElement.style.fontSize = `${size}px`; }, fontSize);
+    await expect(page.getByRole("group", { name: `Payout batch ${BATCH_ID}`, exact: true })).toBeVisible();
+    const bounds = await page.evaluate(() => ({ viewport: innerWidth, root: document.documentElement.scrollWidth, body: document.body.scrollWidth, groups: [...document.querySelectorAll('[role="group"][aria-label^="Payout batch"]')].map(e => ({ name: e.getAttribute("aria-label"), width: e.getBoundingClientRect().width, client: e.clientWidth, scroll: e.scrollWidth })) }));
+    expect(bounds.root).toBeLessThanOrEqual(width); expect(bounds.body).toBeLessThanOrEqual(width);
+    for (const box of bounds.groups) expect(box.scroll).toBeLessThanOrEqual(box.client + 1);
+    const openRow = page.getByRole("group", { name: `Payout batch ${BATCH_ID}`, exact: true });
+    await expect(openRow).toContainText("€60.00"); await expect(openRow).toContainText("2 reports"); await expect(openRow).toContainText(longMaker);
+    const blockedRow = page.getByRole("group", { name: `Payout batch ${OTHER_BATCH_ID}`, exact: true });
+    await expect(blockedRow.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    await expect(blockedRow).toContainText("An export does not confirm payment."); await expect(blockedRow).toContainText(exported.last_msg_id);
+    await expect(page.getByRole("group", { name: `Payout batch ${paid.id}`, exact: true })).toContainText("Bank confirmation is unknown.");
+    const reference = openRow.getByRole("textbox", { name: "Payment reference", exact: true });
+    const exact = `SYNTHETIC-${"R".repeat(150)}`;
+    await reference.fill(exact); await expect(reference).toHaveValue(exact);
+    for (const name of ["Record payment", "Cancel", "Export CSV", "Export SEPA"]) {
+      const action = openRow.getByRole("button", { name, exact: true });
+      await action.focus(); await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+      await expect(action).toBeFocused(); await expect(action).toBeInViewport({ ratio: 0.99 });
+    }
+    const recordAction = openRow.getByRole("button", { name: "Record payment", exact: true });
+    await recordAction.focus(); await page.keyboard.press("Enter");
+    await expect(dialog(page)).toContainText("€60.00"); await expect(dialog(page)).toContainText(exact);
+    await page.keyboard.press("Escape"); await expect(recordAction).toBeFocused();
+    const cancelAction = openRow.getByRole("button", { name: "Cancel", exact: true });
+    await cancelAction.focus(); await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Cancel this reimbursement batch?", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape"); await expect(cancelAction).toBeFocused();
+    expect(wire.posts).toEqual([]); expect(wire.deletes).toEqual([]);
+    await info.attach("payout-reflow-bounds", { body: JSON.stringify({ bounds, scope: "Synthetic Chromium at the stated viewport/root text sizes, exact facts and native keyboard review; no financial action, device or complete WCAG acceptance." }), contentType: "application/json" });
+    await page.screenshot({ path: info.outputPath("payout-reflow.png"), fullPage: true });
+  });
+}

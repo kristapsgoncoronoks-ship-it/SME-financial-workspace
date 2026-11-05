@@ -27,12 +27,11 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
-from app.core.storage import StorageError, StorageReadTooLarge, sha256_hex
+from app.core.storage import StorageError, StorageReadTooLarge
 from app.models.archive_export import ArchiveExport
 from app.models.document import Document
 from app.models.workspace_export import WorkspaceExport
@@ -58,17 +57,17 @@ def _integrity_error() -> AppError:
     )
 
 
-async def load_verified(org_id: str, sha256: str, size: int | None) -> bytes | None:
-    """Read only the admitted export, before consuming its download transaction.
+async def prepare_file(org_id: str, sha256: str, size: int | None) -> documents.StoredFile | None:
+    """Stage only the admitted export before consuming its download transaction.
 
     Recorded sizes bound the storage read; historical rows without a size retain
     their original read contract. Both paths verify the recorded digest. This
-    prepares bytes only: the caller owns its token, audit and commit/rollback.
+    stages bytes only: the caller owns cleanup, token, audit and commit/rollback.
     """
     if size is not None and size < 0:
         raise _integrity_error()
     try:
-        data = await documents.load(
+        staged = await documents.load_file(
             documents.EXPORTS,
             org_id,
             sha256,
@@ -76,13 +75,12 @@ async def load_verified(org_id: str, sha256: str, size: int | None) -> bytes | N
         )
     except StorageReadTooLarge as exc:
         raise _integrity_error() from exc
-    if data is None:
+    if staged is None:
         return None
-    if size is not None and len(data) != size:
+    if (size is not None and staged.size != size) or staged.sha256 != sha256:
+        staged.cleanup()
         raise _integrity_error()
-    if await run_in_threadpool(sha256_hex, data) != sha256:
-        raise _integrity_error()
-    return data
+    return staged
 
 
 async def purge_expired(db: AsyncSession, org_id: str, *, now: datetime | None = None) -> dict:

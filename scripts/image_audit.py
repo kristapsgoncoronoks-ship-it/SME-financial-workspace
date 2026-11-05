@@ -423,6 +423,50 @@ def scanner_reports(args: list[str], image_id: str, prefix: Path, result: dict) 
     return bom, data
 
 
+def write_cache_evidence(cache: Path, output: Path) -> None:
+    """Record the observed final DB, without implying every scan used these bytes."""
+    receipt = {
+        "scanner": SCANNER,
+        "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "status": "unavailable",
+        "scope": "post-audit cache observation; not an in-process per-scan DB attestation",
+    }
+    database, metadata = cache / "db/trivy.db", cache / "db/metadata.json"
+    try:
+        before = (database.stat(), metadata.stat())
+        metadata_bytes = metadata.read_bytes()
+        details = json.loads(metadata_bytes)
+        if not isinstance(details, dict):
+            raise TypeError("invalid DB metadata")
+        digest = hashlib.sha256()
+        with database.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        after = (database.stat(), metadata.stat())
+        stable = all(
+            (a.st_dev, a.st_ino, a.st_size, a.st_mtime_ns, a.st_ctime_ns)
+            == (b.st_dev, b.st_ino, b.st_size, b.st_mtime_ns, b.st_ctime_ns)
+            for a, b in zip(before, after, strict=True)
+        )
+        receipt.update(
+            status="recorded" if stable else "unstable",
+            stable_during_hash=stable,
+            database_bytes=before[0].st_size,
+            database_sha256=digest.hexdigest(),
+            metadata_sha256=hashlib.sha256(metadata_bytes).hexdigest(),
+            metadata={
+                key: details[key]
+                for key in ("Version", "NextUpdate", "UpdatedAt", "DownloadedAt")
+                if key in details
+            },
+        )
+    except (OSError, ValueError, TypeError):
+        # A failed download/corrupt cache must never inherit a previous receipt.
+        receipt["error"] = "database or metadata could not be recorded"
+    output.write_text(json.dumps(receipt, indent=2) + "\n")
+
+
 def readable_summary(summary: dict) -> str:
     def cell(value) -> str:
         value = html.escape(redact(str(value))).replace("\n", " ").replace("\r", " ")
@@ -552,10 +596,13 @@ if __name__ == "__main__":
     for role in ROLES:
         parser.add_argument("--" + role, default="bidit-ci-" + role + ":review")
     args = parser.parse_args()
-    raise SystemExit(
-        run(
+    try:
+        audit_exit = run(
             args.root,
             args.output,
             {r: getattr(args, r.replace("-", "_")) for r in ROLES},
         )
-    )
+    finally:
+        if os.environ.get("TRIVY_CACHE_DIR"):
+            write_cache_evidence(Path(os.environ["TRIVY_CACHE_DIR"]), args.output / "trivy-db.json")
+    raise SystemExit(audit_exit)

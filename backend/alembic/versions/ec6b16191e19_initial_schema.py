@@ -500,4 +500,8 @@ def downgrade() -> None:
         batch_op.drop_index(batch_op.f('ix_ecb_rates_currency'))
 
     op.drop_table('ecb_rates')
+    # PostgreSQL retains native enum types after their last table is removed.
+    # Drop only this revision's type; dependent external objects must refuse.
+    if op.get_bind().dialect.name == 'postgresql':
+        sa.Enum(name='invoice_status').drop(op.get_bind(), checkfirst=True)
     # ### end Alembic commands ###

@@ -67,10 +67,10 @@ from __future__ import annotations
 import re
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 
-from app.api.deps import CurrentUser, DbSession, require_perm
+from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
 from app.api.upload_read import read_upload
 from app.core import authz
 from app.core.errors import NotFoundError
@@ -321,7 +321,9 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 @router.get("/{statement_sha256}/file")
-async def download_statement(statement_sha256: str, current: CurrentUser, db: DbSession):
+async def download_statement(
+    statement_sha256: str, current: CurrentUser, db: DbSession, request: Request
+):
     """The original statement bytes a finding points at (WO-AF).
 
     Read-permission only, like the queue: looking at the file behind a finding
@@ -338,8 +340,11 @@ async def download_statement(statement_sha256: str, current: CurrentUser, db: Db
     )
     if row is None:
         raise NotFoundError("Statement not found", code="statement_not_found")
+    identity = (row.id, row.size, row.filename)
     try:
-        content = await documents.load(documents.STATEMENTS, current.org_id, statement_sha256)
+        content = await documents.load_verified_original(
+            documents.STATEMENTS, current.org_id, statement_sha256, size=row.size
+        )
     except StorageReadError:
         raise
     except StorageError:
@@ -348,6 +353,15 @@ async def download_statement(statement_sha256: str, current: CurrentUser, db: Db
         raise NotFoundError("Statement not found", code="statement_not_found")
     if content is None:
         raise NotFoundError("Statement not found", code="statement_not_found")
+    fresh, _ = await refresh_current_identity(request, db, current)
+    authz.require(fresh, authz.Permission.VAT_READ)
+    row = await document_registry.find(
+        db, current.org_id, sha256=statement_sha256, kind=documents.STATEMENTS
+    )
+    if row is None or (row.id, row.size, row.filename) != identity:
+        raise NotFoundError(
+            "Statement changed while preparing the download", code="statement_not_found"
+        )
     await audit.record(
         db,
         audit.A.DOC_DOWNLOAD,
@@ -366,6 +380,7 @@ async def download_statement(statement_sha256: str, current: CurrentUser, db: Db
         headers={
             "Content-Disposition": content_disposition(row.filename, fallback="statement.csv"),
             "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
         },
     )
 

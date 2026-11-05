@@ -52,6 +52,7 @@ class _S3Files:
         self.faults = {}
         self.handles = []
         self.lookups = []
+        self.uploads = {}
 
     def get_object(self, *, Bucket, Key):
         assert Bucket == "synthetic-export-bucket"
@@ -77,8 +78,31 @@ class _S3Files:
         assert Bucket == "synthetic-export-bucket"
         self.local.put(Key, Body, kwargs.get("ContentType"))
 
+    def create_multipart_upload(self, *, Bucket, Key, **kwargs):
+        assert Bucket == "synthetic-export-bucket"
+        upload_id = f"synthetic-{len(self.uploads)}"
+        self.uploads[upload_id] = (Key, {})
+        return {"UploadId": upload_id}
+
+    def upload_part(self, *, Bucket, Key, UploadId, PartNumber, Body):
+        assert Bucket == "synthetic-export-bucket"
+        assert self.uploads[UploadId][0] == Key
+        self.uploads[UploadId][1][PartNumber] = Body
+        return {"ETag": f"part-{PartNumber}"}
+
+    def complete_multipart_upload(self, *, Bucket, Key, UploadId, MultipartUpload):
+        assert Bucket == "synthetic-export-bucket"
+        key, parts = self.uploads.pop(UploadId)
+        assert key == Key
+        self.local.put(Key, b"".join(parts[n] for n in sorted(parts)))
+
+    def abort_multipart_upload(self, *, Bucket, Key, UploadId):
+        assert Bucket == "synthetic-export-bucket"
+        self.uploads.pop(UploadId, None)
+
     def assert_closed(self):
         assert all(handle.source.closed and handle.close_calls == 1 for handle in self.handles)
+        assert not self.uploads
 
 
 async def _seed_s3(auth_client, db_session, tmp_path):

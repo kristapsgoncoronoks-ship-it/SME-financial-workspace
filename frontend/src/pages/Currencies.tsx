@@ -58,9 +58,9 @@ export default function CurrenciesPage() {
 
   const input = "rounded-lg border border-slate-300 px-2 py-1 text-sm w-full";
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
+    <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 basis-64">
           <h1 className="text-xl font-semibold">Currencies</h1>
           <p className="text-slate-500">
             The currencies this workspace invoices in. Amount handling stays exact — decimal
@@ -85,7 +85,7 @@ export default function CurrenciesPage() {
         Show archived currencies
       </label>
 
-      <Card>
+      <Card className="min-w-0">
         <QueryState
           query={currencies}
           loading={<Skeleton className="h-24 w-full" />}
@@ -103,15 +103,21 @@ export default function CurrenciesPage() {
           errorTitle="Couldn’t load currencies"
         >
           {(rows) => (
-            <table className="w-full text-sm">
+            <div role="region" aria-label="Workspace currencies" tabIndex={0} className="relative max-w-full overflow-x-auto"
+              onFocusCapture={(event) => {
+                if (event.target !== event.currentTarget) event.target.scrollIntoView({ block: "nearest", inline: "nearest" });
+              }}>
+
+            <table className="w-full text-sm [overflow-wrap:normal]">
+              <caption className="sr-only">Workspace currencies</caption>
               <thead>
                 <tr className="text-left text-xs text-text-secondary">
-                  <th className="py-1">Code</th>
-                  <th className="py-1">Name</th>
-                  <th className="py-1">Symbol</th>
-                  <th className="py-1">Decimals</th>
-                  <th className="py-1">Status</th>
-                  {admin && <th className="py-1"></th>}
+                  <th scope="col" className="py-1">Code</th>
+                  <th scope="col" className="py-1">Name</th>
+                  <th scope="col" className="py-1">Symbol</th>
+                  <th scope="col" className="py-1">Decimals</th>
+                  <th scope="col" className="py-1">Status</th>
+                  {admin && <th scope="col" className="py-1"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -129,10 +135,11 @@ export default function CurrenciesPage() {
                       )}
                     </td>
                     {admin && (
-                      <td className="py-1 text-right">
+                      <td className="py-1 pr-1 text-right sm:pr-0">
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="scroll-mx-1 sm:scroll-mx-0"
                           loading={toggle.isPending}
                           onClick={() => toggle.mutate(c)}
                         >
@@ -144,6 +151,7 @@ export default function CurrenciesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </QueryState>
       </Card>

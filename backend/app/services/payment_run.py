@@ -375,10 +375,17 @@ async def mark_paid(
 
 async def cancel_run(db: AsyncSession, org_id: str, run: PaymentRun) -> list[Invoice]:
     """Cancel an open or approved run: unlink its invoices (they return to the
-    scheduled pool). A paid run cannot be cancelled."""
+    scheduled pool). Paid runs and runs with recorded bank exports cannot be
+    cancelled: a file may already be with the bank."""
     if run.status not in (RUN_OPEN, RUN_APPROVED):
         raise PaymentRunError(
             f"Run is {run.status}; only an open or approved run can be cancelled."
+        )
+    if run.export_count != 0 or run.exported_at is not None or run.last_msg_id is not None:
+        raise ConflictError(
+            "Run export records prevent cancellation. Check the bank file’s status "
+            "with your bank or accountant before arranging another payment.",
+            code="run_exported_cannot_cancel",
         )
     invoices = await run_invoices(db, org_id, run.id)
     for inv in invoices:

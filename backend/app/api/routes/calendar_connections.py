@@ -22,6 +22,31 @@ class ConnectOut(BaseModel):
     authorization_url: str
 
 
+class CalendarConnectionOut(BaseModel):
+    id: str
+    status: str
+    calendar_name: str
+    last_synced_at: str | None
+    error: str | None
+    pending: int
+    failed: int
+
+
+class CalendarProviderOut(BaseModel):
+    provider: str
+    configured: bool
+    reason: str | None
+    connection: CalendarConnectionOut | None
+
+
+class CalendarConnectionsOut(BaseModel):
+    providers: list[CalendarProviderOut]
+
+
+class CalendarRetryOut(BaseModel):
+    status: str
+
+
 def _cookie_path() -> str:
     from urllib.parse import urlsplit
 
@@ -29,7 +54,7 @@ def _cookie_path() -> str:
     return f"{base_path}{settings.api_v1_prefix.rstrip('/')}{_PREFIX}"
 
 
-@router.get("")
+@router.get("", response_model=CalendarConnectionsOut)
 async def list_connections(current: CurrentUser, db: DbSession):
     return await calendar_sync.status(db, current.org_id, current.id)
 
@@ -56,7 +81,12 @@ async def connect(
     return ConnectOut(authorization_url=url)
 
 
-@public_router.get("/{provider}/callback")
+@public_router.get(
+    "/{provider}/callback",
+    status_code=303,
+    response_class=RedirectResponse,
+    responses={303: {"description": "Return to work planning with the connection outcome."}},
+)
 async def callback(
     provider: str,
     request: Request,
@@ -99,7 +129,7 @@ async def disconnect(provider: str, current: CurrentUser, db: DbSession):
     return response
 
 
-@router.post("/{provider}/retry", status_code=202)
+@router.post("/{provider}/retry", status_code=202, response_model=CalendarRetryOut)
 async def retry(provider: str, current: CurrentUser, db: DbSession):
     try:
         await calendar_sync.retry(db, current.org_id, current.id, provider)

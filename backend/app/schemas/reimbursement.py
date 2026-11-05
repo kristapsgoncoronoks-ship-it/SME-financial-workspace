@@ -78,6 +78,27 @@ class BatchPay(BaseModel):
         return q2(value) if value is not None else None
 
 
+class BatchCancel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: int = Field(strict=True, ge=1)
+    report_versions: dict[str, ReportVersion] = Field(max_length=1000)
+    reason: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("report_versions")
+    @classmethod
+    def valid_version_ids(cls, value: dict[str, int]) -> dict[str, int]:
+        canonical = {str(UUID(key)): version for key, version in value.items()}
+        if len(canonical) != len(value):
+            raise ValueError("Send each report version once")
+        return canonical
+
+    @field_validator("reason")
+    @classmethod
+    def canonical_reason(cls, value: str | None) -> str | None:
+        return value.strip() or None if value is not None else None
+
+
 class PaymentEvidence(BaseModel):
     basis: Literal["operator_recorded", "legacy_unknown", "not_recorded", "unavailable"] = (
         "not_recorded"
@@ -145,6 +166,13 @@ class BatchOut(BaseModel):
 
 class BatchDetailOut(BatchOut):
     reports: list[ReimbursementReportOut]
+
+
+class BatchCancelOut(BaseModel):
+    batch: BatchDetailOut
+    # Frozen at cancellation, even after reports enter another batch later.
+    released_reports: list[ReimbursementReportOut]
+    reason: str | None = None
 
 
 class EligibleReportOut(BaseModel):

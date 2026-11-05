@@ -78,7 +78,7 @@ const ALL_CLEAR = {
   receivables: { ...FULL_DASHBOARD.receivables, overdue: "0.00" },
 };
 
-async function mockApi(page: Page, dashboard: unknown): Promise<void> {
+async function mockApi(page: Page, dashboard: unknown, options: { onAnalytics?: (path: string) => void; analyticsFailure?: { active: boolean } } = {}): Promise<void> {
   await page.addInitScript(() => localStorage.setItem("invoiceiq_token", "e2e-token"));
 
   const json = (body: unknown, status = 200) => ({
@@ -98,7 +98,10 @@ async function mockApi(page: Page, dashboard: unknown): Promise<void> {
     if (path === "/invoices")
       return route.fulfill(json({ items: [], total: 0, page: 1, page_size: 20 }));
     // Spend-snapshot analytics — empty datasets render their empty branches.
-    if (path.startsWith("/analytics/")) return route.fulfill(json([]));
+    if (path.startsWith("/analytics/")) {
+      options.onAnalytics?.(path);
+      return route.fulfill(options.analyticsFailure?.active ? json({ detail: "Synthetic analytics unavailable" }, 503) : json({ rows: [], currency: "USD", available_currencies: ["USD"] }));
+    }
     return route.fulfill(json([]));
   });
 }
@@ -182,4 +185,63 @@ test("all-clear payload shows the positive empty state", async ({ page }) => {
   await expect(page.getByText("Nothing needs you right now")).toBeVisible();
   // Zero-count approvals render no worklist card.
   await expect(page.getByText("All invoices awaiting approval")).toHaveCount(0);
+});
+
+test("roles without reporting neither load chart code nor request analytics", async ({ page }) => {
+  const chartRequests: string[] = [], reads: string[] = [];
+  page.on("request", request => { if (/DashboardSpendSnapshot|components\/Charts|\/recharts[.-]/.test(request.url())) chartRequests.push(request.url()); });
+  await mockApi(page, REDUCED_DASHBOARD, { onAnalytics: path => reads.push(path) });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Captures to review/s })).toBeVisible();
+  expect(reads).toEqual([]);
+  expect(chartRequests).toEqual([]);
+  await expect(page.getByRole("button", { name: "Show spend snapshot", exact: true })).toHaveCount(0);
+});
+
+test("spend analytics load on native expansion, preserve currency and reuse cached reads after reopening", async ({ page }, testInfo) => {
+  const chartRequests: string[] = [], reads: string[] = [];
+  page.on("request", request => { if (/DashboardSpendSnapshot|components\/Charts|\/recharts[.-]/.test(request.url())) chartRequests.push(request.url()); });
+  await mockApi(page, FULL_DASHBOARD, { onAnalytics: path => reads.push(path) });
+  await page.goto("/");
+  const expand = page.getByRole("button", { name: "Show spend snapshot", exact: true });
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  expect(reads).toEqual([]); expect(chartRequests).toEqual([]);
+  await expand.focus(); await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Spend over time · USD", exact: true })).toBeVisible();
+  await expect.poll(() => reads.length).toBe(4);
+  expect(chartRequests.some(url => url.includes("DashboardSpendSnapshot"))).toBe(true);
+  await expect(page.getByRole("link", { name: "Decide →", exact: true })).toHaveAttribute("href", "/invoices/inv-77");
+  await page.getByRole("button", { name: "Hide spend snapshot", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Spend over time · USD", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Show spend snapshot", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Spend over time · USD", exact: true })).toBeVisible();
+  expect(reads).toHaveLength(4);
+  await testInfo.attach("optional-analytics-requests", { body: JSON.stringify({ reads, chartRequests }), contentType: "application/json" });
+});
+
+test("failed analytics reads stay local and retry without replacing primary work", async ({ page }) => {
+  const failure = { active: true };
+  await mockApi(page, FULL_DASHBOARD, { analyticsFailure: failure });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Show spend snapshot", exact: true }).click();
+  const snapshot = page.getByRole("region", { name: "Spend snapshot", exact: true });
+  const error = snapshot.getByRole("alert").filter({ hasText: "Couldn’t load spend over time" });
+  await expect(error).toBeVisible();
+  await expect(page.getByText("INV-2026-077", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Waiting on you.*5/s }).first()).toBeVisible();
+  failure.active = false;
+  await error.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(snapshot.getByRole("heading", { name: "Spend over time · USD", exact: true })).toBeVisible();
+  await expect(error).toHaveCount(0);
+});
+
+test("a failed optional chart chunk leaves the worklist available", async ({ page }) => {
+  await mockApi(page, FULL_DASHBOARD);
+  await page.route("**/src/components/DashboardSpendSnapshot.tsx*", route => route.abort("failed"));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Show spend snapshot", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Spend snapshot could not load" })).toBeVisible();
+  await expect(page.getByText("INV-2026-077", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Decide →", exact: true })).toHaveAttribute("href", "/invoices/inv-77");
 });

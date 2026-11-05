@@ -19,13 +19,19 @@ path wrap them via `services.documents` which uses a threadpool.
 from __future__ import annotations
 
 import hashlib
+import io
+import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Protocol, runtime_checkable
+from typing import BinaryIO, Protocol, runtime_checkable
 
 from app.core.config import settings
 
 _READ_CHUNK_BYTES = 64 * 1024
+_MULTIPART_BYTES = 8 * 1024 * 1024
+log = logging.getLogger("invoiceiq.storage")
 
 
 class StorageError(Exception):
@@ -38,6 +44,61 @@ class StorageReadTooLarge(StorageError):
 
 class StorageReadError(StorageError):
     """An object could not be read completely; distinct from a missing object."""
+
+
+class StorageWriteError(StorageError):
+    """A file upload could not publish its complete verified original."""
+
+
+def _copy(source, target, max_bytes: int | None = None) -> tuple[str, int]:
+    digest, size = hashlib.sha256(), 0
+    while True:
+        amount = _READ_CHUNK_BYTES
+        if max_bytes is not None:
+            amount = min(amount, max_bytes + 1 - size)
+        chunk = source.read(amount)
+        if not chunk:
+            return digest.hexdigest(), size
+        size += len(chunk)
+        if max_bytes is not None and size > max_bytes:
+            raise StorageReadTooLarge("Stored document exceeds the processing size limit.")
+        digest.update(chunk)
+        target.write(chunk)
+
+
+def _copy_and_close(source, destination: Path, max_bytes: int | None) -> tuple[str, int]:
+    try:
+        with destination.open("wb") as target:
+            identity = _copy(source, target, max_bytes)
+    except BaseException:
+        try:
+            source.close()
+        except OSError:
+            pass
+        raise
+    else:
+        source.close()
+        return identity
+
+
+def _verify_file(identity: tuple[str, int], sha256: str, size: int) -> None:
+    if identity != (sha256, size):
+        raise StorageWriteError("Document changed while preparing its upload. Retry the export.")
+
+
+@contextmanager
+def _source_file(path: Path) -> Iterator[BinaryIO]:
+    source = path.open("rb")
+    try:
+        yield source
+    except BaseException:
+        try:
+            source.close()
+        except OSError:
+            log.warning("Could not close an interrupted private upload source")
+        raise
+    else:
+        source.close()
 
 
 def _digest(source) -> str:
@@ -116,6 +177,12 @@ class Storage(Protocol):
     def digest(self, key: str) -> str: ...
     def delete(self, key: str) -> None: ...
     def exists(self, key: str) -> bool: ...
+    def put_file(
+        self, key: str, source: Path, content_type: str | None = None, *, sha256: str, size: int
+    ) -> None: ...
+    def get_file(
+        self, key: str, destination: Path, *, max_bytes: int | None = None
+    ) -> tuple[str, int]: ...
 
 
 class MemoryStorage:
@@ -148,6 +215,39 @@ class MemoryStorage:
 
     def exists(self, key: str) -> bool:
         return key in self._data
+
+    def put_file(
+        self, key: str, source: Path, content_type: str | None = None, *, sha256: str, size: int
+    ) -> None:
+        # This test backend necessarily owns the complete blob. The file API
+        # bounds source reads, not the memory needed by an in-memory store.
+        try:
+            with _source_file(source) as stream, io.BytesIO() as target:
+                identity = _copy(stream, target)
+                _verify_file(identity, sha256, size)
+                self.put(key, target.getvalue(), content_type)
+        except OSError as exc:
+            raise StorageWriteError(
+                "Stored document could not be written. Retry after recovery."
+            ) from exc
+
+    def get_file(
+        self, key: str, destination: Path, *, max_bytes: int | None = None
+    ) -> tuple[str, int]:
+        data = self.get(key, max_bytes=max_bytes)
+        digest = hashlib.sha256()
+        try:
+            with destination.open("wb") as target:
+                view = memoryview(data)
+                for offset in range(0, len(data), _READ_CHUNK_BYTES):
+                    chunk = view[offset : offset + _READ_CHUNK_BYTES]
+                    digest.update(chunk)
+                    target.write(chunk)
+        except OSError as exc:
+            raise StorageReadError(
+                "Stored document could not be read. Check storage and retry."
+            ) from exc
+        return digest.hexdigest(), len(data)
 
 
 class LocalStorage:
@@ -205,6 +305,51 @@ class LocalStorage:
                 "Stored document could not be read. Check storage and retry."
             ) from e
 
+    def put_file(
+        self, key: str, source: Path, content_type: str | None = None, *, sha256: str, size: int
+    ) -> None:
+        path = self._path(key)
+        staged_path: Path | None = None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with NamedTemporaryFile(
+                dir=path.parent, prefix=".upload-", suffix=".tmp", delete=False
+            ) as staged:
+                staged_path = Path(staged.name)
+                with _source_file(source) as stream:
+                    identity = _copy(stream, staged)
+                _verify_file(identity, sha256, size)
+            staged_path.replace(path)
+        except OSError as exc:
+            raise StorageWriteError(
+                "Stored document could not be written. Retry after recovery."
+            ) from exc
+        finally:
+            if staged_path is not None:
+                try:
+                    staged_path.unlink(missing_ok=True)
+                except OSError:
+                    log.warning("Could not remove a private upload staging file")
+
+    def get_file(
+        self, key: str, destination: Path, *, max_bytes: int | None = None
+    ) -> tuple[str, int]:
+        _validate_read_limit(max_bytes)
+        try:
+            stream = self._path(key).open("rb")
+        except FileNotFoundError as exc:
+            raise StorageError("Stored document is missing.") from exc
+        except OSError as exc:
+            raise StorageReadError(
+                "Stored document could not be read. Check storage and retry."
+            ) from exc
+        try:
+            return _copy_and_close(stream, destination, max_bytes)
+        except OSError as exc:
+            raise StorageReadError(
+                "Stored document could not be read. Check storage and retry."
+            ) from exc
+
     def delete(self, key: str) -> None:
         self._path(key).unlink(missing_ok=True)
 
@@ -256,6 +401,86 @@ class S3Storage:
     def put(self, key: str, data: bytes, content_type: str | None = None) -> None:
         extra = {"ContentType": content_type} if content_type else {}
         self._client.put_object(Bucket=self._bucket, Key=self._k(key), Body=data, **extra)
+
+    def put_file(
+        self, key: str, source: Path, content_type: str | None = None, *, sha256: str, size: int
+    ) -> None:
+        upload_id = None
+        target = {"Bucket": self._bucket, "Key": self._k(key)}
+        extra = {"ContentType": content_type} if content_type else {}
+        try:
+            with _source_file(source) as stream:
+                digest, count = hashlib.sha256(), 0
+                parts: list[dict[str, object]] = []
+                while True:
+                    part = bytearray()
+                    while len(part) < _MULTIPART_BYTES:
+                        chunk = stream.read(min(_READ_CHUNK_BYTES, _MULTIPART_BYTES - len(part)))
+                        if not chunk:
+                            break
+                        part.extend(chunk)
+                        digest.update(chunk)
+                        count += len(chunk)
+                    if not part:
+                        break
+                    if upload_id is None:
+                        upload_id = self._client.create_multipart_upload(**target, **extra)[
+                            "UploadId"
+                        ]
+                    number = len(parts) + 1
+                    response = self._client.upload_part(
+                        **target, UploadId=upload_id, PartNumber=number, Body=bytes(part)
+                    )
+                    parts.append({"PartNumber": number, "ETag": response["ETag"]})
+                _verify_file((digest.hexdigest(), count), sha256, size)
+                if upload_id is None:
+                    self._client.put_object(**target, Body=b"", **extra)
+                else:
+                    self._client.complete_multipart_upload(
+                        **target, UploadId=upload_id, MultipartUpload={"Parts": parts}
+                    )
+        except BaseException as exc:
+            if upload_id is not None:
+                try:
+                    self._client.abort_multipart_upload(**target, UploadId=upload_id)
+                except Exception:
+                    # Keep the primary interruption. Provider qualification also
+                    # inspects unfinished uploads; no shared object is deleted.
+                    log.warning("Could not abort an incomplete document multipart upload")
+            if isinstance(exc, (StorageWriteError, KeyboardInterrupt, SystemExit)):
+                raise
+            if not isinstance(exc, Exception):
+                raise
+            raise StorageWriteError(
+                "Stored document could not be written. Retry after recovery."
+            ) from exc
+
+    def get_file(
+        self, key: str, destination: Path, *, max_bytes: int | None = None
+    ) -> tuple[str, int]:
+        _validate_read_limit(max_bytes)
+        from botocore.exceptions import ClientError
+
+        try:
+            response = self._client.get_object(Bucket=self._bucket, Key=self._k(key))
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") in {"NoSuchKey", "404", "NotFound"}:
+                raise StorageError("Stored document is missing.") from exc
+            raise StorageReadError(
+                "Stored document could not be read. Check storage and retry."
+            ) from exc
+        except Exception as exc:
+            raise StorageReadError(
+                "Stored document could not be read. Check storage and retry."
+            ) from exc
+        try:
+            return _copy_and_close(response["Body"], destination, max_bytes)
+        except StorageReadTooLarge:
+            raise
+        except Exception as exc:
+            raise StorageReadError(
+                "Stored document could not be read. Check storage and retry."
+            ) from exc
 
     def get(self, key: str, *, max_bytes: int | None = None) -> bytes:
         _validate_read_limit(max_bytes)

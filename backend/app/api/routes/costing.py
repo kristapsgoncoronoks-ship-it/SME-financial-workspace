@@ -12,16 +12,17 @@ import json
 from decimal import Decimal
 from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from app.api.deps import CurrentUser, DbSession, require_perm
+from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
 from app.api.upload_read import read_upload
 from app.core import authz
 from app.core.security_headers import content_disposition
 from app.models.costing import CostCenter, Department, Project
 from app.models.customer import Customer
+from app.models.document import Document
 from app.models.project_link import ProjectDocument
 from app.schemas.costing import (
     CostCenterCreate,
@@ -43,7 +44,15 @@ from app.schemas.project_profit import (
     ProjectDocumentOut,
     ProjectPnlOut,
 )
-from app.services import audit, costing, crm, project_offers, project_profit
+from app.services import (
+    audit,
+    costing,
+    crm,
+    documents,
+    project_offers,
+    project_profit,
+    project_thumbnails,
+)
 
 # Structural authorization (ADR-0024): the masters feed the cost-allocation
 # pickers on invoice and expense forms, so reading them declares INVOICE_READ —
@@ -452,12 +461,18 @@ async def share_project_document(
 
 @router.get("/projects/{entity_id}/documents/{document_id}/download")
 async def download_project_document(
-    entity_id: str, document_id: str, current: CurrentUser, db: DbSession
+    entity_id: str, document_id: str, request: Request, current: CurrentUser, db: DbSession
 ):
     """Served inert (attachment + nosniff), like every document route: an
     uploaded contract is still attacker-influenced bytes."""
     try:
         row, data = await project_profit.load_document(db, current.org_id, entity_id, document_id)
+        sha = row.sha256
+        fresh, _org = await refresh_current_identity(request, db, current)
+        authz.require(fresh, authz.Permission.INVOICE_READ)
+        row = await project_profit.get_document(db, fresh.org_id, entity_id, document_id)
+        if row.sha256 != sha:
+            raise project_profit.NotFoundError("Document not found")
     except project_profit.ProjectProfitError as exc:
         _raise_pp(exc)
     return Response(
@@ -465,6 +480,47 @@ async def download_project_document(
         media_type="application/octet-stream",
         headers={
             "Content-Disposition": content_disposition(row.filename, fallback="attachment"),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get(
+    "/projects/{entity_id}/documents/{document_id}/thumbnail",
+    response_class=Response,
+    responses={
+        200: {"content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}}}
+    },
+)
+async def project_photo_thumbnail(
+    entity_id: str, document_id: str, request: Request, current: CurrentUser, db: DbSession
+):
+    try:
+        sha, size, data = await project_thumbnails.prepare(
+            db, current.org_id, entity_id, document_id
+        )
+        fresh, _org = await refresh_current_identity(request, db, current)
+        authz.require(fresh, authz.Permission.INVOICE_READ)
+        row = await project_profit.get_document(db, fresh.org_id, entity_id, document_id)
+        if row.sha256 != sha or row.kind != "photo":
+            raise project_profit.NotFoundError("Document not found")
+        current_size = await db.scalar(
+            select(Document.size).where(
+                Document.org_id == fresh.org_id,
+                Document.kind == project_profit.PROJECT_DOCS,
+                Document.sha256 == sha,
+            )
+        )
+        if current_size != size:
+            raise documents.OriginalIntegrityError()
+    except project_profit.ProjectProfitError as exc:
+        _raise_pp(exc)
+    return Response(
+        data,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": 'inline; filename="thumbnail.jpg"',
             "X-Content-Type-Options": "nosniff",
         },
     )

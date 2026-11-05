@@ -21,6 +21,10 @@ interface PendingExport {
   acknowledgeSkipped: boolean;
 }
 
+function hasExportRecord(run: PaymentRun): boolean {
+  return run.export_count !== 0 || run.exported_at !== null || run.last_msg_id !== null;
+}
+
 export default function PaymentRunsPage() {
   const qc = useQueryClient();
   const [err, setErr] = useState<string | null>(null);
@@ -81,7 +85,12 @@ export default function PaymentRunsPage() {
   const cancel = useMutation({
     mutationFn: async (id: string) => (await api.delete(`/payment-runs/${id}`)).data,
     onSuccess: invalidate,
-    onError: onErr,
+    onError: (e: unknown) => {
+      onErr(e);
+      if (apiErrorCode(e) === "run_exported_cannot_cancel") {
+        void qc.invalidateQueries({ queryKey: ["payment-runs"] });
+      }
+    },
   });
 
   const doExport = async (p: PendingExport) => {
@@ -201,7 +210,7 @@ export default function PaymentRunsPage() {
           {runData.map((r) => (
             <div key={r.id} className="rounded-lg border border-slate-200 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>
                   <span className="font-medium">{money(r.total_eur, "EUR")}</span>
                   <span className="text-xs text-text-secondary">
@@ -209,7 +218,7 @@ export default function PaymentRunsPage() {
                     {r.reference ? ` · ${r.reference}` : ""}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {r.status === "open" && (
                     <>
                       <Button
@@ -220,7 +229,7 @@ export default function PaymentRunsPage() {
                       >
                         Approve
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setCancelAsk(r)}>
+                      <Button size="sm" variant="ghost" disabled={hasExportRecord(r)} aria-describedby={hasExportRecord(r) ? `cancel-blocked-${r.id}` : undefined} onClick={() => setCancelAsk(r)}>
                         Cancel
                       </Button>
                     </>
@@ -241,7 +250,7 @@ export default function PaymentRunsPage() {
                       >
                         Mark paid
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setCancelAsk(r)}>
+                      <Button size="sm" variant="ghost" disabled={hasExportRecord(r)} aria-describedby={hasExportRecord(r) ? `cancel-blocked-${r.id}` : undefined} onClick={() => setCancelAsk(r)}>
                         Cancel
                       </Button>
                     </>
@@ -294,6 +303,12 @@ export default function PaymentRunsPage() {
                     })`
                   : ""}
               </div>
+              {(r.status === "open" || r.status === "approved") && hasExportRecord(r) && (
+                <p id={`cancel-blocked-${r.id}`} className="mt-2 text-sm text-amber-800">
+                  Export records prevent cancellation. Check the bank file’s status with your bank
+                  or accountant before arranging another payment. An export does not confirm payment.
+                </p>
+              )}
             </div>
           ))}
         </div>

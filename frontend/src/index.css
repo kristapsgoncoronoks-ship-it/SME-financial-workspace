@@ -14,6 +14,44 @@
   --color-focus: var(--color-brand-600);
   --color-text-secondary: var(--color-slate-600);
   --color-feedback-success: var(--color-emerald-700);
+
+  /* Shared state roles retain the existing domain hues and readable labels. */
+  --color-state-neutral-bg: var(--color-slate-100);
+  --color-state-neutral-text: var(--color-slate-600);
+  --color-state-muted-bg: var(--color-slate-200);
+  --color-state-muted-text: var(--color-slate-600);
+  --color-state-brand-bg: var(--color-brand-50);
+  --color-state-brand-text: var(--color-brand-700);
+  --color-state-success-bg: var(--color-emerald-100);
+  --color-state-success-text: var(--color-emerald-700);
+  --color-state-warning-bg: var(--color-amber-100);
+  --color-state-warning-text: var(--color-amber-700);
+  --color-state-warning-strong-text: var(--color-amber-800);
+  --color-state-danger-bg: var(--color-rose-100);
+  --color-state-danger-text: var(--color-rose-700);
+  --color-state-info-bg: var(--color-sky-100);
+  --color-state-info-subtle-bg: var(--color-sky-50);
+  --color-state-info-text: var(--color-sky-700);
+  --color-state-approved-bg: var(--color-indigo-100);
+  --color-state-approved-text: var(--color-indigo-700);
+  --color-state-credit-bg: var(--color-violet-100);
+  --color-state-credit-text: var(--color-violet-700);
+  --color-state-returned-bg: var(--color-orange-100);
+  --color-state-returned-text: var(--color-orange-700);
+  --color-control-on: var(--color-emerald-700);
+  --color-control-off: var(--color-slate-500);
+  --color-chart-1: var(--color-brand-500);
+  --color-chart-2: var(--color-emerald-600);
+  --color-chart-3: var(--color-amber-700);
+  --color-chart-4: var(--color-rose-600);
+  --color-chart-5: var(--color-violet-600);
+  --color-chart-6: var(--color-cyan-700);
+  --color-chart-7: var(--color-pink-600);
+  --color-chart-8: var(--color-slate-500);
+  --color-chart-9: var(--color-teal-600);
+  --color-chart-10: var(--color-orange-700);
+  --color-chart-grid: #eef2f7;
+  --color-chart-budget: var(--color-slate-500);
 }
 
 /*
@@ -40,7 +78,7 @@
 
 @utility btn {
   /* Legacy and component buttons share the same visible-focus role. */
-  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-focus;
+  @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-focus;
 }
 
 @utility btn-primary {

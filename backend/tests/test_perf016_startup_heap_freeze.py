@@ -20,7 +20,10 @@ few thousand ORM rows. Frozen, the same pass costs ~1 ms and the ratio reads
 from __future__ import annotations
 
 import gc
+import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -32,22 +35,40 @@ MAIN = BACKEND / "app" / "main.py"
 HARNESS = BACKEND / "scripts" / "perf_harness.py"
 
 
-def test_freeze_parks_the_live_heap_in_the_permanent_generation():
+def test_freeze_parks_the_live_heap_in_the_permanent_generation(monkeypatch):
     before = gc.get_freeze_count()
-    keep = [{"i": i} for i in range(1000)]  # tracked containers alive across the call
-    try:
-        total = gc_tuning.freeze_startup_heap()
-        assert total == gc.get_freeze_count()
-        assert total - before >= len(keep), (
-            f"froze {total - before} objects, fewer than the {len(keep)} alive containers"
-        )
-    finally:
-        # Do not leave the test process partially frozen for the rest of the
-        # suite: thaw back to exactly the state the test found.
-        gc.unfreeze()
-        if before:
-            gc.freeze()  # pragma: no cover — only when a prior test froze something
-    del keep
+    thresholds = gc.get_threshold()
+    enabled = gc.isenabled()
+
+    def forbidden():
+        pytest.fail("The real heap-freeze proof must not mutate the pytest process heap")
+
+    monkeypatch.setattr(gc, "freeze", forbidden)
+    monkeypatch.setattr(gc, "unfreeze", forbidden)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import gc, json; from app.core.gc_tuning import freeze_startup_heap; "
+            "before = gc.get_freeze_count(); keep = [[i] for i in range(1000)]; "
+            "total = freeze_startup_heap(); "
+            "after = gc.get_freeze_count(); assert total >= after; "
+            "assert after - before >= len(keep); "
+            "tracked = {id(obj) for obj in gc.get_objects()}; "
+            "assert all(id(obj) not in tracked for obj in keep); "
+            "print(json.dumps({'parked': after - before, 'live': len(keep)}))",
+        ],
+        cwd=BACKEND,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    observed = json.loads(result.stdout)
+    assert observed["parked"] >= observed["live"] == 1000
+    assert gc.get_freeze_count() == before
+    assert gc.get_threshold() == thresholds
+    assert gc.isenabled() == enabled
 
 
 def test_the_lifespan_freezes_the_heap_after_every_startup_write():

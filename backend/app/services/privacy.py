@@ -30,16 +30,19 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.archive_export import ArchiveExport
 from app.models.email_intake import InboundInvoice
 from app.models.expense import ExpenseReport
 from app.models.issued_invoice import IssuedInvoice
 from app.models.membership import Membership
 from app.models.user import User
-from app.services import audit, documents, retention
+from app.models.workspace_export import WorkspaceExport
+from app.services import audit, documents, export_artefacts, retention
 
 log = logging.getLogger("invoiceiq.privacy")
 
@@ -69,6 +72,61 @@ class ErasureReport:
     on_hold: bool
     locations: list[Location] = field(default_factory=list)
     executed: bool = False
+
+
+async def _export_snapshot_location(db: AsyncSession, org_id: str, on_hold: bool) -> Location:
+    """Disclose potentially affected snapshots, without claiming content matching.
+
+    A full workspace snapshot can contain any subject's data, independent of its
+    requester. We do not reopen ZIPs during a DSAR or select a new purge policy.
+    Stream only lifecycle timestamps and report existing purge eligibility;
+    eligibility is not proof that the daily purge has actually removed bytes.
+    """
+    count = unknown = 0
+    earliest = latest = None
+
+    def utc(value: datetime) -> datetime:
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+    for model in (ArchiveExport, WorkspaceExport):
+        rows = await db.stream(
+            select(model.link_expires_at, model.downloaded_at)
+            .where(model.org_id == org_id, model.sha256.is_not(None), model.purged_at.is_(None))
+            .execution_options(yield_per=200)
+        )
+        try:
+            async for expires, downloaded in rows:
+                count += 1
+                deadlines = []
+                if expires is not None:
+                    deadlines.append(utc(expires))
+                if downloaded is not None:
+                    deadlines.append(utc(downloaded) + export_artefacts.GRACE)
+                if not deadlines:
+                    unknown += 1
+                    continue
+                eligible = min(deadlines)
+                earliest = eligible if earliest is None else min(earliest, eligible)
+                latest = eligible if latest is None else max(latest, eligible)
+        finally:
+            await rows.close()
+    reason = (
+        "Stored archive/workspace snapshots are potentially affected; their contents have not "
+        "been scanned for this subject. Existing export retention applies. "
+    )
+    if earliest is not None and latest is not None:
+        reason += f"Recorded purge eligibility ranges from {earliest.isoformat()} to {latest.isoformat()}. "
+    reason += f"{unknown} stored snapshots have unknown purge eligibility. "
+    if on_hold:
+        reason += "An active legal hold has suspended artifact purging. "
+    reason += "These are eligibility dates, not confirmation of deletion."
+    return Location(
+        "export_artifacts",
+        "Stored export snapshots (potential subject data)",
+        count,
+        RETAIN,
+        reason,
+    )
 
 
 def _subject_hash(email: str) -> str:
@@ -155,8 +213,12 @@ async def preview(db: AsyncSession, org_id: str, email: str) -> ErasureReport:
     """What an erasure WOULD do — classifies every location, mutates nothing."""
     on_hold = await retention.is_on_hold(db, org_id)
     _, counts = await _scan(db, org_id, email)
+    exports = await _export_snapshot_location(db, org_id, on_hold)
     return ErasureReport(
-        email=email, on_hold=on_hold, locations=_locations(counts, on_hold), executed=False
+        email=email,
+        on_hold=on_hold,
+        locations=[*_locations(counts, on_hold), exports],
+        executed=False,
     )
 
 
@@ -167,9 +229,13 @@ async def erase(
     with a hashed subject reference + per-location counts."""
     on_hold = await retention.is_on_hold(db, org_id)
     user_ids, counts = await _scan(db, org_id, email)
+    exports = await _export_snapshot_location(db, org_id, on_hold)
     if on_hold:
         return ErasureReport(
-            email=email, on_hold=True, locations=_locations(counts, True), executed=False
+            email=email,
+            on_hold=True,
+            locations=[*_locations(counts, True), exports],
+            executed=False,
         )
 
     subject = _subject_hash(email)
@@ -218,7 +284,11 @@ async def erase(
         "expenses": counts["expenses"],
         "inbound_email": counts["inbound_email"],
     }
-    retained = {"issued_invoices": counts["issued_invoices"], "audit_trail": counts["audit_trail"]}
+    retained = {
+        "issued_invoices": counts["issued_invoices"],
+        "audit_trail": counts["audit_trail"],
+        "export_artifacts": exports.matched,
+    }
     await audit.record(
         db,
         "privacy.erasure",
@@ -228,5 +298,5 @@ async def erase(
     await db.commit()
 
     return ErasureReport(
-        email=email, on_hold=False, locations=_locations(counts, False), executed=True
+        email=email, on_hold=False, locations=[*_locations(counts, False), exports], executed=True
     )

@@ -84,6 +84,14 @@ async def portal_document(token: str, document_id: str, db: DbSession):
         try:
             row = await portal.load_shared_document(db, org_id, customer_id, document_id)
             _, data = await project_profit.load_document(db, org_id, row.project_id, row.id)
+            sha = row.sha256
+            await db.flush()
+            db.expire_all()
+            if await _resolve(db, token) != (org_id, customer_id):
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "document not found")
+            row = await portal.load_shared_document(db, org_id, customer_id, document_id)
+            if row.sha256 != sha:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "document not found")
         except (portal.NotFoundError, project_profit.ProjectProfitError) as exc:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "document not found") from exc
     finally:

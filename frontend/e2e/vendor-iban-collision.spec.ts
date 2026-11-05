@@ -90,3 +90,60 @@ test("DB-014: a pending IBAN change names the holders in the inbox and again in 
   // The decision is still the approver's: the button is there, not hidden.
   await expect(page.getByRole("button", { name: "Approve change" })).toBeVisible();
 });
+
+for (const [width, fontSize] of [[320, 16], [390, 32], [1280, 16]]) {
+  test(`supplier facts, bank fields and second-approver actions reflow at ${width}px/${fontSize}px text`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    const writes: { path: string; body: unknown }[] = [];
+    await signedIn(page, (path, route) => {
+      if (route.request().method() !== "GET") {
+        writes.push({ path, body: route.request().postDataJSON() });
+        return route.fulfill(json({ ...VENDORS[2], iban: "NL91ABNA0417164300", bic: "SYNTHETIC" }));
+      }
+      if (path === "/vendors") return route.fulfill(json(VENDORS));
+      if (path === "/vendors/changes") return route.fulfill(json([CHANGE, { ...CHANGE, id: "cr-mine", requested_by: "u1", vendor_name: "Own supplier request" }]));
+      return false;
+    });
+    await page.goto("/vendors");
+    await expect(page.getByRole("heading", { name: "Suppliers", exact: true })).toBeVisible();
+    await page.evaluate(size => { document.documentElement.style.fontSize = `${size}px`; }, fontSize);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const bounds = await page.evaluate(() => ({ viewport: innerWidth, body: document.body.scrollWidth, root: document.documentElement.scrollWidth, escaped: [...document.querySelectorAll("body *")].filter(e => { const r=e.getBoundingClientRect(); return r.right > innerWidth+1 && !e.closest("[role=region]"); }).map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,text:e.textContent?.slice(0,80),pos:getComputedStyle(e).position})), tables: [...document.querySelectorAll("main table")].map(e => ({ width: e.getBoundingClientRect().width, scroll: e.scrollWidth })), containers: [...document.querySelectorAll("main, main > div, main section, main section > div, main [role=region]")].map(e => ({ tag: e.tagName, classes: e.className, width: e.getBoundingClientRect().width, scroll: e.scrollWidth, display: getComputedStyle(e).display, overflow: getComputedStyle(e).overflowX })) }));
+    await testInfo.attach("supplier-page-bounds", { body: JSON.stringify(bounds), contentType: "application/json" });
+    expect(bounds.root).toBeLessThanOrEqual(width);
+    expect(bounds.body).toBeLessThanOrEqual(width);
+    const changes = page.getByRole("region", { name: "Pending supplier bank changes", exact: true });
+    const suppliers = page.getByRole("region", { name: "Suppliers and bank details", exact: true });
+    for (const region of [changes, suppliers]) {
+      await region.focus(); await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+      await expect(region).toBeFocused();
+      if (await region.evaluate(e => e.scrollWidth > e.clientWidth)) {
+        await page.keyboard.press("ArrowRight");
+        await expect.poll(() => region.evaluate(e => e.scrollLeft)).toBeGreaterThan(0);
+        await region.evaluate(e => new Promise<void>(resolve => { let previous = e.scrollLeft, stable = 0; const frame = () => { stable = e.scrollLeft === previous ? stable + 1 : 0; previous = e.scrollLeft; if (stable >= 5) resolve(); else requestAnimationFrame(frame); }; requestAnimationFrame(frame); }));
+      }
+      await expect(region.getByRole("table")).toHaveCount(1);
+    }
+    await expect(changes.getByText("Already on file for Steel GmbH, Steel Trading GmbH")).toHaveCount(2);
+    const own = changes.getByRole("row").filter({ hasText: "Own supplier request" });
+    await expect(own.getByRole("button", { name: "Approve", exact: true })).toHaveCount(0);
+    await expect(own).toContainText("Yours — a different approver must decide");
+    await expect(suppliers.getByText("Same account as Steel Trading GmbH")).toBeVisible();
+    const iban = suppliers.getByRole("textbox", { name: "IBAN for Cargo BV", exact: true });
+    await iban.focus(); await expect(iban).toBeInViewport({ ratio: 0.99 });
+    await expect(iban).toHaveValue("NL91ABNA0417164300");
+    const bic = suppliers.getByRole("textbox", { name: "BIC for Cargo BV", exact: true });
+    await bic.fill("SYNTHETIC");
+    const save = suppliers.getByRole("row").filter({ hasText: "Cargo BV" }).getByRole("button", { name: "Save", exact: true });
+    await save.focus(); await expect(save).toBeInViewport({ ratio: 0.99 }); await page.keyboard.press("Enter");
+    await expect.poll(() => writes).toEqual([{ path: "/vendors/v-cargo", body: { iban: "NL91ABNA0417164300", bic: "SYNTHETIC", version: 2 } }]);
+    await changes.getByRole("button", { name: "Approve", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Apply this bank-detail change?", exact: true });
+    await expect(dialog).toContainText("This account is already on file for Steel GmbH, Steel Trading GmbH.");
+    await dialog.getByRole("button", { name: "Approve change", exact: true }).focus();
+    await expect(dialog.getByRole("button", { name: "Approve change", exact: true })).toBeInViewport({ ratio: 0.99 });
+    await page.keyboard.press("Escape");
+    expect(writes).toHaveLength(1);
+    await page.screenshot({ path: testInfo.outputPath("supplier-reflow.png"), fullPage: true });
+  });
+}

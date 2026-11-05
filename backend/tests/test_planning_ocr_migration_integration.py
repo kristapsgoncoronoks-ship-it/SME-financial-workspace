@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from tests.test_migrations import BACKEND_DIR, _run_alembic
 
 MERGE = "f0b2d4e6a8c1"
+PLANNING_COMMANDS = "8d1f3a5c7e90"
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -444,12 +445,13 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert graph.get_heads() == [MERGE]
+    assert graph.get_heads() == [PLANNING_COMMANDS]
+    assert graph.get_revision(PLANNING_COMMANDS).down_revision == MERGE
     assert set(graph.get_revision(MERGE).down_revision) == PARENTS
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 155
+    assert len(revisions) == 156
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -511,7 +513,28 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
 
     database(migration_url, index_contract)
 
+    head_schema = database(migration_url, schemas)
+    # The additive planning-command migration is now the linear head. Its
+    # empty receipt table can be removed; test merge ambiguity AT the merge,
+    # while the separate planning migration tests refuse populated downgrade.
+    migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
+    assert set(head_schema) - set(schema_before) == {"planning_commands"}
+    expected_marker_schema = {
+        key: value for key, value in head_schema.items() if key != "planning_commands"
+    }
+    if "_rls" in head_schema:
+        assert [row for row in head_schema["_rls"] if row[0] == "planning_commands"] == [
+            ["planning_commands", True, True]
+        ]
+        policies = [row for row in head_schema["_policies"] if row[0] == "planning_commands"]
+        assert len(policies) == 1 and policies[0][1] == "tenant_isolation"
+        for key in ("_rls", "_policies"):
+            expected_marker_schema[key] = [
+                row for row in head_schema[key] if row[0] != "planning_commands"
+            ]
+    assert expected_marker_schema == schema_before
+    assert database(migration_url, snapshot) == after
     # An unqualified relative downgrade is ambiguous at a merge point.
     refused = _run_alembic(["downgrade", "-1"], migration_url)
     assert refused.returncode != 0 and "Ambiguous walk" in refused.stdout + refused.stderr
@@ -526,7 +549,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     assert database(migration_url, snapshot) == after
     migrate(migration_url, "upgrade", "head")
     assert database(migration_url, snapshot) == after
-    assert database(migration_url, schemas) == schema_before
+    assert database(migration_url, schemas) == head_schema
 
 
 def test_downgrade_refuses_changed_assignments_and_applied_ocr(migration_url):

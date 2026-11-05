@@ -116,6 +116,8 @@ PURPOSE_MB: dict[str, int] = {
 # limits in the existing central owner so the upload-cap structural gate stays
 # intact; these fixed output/memory limits never enlarge an accepted upload.
 RESOURCE_BYTES = {
+    "project_thumbnail_input": 32 * _MB,
+    "project_thumbnail": 128 * 1024,
     "capture_pages": 2 * _MB,
     "capture_page": 512 * 1024,
     "capture_renderer_memory": 512 * _MB,

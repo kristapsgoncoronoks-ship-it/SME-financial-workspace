@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
@@ -25,9 +25,16 @@ from sqlalchemy import or_, select
 from app.api.deps import CurrentUser, DbSession, require_perm
 from app.core import authz
 from app.core.config import settings
+from app.core.errors import AppError
 from app.models.costing import Project
 from app.models.email_message import EmailMessage
-from app.services import audit, ics, schedule_email, scheduling, team
+from app.schemas.scheduling import (
+    AssignmentIn,
+    AssignmentOut,
+    AssignmentWriteOut,
+    PlanningCommandOut,
+)
+from app.services import audit, ics, planning_commands, schedule_email, scheduling, team
 
 router = APIRouter(
     prefix="/schedule",
@@ -36,21 +43,6 @@ router = APIRouter(
 )
 
 _PLANNING = [Depends(require_perm(authz.Permission.INVOICE_WRITE))]
-
-
-class AssignmentIn(BaseModel):
-    project_id: str
-    assignee_user_id: str
-    starts_at: datetime
-    ends_at: datetime
-    all_day: bool = False
-    note: str | None = Field(default=None, max_length=2000)
-    remind_hours_before: int | None = Field(default=None, ge=1, le=336)
-    client_notice_hours_before: int | None = Field(default=None, ge=1, le=336)
-    time_zone: str = Field(default="UTC", min_length=1, max_length=64)
-    notify_assignee: bool = True
-    reminders_enabled: bool = True
-    client_notice_enabled: bool | None = None
 
 
 class AssignmentPatch(BaseModel):
@@ -74,36 +66,6 @@ class AssignmentPatch(BaseModel):
 class TransitionIn(BaseModel):
     status: str
     expected_revision: int | None = Field(default=None, ge=1)
-
-
-class AssignmentOut(BaseModel):
-    id: str
-    project_id: str
-    project_code: str | None = None
-    project_name: str | None = None
-    assignee_user_id: str
-    assignee_email: str
-    starts_at: str
-    ends_at: str
-    all_day: bool
-    status: str
-    note: str | None
-    created_by: str
-    remind_hours_before: int | None = None
-    client_notice_hours_before: int | None = None
-    time_zone: str
-    revision: int
-    notify_assignee: bool
-    reminders_enabled: bool
-    client_notice_enabled: bool | None
-    notification_status: str | None = None
-
-
-class AssignmentWriteOut(BaseModel):
-    """A write's result plus the ADVISORY overlap warnings (never blocking)."""
-
-    assignment: AssignmentOut
-    overlaps: list[AssignmentOut]
 
 
 class MemberOut(BaseModel):
@@ -172,6 +134,22 @@ async def _outputs(db, rows) -> list[AssignmentOut]:
     return [_out(row, projects, notices) for row in rows]
 
 
+async def _command_outputs(db, rows) -> list[AssignmentOut]:
+    # The new receipt/current-read contract restores the known UTC convention
+    # SQLite drops from stored timestamps. Preserve legacy route serializers.
+    return [
+        output.model_copy(
+            update={
+                "starts_at": scheduling._as_utc(
+                    datetime.fromisoformat(output.starts_at)
+                ).isoformat(),
+                "ends_at": scheduling._as_utc(datetime.fromisoformat(output.ends_at)).isoformat(),
+            }
+        )
+        for output in await _outputs(db, rows)
+    ]
+
+
 def _raise(exc: scheduling.SchedulingError) -> NoReturn:
     if isinstance(exc, scheduling.StaleError):
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc))
@@ -223,7 +201,17 @@ async def plannable_members(current: CurrentUser, db: DbSession):
     status_code=status.HTTP_201_CREATED,
     dependencies=_PLANNING,
 )
-async def create_assignment(body: AssignmentIn, current: CurrentUser, db: DbSession):
+async def create_assignment(
+    body: AssignmentIn,
+    current: CurrentUser,
+    db: DbSession,
+    command_key: str | None = Header(
+        default=None, alias="Idempotency-Key", min_length=1, max_length=120
+    ),
+):
+    command = await planning_commands.prepare_create(db, current, body, command_key)
+    if command is not None and command.previous is not None:
+        return command.previous
     try:
         row, overlaps = await scheduling.create(
             db,
@@ -259,14 +247,42 @@ async def create_assignment(body: AssignmentIn, current: CurrentUser, db: DbSess
             "notify_assignee": row.notify_assignee,
             "reminders_enabled": row.reminders_enabled,
             "client_notice_enabled": row.client_notice_enabled,
+            **({"command_key": command.key} if command is not None else {}),
         },
     )
     if event is None:
+        if command is not None:
+            raise AppError(
+                "The planning audit could not be recorded. No assignment was committed.",
+                code="planning_command_unavailable",
+                status=503,
+            )
         raise RuntimeError("Assignment audit could not be recorded.")
+    if command is not None:
+        outputs = await _command_outputs(db, [row, *overlaps])
+        result = AssignmentWriteOut(assignment=outputs[0], overlaps=outputs[1:])
+        await planning_commands.record_create(db, current, command, result)
+        await db.commit()
+        return result
     await db.commit()
     await db.refresh(row)
     outputs = await _outputs(db, [row, *overlaps])
     return AssignmentWriteOut(assignment=outputs[0], overlaps=outputs[1:])
+
+
+@router.get("/commands/{command_key}", response_model=PlanningCommandOut, dependencies=_PLANNING)
+async def planning_command_status(command_key: str, current: CurrentUser, db: DbSession):
+    return await planning_commands.status(db, current, command_key)
+
+
+@router.get("/assignments/{assignment_id}", response_model=AssignmentOut, dependencies=_PLANNING)
+async def current_assignment(assignment_id: str, current: CurrentUser, db: DbSession):
+    await planning_commands.lock_memberships(db, current)
+    try:
+        row = await scheduling.get(db, current.org_id, assignment_id)
+    except scheduling.SchedulingError as exc:
+        _raise(exc)
+    return (await _command_outputs(db, [row]))[0]
 
 
 @router.patch(
@@ -392,7 +408,22 @@ def _notice_out(message: EmailMessage, row) -> dict:
     }
 
 
-@router.get("/assignments/{assignment_id}/notifications")
+class AssignmentNotificationOut(BaseModel):
+    id: str
+    kind: str
+    status: str
+    error: str | None
+    sent_at: str | None
+    created_at: str
+    can_retry: bool
+
+
+class AssignmentNotificationsOut(BaseModel):
+    smtp_configured: bool
+    items: list[AssignmentNotificationOut]
+
+
+@router.get("/assignments/{assignment_id}/notifications", response_model=AssignmentNotificationsOut)
 async def assignment_notifications(assignment_id: str, current: CurrentUser, db: DbSession):
     row = await _notice_assignment(db, current, assignment_id)
     messages = await db.scalars(
@@ -410,7 +441,10 @@ async def assignment_notifications(assignment_id: str, current: CurrentUser, db:
     }
 
 
-@router.post("/assignments/{assignment_id}/notifications/{message_id}/retry")
+@router.post(
+    "/assignments/{assignment_id}/notifications/{message_id}/retry",
+    response_model=AssignmentNotificationOut,
+)
 async def retry_assignment_notification(
     assignment_id: str, message_id: str, current: CurrentUser, db: DbSession
 ):

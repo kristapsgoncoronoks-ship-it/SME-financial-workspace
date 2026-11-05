@@ -151,7 +151,11 @@ async def record(
                 else (
                     audit.A.REIMBURSE_PAID
                     if operation == "reimbursement_paid"
-                    else f"expense.{operation}"
+                    else (
+                        audit.A.REIMBURSE_CANCEL
+                        if operation == "reimbursement_cancelled"
+                        else f"expense.{operation}"
+                    )
                 )
             )
         ),
@@ -163,6 +167,7 @@ async def record(
             "transaction_binned": "expense_transaction",
             "reimbursement_created": "reimbursement_batch",
             "reimbursement_paid": "reimbursement_batch",
+            "reimbursement_cancelled": "reimbursement_batch",
         }[operation],
         target_id=target_id,
         meta={
@@ -180,6 +185,15 @@ async def record(
                     "evidence_basis": "operator_recorded",
                 }
                 if operation == "reimbursement_paid"
+                else {}
+            ),
+            **(
+                {
+                    "reports": len(result["released_reports"]),
+                    "released_report_ids": [r["id"] for r in result["released_reports"]],
+                    "reason": result["reason"],
+                }
+                if operation == "reimbursement_cancelled"
                 else {}
             ),
         },

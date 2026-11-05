@@ -9,7 +9,7 @@ import { test, expect, type Page, type Route } from "@playwright/test";
  *    a customer-notice lead PUTs {client_notice_hours}; picking Off sends
  *    {clear_client_notice_hours};
  *  - the assignment form carries the per-assignment override and posts
- *    client_notice_hours_before only when set;
+ *    explicit inherited timing or the chosen client_notice_hours_before;
  *  - the project page's Customer card lists customers, flags one without an
  *    email, and PUTs the link;
  *  - copy is industry-neutral (owner guard list).
@@ -34,6 +34,9 @@ async function open(page: Page, path: string, opts: MockOpts = {}) {
     contentType: "application/json",
     body: JSON.stringify(body),
   });
+
+  const planningReceipts: Record<string, { payload: Record<string, unknown>; result: { assignment: Record<string, unknown>; overlaps: unknown[] } }> = {};
+  const planningRows: Record<string, unknown>[] = [];
 
   let scheduleSettings: Record<string, unknown> = {
     assignment_remind_hours: null,
@@ -92,30 +95,20 @@ async function open(page: Page, path: string, opts: MockOpts = {}) {
       return route.fulfill(json([{ user_id: "user-1", email: "someone@test.io", name: "Test User" }]));
     if (p === "/schedule/assignments") {
       if (method === "POST") {
-        opts.onAssignmentCreate?.(route.request().postDataJSON());
-        return route.fulfill(
-          json(
-            {
-              assignment: {
-                id: "asg-new",
-                project_id: "proj-1",
-                assignee_user_id: "user-1",
-                assignee_email: "someone@test.io",
-                starts_at: "2026-09-04T09:00:00+00:00",
-                ends_at: "2026-09-04T17:00:00+00:00",
-                all_day: false,
-                status: "planned",
-                note: null,
-                created_by: "someone@test.io",
-              },
-              overlaps: [],
-            },
-            201,
-          ),
-        );
+        const payload = route.request().postDataJSON(); opts.onAssignmentCreate?.(payload);
+        const assignment = { ...payload, id: `asg-new-${planningRows.length + 1}`, assignee_email: "someone@test.io", created_by: "someone@test.io", revision: 1, status: "planned", notification_status: "queued" };
+        const result = { assignment, overlaps: [] };
+        planningRows.push(assignment);
+        planningReceipts[route.request().headers()["idempotency-key"]] = { payload, result };
+        return route.fulfill(json(result, 201));
       }
-      return route.fulfill(json([]));
+      return route.fulfill(json(planningRows));
     }
+    if (p.startsWith("/schedule/commands/")) {
+      const key = p.slice("/schedule/commands/".length), receipt = planningReceipts[key];
+      return route.fulfill(receipt ? json({ id: "planning-receipt", org_id: ORG.id, actor_user_id: "user-1", status: "committed", operation: "assignment_created", command_key: key, target_id: receipt.result.assignment.id, ...receipt }) : json({ detail: "No committed outcome" }, 404));
+    }
+    if (p.startsWith("/schedule/assignments/asg-new-")) return route.fulfill(json(planningRows.find((row) => p.endsWith(String(row.id)))));
     if (p === "/schedule/feed-token")
       return route.fulfill(json({ token: "tok-1", path: "/api/v1/calendar/feed/tok-1.ics" }));
 
@@ -205,7 +198,7 @@ test("schedule-notice settings render and PUT the picked lead / the clear", asyn
   expect(puts[1]).toEqual({ clear_client_notice_hours: true });
 });
 
-test("the assignment form posts the per-assignment notice override only when set", async ({
+test("the assignment form freezes inherited null timing and an explicit per-assignment notice override", async ({
   page,
 }) => {
   const posts: Record<string, unknown>[] = [];
@@ -214,7 +207,8 @@ test("the assignment form posts the per-assignment notice override only when set
   await page.getByRole("button", { name: "New assignment", exact: true }).click();
   await page.getByRole("button", { name: "Save assignment" }).click();
   await expect.poll(() => posts.length).toBe(1);
-  expect(posts[0]).not.toHaveProperty("client_notice_hours_before");
+  expect(posts[0]).toMatchObject({ client_notice_hours_before: null });
+  await expect(page.getByText("Assignment saved.", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "New assignment", exact: true }).click();
   await page

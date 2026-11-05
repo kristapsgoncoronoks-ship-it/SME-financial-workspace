@@ -82,7 +82,7 @@ class _Artifact:
             self.store.put(self.key, data)
 
     def observe(self, monkeypatch):
-        original_open, original_get = Path.open, self.store.get
+        original_open, original_get = Path.open, self.store.get_file
         target = self.local._path(self.key)
 
         def opened(path, *args, **kwargs):
@@ -92,12 +92,12 @@ class _Artifact:
                 self.handles.append(source)
             return source
 
-        def get(key, *, max_bytes=None):
+        def get_file(key, destination, *, max_bytes=None):
             self.calls.append((key, max_bytes))
-            return original_get(key, max_bytes=max_bytes)
+            return original_get(key, destination, max_bytes=max_bytes)
 
         monkeypatch.setattr(Path, "open", opened)
-        monkeypatch.setattr(self.store, "get", get)
+        monkeypatch.setattr(self.store, "get_file", get_file)
 
     def assert_closed(self):
         assert all(h.source.closed and h.close_calls == 1 for h in self.handles)

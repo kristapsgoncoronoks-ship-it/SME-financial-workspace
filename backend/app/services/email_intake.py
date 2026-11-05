@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.email_intake import EmailIntake, InboundInvoice
+from app.models.organization import Organization
 from app.services import capture_failures, documents, filesec, jobs
 from app.services.parser import parse_invoice_file
 
@@ -74,6 +75,25 @@ async def resolve_org(db: AsyncSession, token: str | None) -> str | None:
     if not token:
         return None
     return await db.scalar(select(EmailIntake.org_id).where(EmailIntake.token == token.lower()))
+
+
+async def lock_delivery_workspace(db: AsyncSession, org_id: str) -> bool:
+    """Serialize delivery admission until the caller's commit or rollback.
+
+    A message has several attachment rows, so an attachment uniqueness rule
+    cannot identify its delivery. The existing workspace row also covers old
+    duplicate Message-IDs without rewriting them. NO KEY UPDATE serializes
+    admissions while remaining compatible with child inserts' KEY SHARE locks.
+    The pessimistic health commit releases this lock: callers must reacquire it
+    and recheck the recipient/module/message before storing any attachment.
+    SQLite ignores the row lock; concurrency qualification is PostgreSQL-only.
+    """
+    return (
+        await db.scalar(
+            select(Organization.id).where(Organization.id == org_id).with_for_update(key_share=True)
+        )
+        is not None
+    )
 
 
 def _method_for(filename: str) -> str:
@@ -152,6 +172,21 @@ async def process_attachment(
     return row
 
 
+def _extraction_base(row: InboundInvoice) -> tuple:
+    """Facts the worker saw before asynchronous storage/parsing work."""
+    return (
+        row.org_id,
+        row.status,
+        row.sha256,
+        row.filename,
+        row.size,
+        row.draft_json,
+        row.failure_seq,
+        row.invoice_id,
+        row.updated_at,
+    )
+
+
 async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
     """Worker-side extraction of one queued inbound attachment (idempotent).
 
@@ -164,38 +199,53 @@ async def extract_inbound(db: AsyncSession, inbound_id: str) -> dict:
     if row.status not in ("queued", "failed"):
         return {"skipped": f"status={row.status}"}  # already parsed/confirmed
 
+    base = _extraction_base(row)
+    org_id, filename, source_sha = row.org_id, row.filename, row.sha256
+    draft = None
+    error = failure_code = failure_reason = None
     try:
-        content = await documents.load_capture(documents.EMAIL_ATTACHMENTS, row.org_id, row.sha256)
+        content = await documents.load_capture(documents.EMAIL_ATTACHMENTS, org_id, source_sha)
     except capture_failures.CaptureError as exc:
-        row.status = "failed"
-        row.error = str(exc)
-        row.failure_code = exc.code
-        row.failure_seq = (row.failure_seq or 0) + 1
-        await db.commit()
-        return {"status": "failed", "reason": exc.code}
-    if content is None:
-        row.status = "failed"
-        row.error = "stored attachment missing"
-        row.failure_code = capture_failures.STORED_FILE_MISSING
-        row.failure_seq = (row.failure_seq or 0) + 1
-        await db.commit()
-        return {"status": "failed", "reason": "missing bytes"}
+        content = None
+        error, failure_code = str(exc), exc.code
+        failure_reason = exc.code
+    if content is None and failure_code is None:
+        error, failure_code = "stored attachment missing", capture_failures.STORED_FILE_MISSING
+        failure_reason = "missing bytes"
 
-    try:
-        draft = await run_in_threadpool(parse_invoice_file, row.filename or "attachment", content)
+    if content is not None:
+        try:
+            draft = await run_in_threadpool(parse_invoice_file, filename or "attachment", content)
+        except ValueError as exc:
+            error, failure_code = str(exc), capture_failures.code_for(exc)
+
+    # Parse without holding a document row lock, then join the same publication
+    # boundary as confirm/discard/delete. Refresh the identity-map instance:
+    # taking a lock alone must not leave the pre-parse status in memory.
+    row = await db.scalar(
+        select(InboundInvoice)
+        .where(InboundInvoice.id == inbound_id, InboundInvoice.org_id == org_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if row is None:
+        return {"skipped": "row gone"}
+    if _extraction_base(row) != base:
+        return {"skipped": "inbound changed"}
+    if draft is not None:
         row.draft_json = draft.model_dump_json()
         row.method = draft.method if draft.method and draft.method != "unknown" else row.method
         row.status = "pending"
         row.error = None
-        # A retry that succeeds must not leave the previous cause behind.
         row.failure_code = None
-    except ValueError as exc:
+    else:
         row.status = "failed"
-        row.error = str(exc)
-        # H-1: classify into the vocabulary the failed-capture worklist reads.
-        row.failure_code = capture_failures.code_for(exc)
+        row.error = error
+        row.failure_code = failure_code
         row.failure_seq = (row.failure_seq or 0) + 1
     await db.commit()
+    if failure_reason is not None:
+        return {"status": "failed", "reason": failure_reason}
     return {"status": row.status, "method": row.method}
 
 

@@ -1,0 +1,4 @@
+# Test tooling for local CI and disposable in-container smoke environments.
+# Production installs requirements-runtime.txt; each pin is declared once.
+pytest==9.1.1
+pytest-asyncio==1.4.0

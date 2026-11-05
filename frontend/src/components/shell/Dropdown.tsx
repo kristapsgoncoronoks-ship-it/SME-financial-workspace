@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cx } from "../../lib/cx";
 
 export interface DropdownItem {
@@ -33,7 +33,51 @@ export function Dropdown({ trigger, items, label, align = "right", className = "
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const root = rootRef.current, menu = menuRef.current;
+    if (!root || !menu) return;
+    function position() {
+      if (!root || !menu) return;
+      const viewport = window.visualViewport;
+      let left = viewport?.offsetLeft ?? 0, top = viewport?.offsetTop ?? 0;
+      let right = left + (viewport?.width ?? innerWidth), bottom = top + (viewport?.height ?? innerHeight);
+      // A drawer's scrolling body also clips its descendants. Keep the menu
+      // inside that visible area as well as the browser viewport.
+      for (let parent = root.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+        const style = getComputedStyle(parent), rect = parent.getBoundingClientRect();
+        if (/auto|scroll|hidden|clip/.test(style.overflowX)) { left = Math.max(left, rect.left + parent.clientLeft); right = Math.min(right, rect.left + parent.clientLeft + parent.clientWidth); }
+        if (/auto|scroll|hidden|clip/.test(style.overflowY)) { top = Math.max(top, rect.top + parent.clientTop); bottom = Math.min(bottom, rect.top + parent.clientTop + parent.clientHeight); }
+      }
+      const anchor = root.getBoundingClientRect(), gap = 4, inset = 8;
+      const availableWidth = Math.max(0, right - left - inset * 2);
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const maxWidth = Math.min(24 * rem, availableWidth), minWidth = Math.min(12 * rem, maxWidth);
+      const width = Math.min(Math.max(menu.offsetWidth, minWidth), maxWidth);
+      const x = Math.max(left + inset, Math.min(align === "right" ? anchor.right - width : anchor.left, right - inset - width));
+      const below = Math.max(0, bottom - inset - anchor.bottom - gap), above = Math.max(0, anchor.top - top - inset - gap);
+      const upwards = menu.scrollHeight > below && above > below;
+      const maxHeight = upwards ? above : below;
+      const next: CSSProperties = { left: x - anchor.left, top: upwards ? -Math.min(menu.scrollHeight + 2, maxHeight) - gap : anchor.height + gap, minWidth, maxWidth, maxHeight, width: "max-content" };
+      setMenuStyle(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+    }
+    position();
+    const observer = new ResizeObserver(position);
+    observer.observe(root); observer.observe(menu);
+    window.addEventListener("resize", position);
+    document.addEventListener("scroll", position, true);
+    window.visualViewport?.addEventListener("resize", position);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", position);
+      document.removeEventListener("scroll", position, true);
+      window.visualViewport?.removeEventListener("resize", position);
+    };
+  }, [open, align]);
 
   useEffect(() => {
     if (!open) return;
@@ -112,23 +156,24 @@ export function Dropdown({ trigger, items, label, align = "right", className = "
             setOpen(true);
           }
         }}
-        className="rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
+        className="max-w-full rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus"
       >
         {trigger({ open })}
       </button>
 
       {open && (
         <div
+          ref={menuRef}
           role="menu"
           aria-label={label}
+          style={menuStyle}
           className={cx(
-            "iq-pop-in absolute z-40 mt-1 min-w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg",
-            align === "right" ? "right-0" : "left-0",
+            "iq-pop-in absolute z-40 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-lg",
           )}
         >
           {items.map((item, i) => {
             const cls = cx(
-              "flex w-full items-center gap-2 px-3 py-2 text-left text-sm focus-visible:outline-hidden",
+              "flex min-w-0 w-full items-center gap-2 whitespace-normal px-3 py-2 text-left text-sm [overflow-wrap:anywhere] focus-visible:outline-hidden",
               item.disabled
                 ? "cursor-not-allowed text-slate-300"
                 : item.danger

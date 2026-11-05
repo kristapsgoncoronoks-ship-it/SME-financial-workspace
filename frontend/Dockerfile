@@ -49,26 +49,22 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
 FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS build
 WORKDIR /app
 COPY package*.json ./
+COPY scripts/verify-npm-toolchain.mjs /tmp/bidit-verify-npm-toolchain.mjs
 # Optional public CA bundle for corporate build proxies; never stored in the image.
-# npm 12.2.1 bundles node-gyp's vulnerable undici 6.29.0. Apply the compatible
-# upstream 6.29.1 maintenance patch to this build-only dependency, retaining its
-# complete package/license and explicit provenance until npm ships the repair.
+# The official npm 12.2.2 parent fixes ip-address and includes the existing
+# undici 6.29.1 repair. Pin its archive, then verify owner/path/resolution and
+# exact bundled package bytes/notices before installing application packages.
 RUN --mount=type=secret,id=build_ca \
     set -eu; \
     if [ -f /run/secrets/build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/build_ca; fi; \
-    npm install --global npm@12.2.1; \
+    npm pack --ignore-scripts --pack-destination /tmp npm@12.2.2; \
+    node /tmp/bidit-verify-npm-toolchain.mjs archive /tmp/npm-12.2.2.tgz; \
+    npm install --global --ignore-scripts --no-audit --no-fund /tmp/npm-12.2.2.tgz; \
     bidit_npm_root="$(npm root --global)"; \
-    node -e 'require("node:assert/strict").equal(require(process.argv[1]).version, "6.29.0")' "$bidit_npm_root/npm/node_modules/undici/package.json"; \
-    npm pack --ignore-scripts --pack-destination /tmp undici@6.29.1; \
-    echo '29c4b8e0b2d86cb8795571c1959012ce057a14ecfd34858335f47c31e770a04f  /tmp/undici-6.29.1.tgz' | sha256sum -c -; \
-    rm -rf "$bidit_npm_root/npm/node_modules/undici"; \
-    mkdir "$bidit_npm_root/npm/node_modules/undici"; \
-    tar -xzf /tmp/undici-6.29.1.tgz -C "$bidit_npm_root/npm/node_modules/undici" --strip-components=1; \
-    node -e 'require("node:assert/strict").equal(require(process.argv[1]).version, "6.29.1")' "$bidit_npm_root/npm/node_modules/undici/package.json"; \
-    test -s "$bidit_npm_root/npm/node_modules/undici/LICENSE"; \
-    mkdir -p /usr/local/share/bidit-npm; \
-    printf '%s\n' 'npm-version: 12.2.1' 'patched-dependency: undici 6.29.0 -> 6.29.1' 'source: https://registry.npmjs.org/undici/-/undici-6.29.1.tgz' 'sha256: 29c4b8e0b2d86cb8795571c1959012ce057a14ecfd34858335f47c31e770a04f' 'advisory: GHSA-xjj6-f33q-929c / CVE-2026-109869' > /usr/local/share/bidit-npm/security-patch.txt; \
-    rm /tmp/undici-6.29.1.tgz; \
+    test "$bidit_npm_root" = /usr/local/lib/node_modules; \
+    node /tmp/bidit-verify-npm-toolchain.mjs installed "$bidit_npm_root" /usr/local/share/bidit-npm; \
+    test "$(npm --version)" = 12.2.2; \
+    rm /tmp/npm-12.2.2.tgz /tmp/bidit-verify-npm-toolchain.mjs; \
     npm ci; \
     npm cache clean --force
 COPY --from=typescript-compiler /out/tsc /tmp/bidit-tsc
@@ -101,5 +97,5 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
 USER nginx
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://127.0.0.1:80/ >/dev/null 2>&1 || exit 1
+    CMD wget -Y off -qO- http://127.0.0.1:80/ >/dev/null 2>&1 || exit 1
 CMD ["nginx", "-g", "daemon off;"]

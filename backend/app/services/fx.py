@@ -22,6 +22,8 @@ from decimal import Decimal, InvalidOperation
 
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.money import q as _q
@@ -193,6 +195,34 @@ async def load_rates(db: AsyncSession, rows: list[tuple[date, str, Decimal]]) ->
     return written
 
 
+async def _seed_missing_rates(db: AsyncSession, rows: list[tuple[date, str, Decimal]]) -> int:
+    """Insert fallback rows without replacing a concurrent seed or live rate.
+
+    Only the dated-currency conflict is a no-op; unrelated database errors still
+    propagate. Live ECB refresh retains `load_rates`' ordinary update semantics.
+    """
+    dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
+    insert = pg_insert if dialect == "postgresql" else sqlite_insert
+    written = 0
+    # Keep each batch below SQLite's historical 999-bound-parameter limit,
+    # including the generated ID and timestamp values.
+    for offset in range(0, len(rows), 100):
+        statement = (
+            insert(EcbRate)
+            .values(
+                [
+                    {"rate_date": d, "currency": currency, "rate": rate}
+                    for d, currency, rate in rows[offset : offset + 100]
+                ]
+            )
+            .on_conflict_do_nothing(index_elements=["rate_date", "currency"])
+            .returning(EcbRate.id)
+        )
+        written += len((await db.scalars(statement)).all())
+    await db.commit()
+    return written
+
+
 def _month_starts(start: date, end: date) -> list[date]:
     out, y, m = [], start.year, start.month
     while date(y, m, 1) <= end:
@@ -214,7 +244,7 @@ async def ensure_seed_rates(db: AsyncSession, today: date) -> int:
         factor = Decimal(1) + (Decimal((idx % 5) - 2) * Decimal("0.004"))
         for ccy, base in FALLBACK_RATES.items():
             rows.append((d, ccy, _q(base * factor, Decimal("0.0001"))))
-    return await load_rates(db, rows)
+    return await _seed_missing_rates(db, rows)
 
 
 async def ensure_european_coverage(db: AsyncSession, today: date) -> int:
@@ -235,7 +265,7 @@ async def ensure_european_coverage(db: AsyncSession, today: date) -> int:
     for d in _month_starts(FALLBACK_START, today):
         for ccy in missing:
             rows.append((d, ccy, FALLBACK_RATES[ccy]))
-    return await load_rates(db, rows)
+    return await _seed_missing_rates(db, rows)
 
 
 async def resolve_rate(db: AsyncSession, currency: str, on_date: date) -> Resolved | None:

@@ -537,19 +537,40 @@ async def reclaim_stale(db: AsyncSession, *, now: datetime | None = None) -> int
             )
         )
     )
+    reclaimed = 0
     for job in stale:
-        job.locked_at = None
-        job.locked_by = None
-        job.updated_at = now
+        values = {
+            "locked_at": None,
+            "locked_by": None,
+            "updated_at": now,
+            "last_error": LEASE_EXPIRED_ERROR,
+        }
         if job.attempts >= job.max_attempts:
-            job.status = jobmodel.DEAD
-            job.last_error = LEASE_EXPIRED_ERROR
+            values["status"] = jobmodel.DEAD
         else:
-            job.status = jobmodel.QUEUED
-            job.last_error = LEASE_EXPIRED_ERROR
-            job.run_after = now + timedelta(seconds=_backoff(job.attempts))
+            values["status"] = jobmodel.QUEUED
+            values["run_after"] = now + timedelta(seconds=_backoff(job.attempts))
+        # Selection is only a candidate snapshot. A worker can finish/renew, or
+        # another sweep can reclaim, before this UPDATE obtains the row lock.
+        # Match the observed lease so none of those writes/evidence is replaced.
+        result = await db.execute(
+            update(Job)
+            .where(
+                Job.id == job.id,
+                Job.org_id == job.org_id,
+                Job.status == jobmodel.RUNNING,
+                Job.locked_at == job.locked_at,
+                Job.locked_by == job.locked_by,
+                Job.attempts == job.attempts,
+                Job.max_attempts == job.max_attempts,
+                or_(Job.locked_at.is_(None), Job.locked_at < cutoff),
+            )
+            .values(**values)
+            .execution_options(synchronize_session="fetch")
+        )
+        reclaimed += cast(CursorResult, result).rowcount
     await db.commit()
-    return len(stale)
+    return reclaimed
 
 
 class JobNotRetryable(Exception):

@@ -2863,6 +2863,71 @@ async def _org_templates(ctx: Ctx) -> None:
         )
 
 
+@probe("planning_commands")
+async def _planning_commands(ctx: Ctx) -> None:
+    """The same actor command key in two tenants must return only its own receipt."""
+    shared_key = "parity-shared-planning-command"
+    receipts, bodies = {}, {}
+    for org in (ctx.a, ctx.b):
+        project = await org.post(
+            "/api/v1/masters/projects",
+            json={"code": "COMMAND-PARITY", "name": "Overlapping planning project"},
+        )
+        assert project.status_code == 201, project.text
+        body = {
+            "project_id": project.json()["id"],
+            "assignee_user_id": org.user_id,
+            "starts_at": "2026-09-01T09:00:00+00:00",
+            "ends_at": "2026-09-01T17:00:00+00:00",
+            "note": f"PRIVATE COMMAND OF {org.name}",
+        }
+        made = await org.client.post(
+            "/api/v1/schedule/assignments",
+            headers={**org.headers, "Idempotency-Key": shared_key},
+            json=body,
+        )
+        assert made.status_code == 201, made.text
+        own = await org.get(f"/api/v1/schedule/commands/{shared_key}")
+        assert own.status_code == 200, own.text
+        assert own.json()["target_id"] == made.json()["assignment"]["id"]
+        receipts[org.name], bodies[org.name] = own.json(), body
+
+    for me, other in ((ctx.a, ctx.b), (ctx.b, ctx.a)):
+        own = await me.get(f"/api/v1/schedule/commands/{shared_key}")
+        assert own.status_code == 200, own.text
+        _assert_isolated(
+            "planning_commands",
+            {receipts[me.name]["id"]},
+            {receipts[other.name]["id"]},
+            {own.json()["id"]},
+        )
+        assert own.json()["org_id"] == me.org_id
+        assert own.json()["actor_user_id"] == me.user_id
+        assert own.json()["payload"]["note"] == bodies[me.name]["note"]
+
+    private_key = "parity-private-planning-command"
+    private_body = {
+        **bodies[ctx.a.name],
+        "starts_at": "2026-09-02T09:00:00+00:00",
+        "ends_at": "2026-09-02T17:00:00+00:00",
+    }
+    made = await ctx.a.client.post(
+        "/api/v1/schedule/assignments",
+        headers={**ctx.a.headers, "Idempotency-Key": private_key},
+        json=private_body,
+    )
+    assert made.status_code == 201, made.text
+    _assert_404(
+        await ctx.b.get(f"/api/v1/schedule/commands/{private_key}"),
+        "planning receipt lookup by another tenant's command key",
+    )
+    other_actor, _ = await ctx.a.member("planning-other-actor@example.com")
+    _assert_404(
+        await ctx.a.client.get(f"/api/v1/schedule/commands/{shared_key}", headers=other_actor),
+        "planning receipt lookup by a different actor in the same tenant",
+    )
+
+
 @probe("project_assignments")
 async def _project_assignments(ctx: Ctx) -> None:
     """Who works where and when is operational data a rival tenant must not

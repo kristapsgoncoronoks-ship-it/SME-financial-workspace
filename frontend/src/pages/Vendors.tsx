@@ -91,7 +91,7 @@ export default function VendorsPage() {
 
   const input = "rounded-lg border border-slate-300 px-2 py-1 text-sm";
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 [overflow-wrap:anywhere]">
       <div>
         <h1 className="text-xl font-semibold">Suppliers</h1>
         <p className="text-slate-500">
@@ -111,7 +111,7 @@ export default function VendorsPage() {
         </div>
       )}
 
-      <Card>
+      <Card className="min-w-0">
         <h2 className="mb-2 text-sm font-semibold text-slate-600">Pending bank-detail changes</h2>
         <QueryState
           query={changes}
@@ -126,15 +126,17 @@ export default function VendorsPage() {
           errorTitle="Couldn’t load pending changes"
         >
           {(rows) => (
-            <table className="w-full text-sm">
+            <div role="region" aria-label="Pending supplier bank changes" tabIndex={0} className="relative max-w-full overflow-x-auto">
+            <table className="w-full text-sm [overflow-wrap:normal]">
+              <caption className="sr-only">Pending supplier bank changes</caption>
               <thead>
                 <tr className="text-left text-xs text-text-secondary">
-                  <th className="py-1">Supplier</th>
-                  <th className="py-1">Field</th>
-                  <th className="py-1">Change</th>
-                  <th className="py-1">Requested by</th>
-                  <th className="py-1">Source</th>
-                  <th className="py-1"></th>
+                  <th scope="col" className="py-1">Supplier</th>
+                  <th scope="col" className="py-1">Field</th>
+                  <th scope="col" className="py-1">Change</th>
+                  <th scope="col" className="py-1">Requested by</th>
+                  <th scope="col" className="py-1">Source</th>
+                  <th scope="col" className="py-1"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -190,11 +192,12 @@ export default function VendorsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </QueryState>
       </Card>
 
-      <Card>
+      <Card className="min-w-0">
         <QueryState
           query={vendors}
           loading={<Skeleton className="h-24 w-full" />}
@@ -208,14 +211,16 @@ export default function VendorsPage() {
           errorTitle="Couldn’t load suppliers"
         >
           {(rows) => (
-            <table className="w-full text-sm">
+            <div role="region" aria-label="Suppliers and bank details" tabIndex={0} className="relative max-w-full overflow-x-auto">
+            <table className="w-full text-sm [overflow-wrap:normal]">
+              <caption className="sr-only">Suppliers and bank details</caption>
               <thead>
                 <tr className="text-left text-xs text-text-secondary">
-                  <th className="py-1">Supplier</th>
-                  <th className="py-1">Status</th>
-                  <th className="py-1">IBAN</th>
-                  <th className="py-1">BIC</th>
-                  <th className="py-1"></th>
+                  <th scope="col" className="py-1">Supplier</th>
+                  <th scope="col" className="py-1">Status</th>
+                  <th scope="col" className="py-1">IBAN</th>
+                  <th scope="col" className="py-1">BIC</th>
+                  <th scope="col" className="py-1"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -241,16 +246,16 @@ export default function VendorsPage() {
                     </td>
                     <td className="py-1">
                       <input
-                        className={`${input} w-56 font-mono`}
-                        placeholder="—" aria-label="—"
+                        className={`${input} w-56 max-w-[calc(100vw-6rem)] font-mono`}
+                        placeholder="—" aria-label={`IBAN for ${v.name}`}
                         value={val(v, "iban")}
                         onChange={(e) => set(v, "iban", e.target.value)}
                       />
                     </td>
                     <td className="py-1">
                       <input
-                        className={`${input} w-32`}
-                        placeholder="—" aria-label="—"
+                        className={`${input} w-32 max-w-[calc(100vw-6rem)]`}
+                        placeholder="—" aria-label={`BIC for ${v.name}`}
                         value={val(v, "bic")}
                         onChange={(e) => set(v, "bic", e.target.value)}
                       />
@@ -270,6 +275,7 @@ export default function VendorsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </QueryState>
       </Card>

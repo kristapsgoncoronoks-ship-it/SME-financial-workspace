@@ -66,6 +66,38 @@ palette; brand marks, disabled states and decorative colors keep their meaning.
 | `focus` | `focus-visible:ring-focus` | Visible keyboard location for buttons, inputs and related controls, including invalid fields. Preserve separate error borders and messages. |
 | `feedback-success` | `bg-feedback-success` | Readable success confirmation with white text. |
 
+State presentation is shared by `lib/statusStyles.ts` and the `state-*` roles
+in `index.css`. `Badge` and `StatusBadge` use those presentation roles; legacy
+format maps keep their own domain keys and labels. Do not replace a domain state
+with a generic label merely because it shares a colour.
+
+| Role family | Existing domain meaning retained |
+| --- | --- |
+| `neutral`, `muted` | Draft/open/no-validation/discarded; written off and cancelled keep the muted background, and cancelled keeps its strike-through. |
+| `success` | Paid, confirmed, passed, reimbursed; validation approval keeps its existing success meaning. |
+| `warning`, `warning-strong` | Pending, disputed, submitted; partially approved remains the stronger warning text. |
+| `danger` | Overdue, failed, rejected, flagged. |
+| `info`, `info-subtle` | Viewed/partial/queued/expense-approved; issued Sent keeps its lighter background. |
+| `approved`, `credit`, `returned` | Issued approval/reimbursement marking, credits/extraction method, and returned expenses retain their distinct indigo/violet/orange families. |
+| `control-on`, `control-off` | Enabled switch track states; native switch semantics and disabled behavior are unchanged. |
+| `chart-1` … `chart-10`, `chart-budget`, `chart-grid` | Shared categorical markers, budget line and decorative grid. Labels/legend remain the source of category meaning. |
+
+The incremental migration keeps readable existing status colours. Slate-500
+status text moves to Slate-600, and Sent text from Sky-600 to Sky-700, to meet
+the sampled 4.5:1 normal-text threshold on their actual light backgrounds.
+Chart markers and enabled switch tracks use darker hues for a sampled 3:1
+contrast against white; adjacent categories still require labels and do not gain
+an automatic colour-difference guarantee. Disabled content and grid lines are
+not claimed to meet enabled-information contrast.
+
+Shared Button, legacy `btn`, Switch and overlay-close hit areas are at least
+44 CSS pixels below the 640px breakpoint, with nonoverlapping layout boxes.
+Desktop sizes and switch track geometry remain dense. The 44px enhancement is
+separate from the 24px AA minimum and its spacing exceptions; Chromium rectangle,
+keyboard and colour checks do not establish physical-device or full WCAG
+acceptance. Named scrolling table regions use a positioned containing block so
+visually hidden captions/header labels cannot escape to the document root.
+
 Choose roles by context instead of replacing every palette use mechanically.
 The repaired light-theme controls have rendered contrast measurements in the
 [priority repair record](design/IMPECCABLE-PRIORITY-FIXES-2026-10-22.md); arbitrary

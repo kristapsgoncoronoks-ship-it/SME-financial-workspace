@@ -17,6 +17,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import tenant
 from app.core.csv_safety import sanitize_cell
 from app.core.errors import AppError, ConflictError, ValidationError
 from app.core.money import q2
@@ -359,7 +360,11 @@ async def _locked_batch_reports(
 
 
 async def cancel_batch(
-    db: AsyncSession, org_id: str, batch: ReimbursementBatch
+    db: AsyncSession,
+    org_id: str,
+    batch: ReimbursementBatch,
+    *,
+    report_versions: dict[str, int] | None = None,
 ) -> list[ExpenseReport]:
     """Cancel an open batch with no recorded export, releasing its reports.
 
@@ -375,9 +380,33 @@ async def cancel_batch(
             "with your bank or accountant before arranging another payment.",
             code="batch_exported_cannot_cancel",
         )
-    reports = await batch_reports(db, org_id, batch.id)
+    if batch.paid_at is not None:
+        raise ConflictError(
+            "Batch has contradictory payment evidence. Review it with your accountant "
+            "before releasing its reports.",
+            code="reimbursement_cancellation_conflict",
+        )
+    # Batch -> ordered reports -> audit matches pay and expense decisions. Read
+    # current row values after actual lock waits, before unlinking any report.
+    with tenant.include_deleted():
+        reports = await _locked_batch_reports(db, org_id, batch.id)
+    if (report_versions is not None and set(report_versions) != {r.id for r in reports}) or any(
+        r.deleted_at is not None
+        or r.status not in ("approved", "marked_for_reimbursement")
+        or r.reimbursed_at is not None
+        or r.payment_reference is not None
+        or r.payment_method is not None
+        or (report_versions is not None and report_versions.get(r.id) != r.version)
+        for r in reports
+    ):
+        raise ConflictError(
+            "A linked report changed or has payment evidence. Refresh the batch and "
+            "review its reports before cancelling.",
+            code="reimbursement_selection_conflict",
+        )
     for r in reports:
         r.payout_batch_id = None
+        r.version += 1
     batch.status = BATCH_CANCELLED
     batch.version += 1
     return reports

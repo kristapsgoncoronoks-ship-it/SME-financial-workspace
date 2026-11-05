@@ -15,6 +15,7 @@ A DSAR is keyed by the subject's **email**. Each personal-data location resolves
 | Inbound email records | **erase** | delete the row **and** its stored attachment bytes. |
 | Issued tax invoices (buyer) | **retain** | statutory record; buyer identity is required content. Exempt under Art. 17(3)(b). Reported, untouched. |
 | Audit trail (actor) | **retain** | tamper-evident integrity record; redacting it would break the hash chain. Reported, untouched. |
+| Stored export snapshots | **retain** | Conservatively report every unpurged stored archive/workspace snapshot in this tenant as potentially affected, independent of requester. Report the existing link-expiry/download-grace purge eligibility range, unknown deadlines and legal-hold suspension. Dates are eligibility, not proof of deletion; contents are not scanned during erasure. No new artifact-purge policy. |
 
 An active legal hold turns every erasable location into **blocked** and the execute call is a no-op. Each executed erasure is written to the audit trail as `privacy.erasure` with a **hashed** subject reference + per-location counts — never the cleartext email or any raw value — so the request is provably handled without re-storing the subject's identity. Endpoints are admin-gated and tenant-scoped; the same admin appears as the audit actor.
 

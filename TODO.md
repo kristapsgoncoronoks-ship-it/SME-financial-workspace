@@ -1,5 +1,12 @@
 # TODO — Task Board
 
+**Active backlog completion — 5 November 2026:** continue through the
+[execution plan](docs/plan/BACKLOG-COMPLETION-2026-11-05.md) and
+[197-row inventory](docs/plan/BACKLOG-COMPLETION-2026-11-05.json). Reimbursement
+cancellation, email/job races, startup, rollback and UI repairs have local
+evidence; integrated and delivered-source CI are still required. Decisions and
+external acceptance remain explicit rather than silently marked complete.
+
 **uv / rustls maintenance — 3 November 2026:** upgrade the actual builder
 installer to digest-pinned uv 0.13.7 with fixed rustls 0.23.46. Preserve the
 application graph, verified TLS, fixed XML pair and all security/storage gates.

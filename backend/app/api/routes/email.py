@@ -9,9 +9,10 @@ from sqlalchemy import func, select
 
 from app.api.deps import CurrentOrg, CurrentUser, DbSession, require_perm
 from app.api.routes.invoices import _capture_identity, _detail, persist_invoice
-from app.core import authz
+from app.core import authz, storage
 from app.core.config import settings
 from app.core.errors import AppError
+from app.core.security_headers import content_disposition
 from app.core.tenant import reset_current_org, set_current_org
 from app.models.email_intake import InboundInvoice
 from app.schemas.email_intake import (
@@ -60,6 +61,25 @@ def _inbound_auth_failed() -> AppError:
     )
 
 
+async def _delivery_replayed(
+    db: DbSession, org_id: str, token: str | None, message_id: str | None
+) -> bool:
+    """Lock admission and revalidate facts after any wait or health commit."""
+    if not await email_intake.lock_delivery_workspace(db, org_id):
+        raise _inbound_auth_failed()
+    if await email_intake.resolve_org(db, token) != org_id:
+        raise _inbound_auth_failed()
+    if not await modules.is_enabled(db, org_id, "email_intake"):
+        await inbound_health.record_failure(
+            db, org_id, inbound_health.CHANNEL_EMAIL, inbound_health.ERR_NOT_ACTIVATED
+        )
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Email invoice intake is not activated for this workspace",
+        )
+    return await email_intake.already_delivered(db, org_id, message_id)
+
+
 @router.post("/inbound", response_model=InboundResult)
 async def inbound(
     body: InboundEmailIn,
@@ -101,19 +121,10 @@ async def inbound(
     # consequence is still caught by `last_success_at` going stale.
     scope = set_current_org(org_id)
     try:
-        # Module gate for the resolved tenant.
-        if not await modules.is_enabled(db, org_id, "email_intake"):
-            await inbound_health.record_failure(
-                db, org_id, inbound_health.CHANNEL_EMAIL, inbound_health.ERR_NOT_ACTIVATED
-            )
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                "Email invoice intake is not activated for this workspace",
-            )
         # BE-009: a redelivery of a message already in the inbox is acknowledged
         # (the provider stops retrying) and stores nothing. Checked before the
         # attempt is recorded — a retry is not a new delivery.
-        if await email_intake.already_delivered(db, org_id, body.message_id):
+        if await _delivery_replayed(db, org_id, token, body.message_id):
             return InboundResult(
                 received=len(body.attachments), queued=0, rejected=0, deduplicated=True
             )
@@ -121,6 +132,12 @@ async def inbound(
         # mid-delivery leaves the attempt recorded as not-succeeded rather than
         # leaving no trace at all.
         await inbound_health.begin_attempt(db, org_id, inbound_health.CHANNEL_EMAIL)
+        # begin_attempt intentionally commits before document work. Reacquire
+        # the shared admission lock and inspect fresh facts before writing.
+        if await _delivery_replayed(db, org_id, token, body.message_id):
+            return InboundResult(
+                received=len(body.attachments), queued=0, rejected=0, deduplicated=True
+            )
 
         # Decode EVERY attachment before writing any of them. A malformed payload
         # is then a clean, classified channel failure with nothing half-written —
@@ -220,7 +237,8 @@ async def inbound_mailgun(request: Request, db: DbSession):
             raise _inbound_auth_failed()
 
         recipient = _s("recipient") or _s("to")
-        org_id = await email_intake.resolve_org(db, email_intake.token_from_address(recipient))
+        recipient_token = email_intake.token_from_address(recipient)
+        org_id = await email_intake.resolve_org(db, recipient_token)
         if org_id is None:
             raise _inbound_auth_failed()
 
@@ -240,18 +258,10 @@ async def inbound_mailgun(request: Request, db: DbSession):
             # ORM tenant guard (the second of the three isolation layers) switched off
             # for those statements, and left two sibling routes doing the same thing
             # differently, which is how the next person copies the wrong one.
-            if not await modules.is_enabled(db, org_id, "email_intake"):
-                await inbound_health.record_failure(
-                    db, org_id, inbound_health.CHANNEL_EMAIL, inbound_health.ERR_NOT_ACTIVATED
-                )
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN,
-                    "Email invoice intake is not activated for this workspace",
-                )
             # BE-009: Mailgun retries a route that did not answer 2xx for up to
             # 8 hours; the Message-Id it posts identifies the message across them.
             message_id = _s("Message-Id") or _s("message-id")
-            if await email_intake.already_delivered(db, org_id, message_id):
+            if await _delivery_replayed(db, org_id, recipient_token, message_id):
                 return InboundResult(received=count, queued=0, rejected=0, deduplicated=True)
             # BE-020: the same bounds the JSON route enforces in its schema. More
             # parts than a message may carry is a malformed delivery, classified
@@ -269,6 +279,8 @@ async def inbound_mailgun(request: Request, db: DbSession):
                     f"At most {MAX_INBOUND_ATTACHMENTS} attachments are accepted per message",
                 )
             await inbound_health.begin_attempt(db, org_id, inbound_health.CHANNEL_EMAIL)
+            if await _delivery_replayed(db, org_id, recipient_token, message_id):
+                return InboundResult(received=count, queued=0, rejected=0, deduplicated=True)
             per_part_cap = filesec.max_bytes()
             for i in range(1, count + 1):
                 upload = form.get(f"attachment-{i}")
@@ -407,14 +419,27 @@ async def set_channel_cadence(
 # --------------------------------------------------------------------------- #
 # Review inbox
 # --------------------------------------------------------------------------- #
-async def _load(db: DbSession, org_id: str, inbound_id: str) -> InboundInvoice:
-    row = await db.scalar(
-        select(InboundInvoice).where(
-            InboundInvoice.id == inbound_id, InboundInvoice.org_id == org_id
-        )
+async def _load(
+    db: DbSession, org_id: str, inbound_id: str, *, for_update: bool = False
+) -> InboundInvoice:
+    stmt = select(InboundInvoice).where(
+        InboundInvoice.id == inbound_id, InboundInvoice.org_id == org_id
     )
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+    row = await db.scalar(stmt)
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Inbound invoice not found")
+    return row
+
+
+async def _locked_inbound(
+    db: DbSession, org_id: str, inbound_id: str, request: Request, current: CurrentUser
+) -> InboundInvoice:
+    row = await _load(db, org_id, inbound_id, for_update=True)
+    await _capture_identity(request, db, current)
+    await _guard(db, org_id)
+    await db.refresh(row)
     return row
 
 
@@ -480,9 +505,11 @@ async def confirm_inbound(
     # plan, not the caller's role.
     await _guard(db, current.org_id)
     await access.enforce_invoice_quota(db, current.org_id, current_org.plan)
-    row = await _load(db, current.org_id, inbound_id)
+    row = await _locked_inbound(db, current.org_id, inbound_id, request, current)
     if row.status == "confirmed":
         raise HTTPException(status.HTTP_409_CONFLICT, "This invoice was already confirmed")
+    if row.status == "discarded":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This attachment was discarded")
 
     draft = body.draft
     if draft is None:
@@ -498,25 +525,31 @@ async def confirm_inbound(
         await _guard(db, current.org_id)
 
     invoice, vendor_name = await persist_invoice(
-        db, current.org_id, draft, verify_capture_identity=verify_capture_identity
+        db, current.org_id, draft, verify_capture_identity=verify_capture_identity, commit=False
     )
     row.invoice_id = invoice.id
     row.status = "confirmed"
-    await audit.record(
+    event = await audit.record(
         db,
         audit.A.INBOUND_CONFIRM,
         target_type="invoice",
         target_id=invoice.id,
         meta={"inbound_id": inbound_id, "number": invoice.invoice_number},
     )
+    if event is None:
+        raise AppError(
+            "The invoice confirmation could not be recorded. Try again.",
+            code="inbound_confirmation_unavailable",
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
     await db.commit()
     return _detail(invoice, vendor_name)
 
 
 @router.post("/inbox/{inbound_id}/discard", response_model=InboundInvoiceOut, dependencies=_CAPTURE)
-async def discard_inbound(inbound_id: str, current: CurrentUser, db: DbSession):
+async def discard_inbound(inbound_id: str, request: Request, current: CurrentUser, db: DbSession):
     await _guard(db, current.org_id)
-    row = await _load(db, current.org_id, inbound_id)
+    row = await _locked_inbound(db, current.org_id, inbound_id, request, current)
     if row.status == "confirmed":
         raise HTTPException(status.HTTP_409_CONFLICT, "A confirmed invoice cannot be discarded")
     row.status = "discarded"
@@ -526,20 +559,37 @@ async def discard_inbound(inbound_id: str, current: CurrentUser, db: DbSession):
 
 
 @router.delete("/inbox/{inbound_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=_CAPTURE)
-async def delete_inbound(inbound_id: str, current: CurrentUser, db: DbSession):
+async def delete_inbound(inbound_id: str, request: Request, current: CurrentUser, db: DbSession):
     await _guard(db, current.org_id)
-    row = await _load(db, current.org_id, inbound_id)
+    row = await _locked_inbound(db, current.org_id, inbound_id, request, current)
     await db.delete(row)
     await db.commit()
 
 
 @router.get("/inbox/{inbound_id}/file", dependencies=_CAPTURE)
-async def download_file(inbound_id: str, current: CurrentUser, db: DbSession):
+async def download_file(inbound_id: str, request: Request, current: CurrentUser, db: DbSession):
     await _guard(db, current.org_id)
     row = await _load(db, current.org_id, inbound_id)
     if row.status == "rejected" or not row.sha256:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No stored file for this attachment")
-    content = await documents.load(documents.EMAIL_ATTACHMENTS, current.org_id, row.sha256)
+    sha, size = row.sha256, row.size
+    try:
+        # Preserve the admitted historical size, including empty originals;
+        # today's upload policy must not make an older original inaccessible.
+        content = await documents.load_verified_original(
+            documents.EMAIL_ATTACHMENTS, current.org_id, sha, size=size
+        )
+    except storage.StorageReadError:
+        raise  # Shared sanitized retry guidance; not a missing-object claim.
+    except storage.StorageError:
+        raise HTTPException(404, "Stored attachment missing") from None
+    await _capture_identity(request, db, current)
+    await _guard(db, current.org_id)
+    row = await _load(db, current.org_id, inbound_id)
+    if row.status == "rejected" or (row.sha256, row.size) != (sha, size):
+        raise HTTPException(404, "Attachment changed while preparing the download")
+    if content is None:
+        raise HTTPException(404, "Stored attachment missing")
     await audit.record(
         db,
         audit.A.DOC_DOWNLOAD,
@@ -548,13 +598,14 @@ async def download_file(inbound_id: str, current: CurrentUser, db: DbSession):
         meta={"filename": row.filename},
     )
     await db.commit()
-    fname = (row.filename or "attachment").replace('"', "")
+    filename = row.filename or "attachment"
     # Serve inert: force download, never inline, and stop MIME sniffing.
     return Response(
         content=content,
         media_type="application/octet-stream",
         headers={
-            "Content-Disposition": f'attachment; filename="{fname}"',
+            "Content-Disposition": content_disposition(filename, fallback="attachment"),
             "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
         },
     )

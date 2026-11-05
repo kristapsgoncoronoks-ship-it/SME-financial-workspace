@@ -12,7 +12,7 @@ const DRAFT_RULE = {
   published_version: null, created_at: "2026-10-22T09:00:00Z",
 };
 
-async function fixture(page: Page) {
+async function fixture(page: Page, populatedCurrencies = false) {
   let published = false;
   const writes: string[] = [];
   await page.addInitScript(() => localStorage.setItem("invoiceiq_token", "responsive-synthetic-token"));
@@ -34,7 +34,7 @@ async function fixture(page: Page) {
     }
     if (path === "/automation/rules") return json([{ ...DRAFT_RULE, status: published ? "published" : "draft", published_version: published ? 1 : null }]);
     if (path === "/automation/runs") return json([{ id: "responsive-run", rule_id: DRAFT_RULE.id, version: 1, ref_id: "synthetic-invoice-reference", status: "ok", detail: null, at: "2026-10-22T09:00:00Z" }]);
-    if (path === "/currencies") return json([]);
+    if (path === "/currencies") return json(populatedCurrencies ? [{ id: "currency-1", code: "SYN", name: "Synthetic Long Currency Name with Historical Precision", symbol: "S$", decimal_places: 4, active: true, version: 7 }, { id: "currency-old", code: "OLD", name: "Synthetic archived currency", symbol: null, decimal_places: 0, active: false, version: 3 }] : []);
     if (path.startsWith("/masters/")) return json([]);
     return json([]);
   });
@@ -212,3 +212,37 @@ test("cost-object form actions wrap inside the enlarged-text modal", async ({ pa
   await expect(trigger).toBeFocused();
   expect(writes).toEqual([]);
 });
+
+for (const [width, fontSize] of [[320, 16], [390, 32], [1280, 16]]) {
+  test(`the populated currencies page reflows and retains every value/action at ${width}px/${fontSize}px text`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    const writes = await fixture(page, true);
+    await page.goto("/currencies");
+    await expect(page.getByText("Synthetic Long Currency Name with Historical Precision", { exact: true })).toBeVisible();
+    await page.evaluate(size => { document.documentElement.style.fontSize = `${size}px`; }, fontSize);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const bounds = await page.evaluate(() => ({ viewport: innerWidth, body: document.body.scrollWidth, root: document.documentElement.scrollWidth, escaped: [...document.querySelectorAll("body *")].filter(e => { const r=e.getBoundingClientRect(); return r.right > innerWidth+1 && !e.closest("[role=region]"); }).map(e=>({tag:e.tagName,cls:e.className,right:e.getBoundingClientRect().right,text:e.textContent?.slice(0,80),pos:getComputedStyle(e).position})), tables: [...document.querySelectorAll("main table")].map(e => ({ width: e.getBoundingClientRect().width, scroll: e.scrollWidth })), containers: [...document.querySelectorAll("main, main > div, main section, main section > div, main [role=region]")].map(e => ({ tag: e.tagName, classes: e.className, width: e.getBoundingClientRect().width, scroll: e.scrollWidth, display: getComputedStyle(e).display, overflow: getComputedStyle(e).overflowX })) }));
+    await testInfo.attach("currencies-page-bounds", { body: JSON.stringify(bounds), contentType: "application/json" });
+    expect(bounds.root).toBeLessThanOrEqual(width); expect(bounds.body).toBeLessThanOrEqual(width);
+    const region = page.getByRole("region", { name: "Workspace currencies", exact: true });
+    await expect(region.getByRole("table", { name: "Workspace currencies", exact: true })).toHaveCount(1);
+    await expect(region.getByRole("columnheader")).toHaveText(["Code", "Name", "Symbol", "Decimals", "Status", "Actions"]);
+    await expect(region.getByRole("row").filter({ has: page.getByRole("cell", { name: "SYN", exact: true }) })).toContainText("4");
+    await expect(region.getByRole("row").filter({ has: page.getByRole("cell", { name: "OLD", exact: true }) })).toContainText("archived");
+    await region.focus(); await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab"); await expect(region).toBeFocused();
+    if (await region.evaluate(e => e.scrollWidth > e.clientWidth)) {
+      await page.keyboard.press("ArrowRight"); await expect.poll(() => region.evaluate(e => e.scrollLeft)).toBeGreaterThan(0);
+        await region.evaluate(e => new Promise<void>(resolve => { let previous = e.scrollLeft, stable = 0; const frame = () => { stable = e.scrollLeft === previous ? stable + 1 : 0; previous = e.scrollLeft; if (stable >= 5) resolve(); else requestAnimationFrame(frame); }; requestAnimationFrame(frame); }));
+    }
+    for (const action of ["Archive", "Restore"]) {
+      const button = region.getByRole("button", { name: action, exact: true });
+      await button.focus(); await testInfo.attach(`currency-${action}-focused`, { body: JSON.stringify(await button.evaluate(e=>({rect:e.getBoundingClientRect().toJSON(),region:e.closest("[role=region]")?.getBoundingClientRect().toJSON(),scrollX,scrollY,viewport:[innerWidth,innerHeight]}))), contentType:"application/json" }); await expect(button).toBeInViewport({ ratio: 1 });
+    }
+    const create = page.getByRole("button", { name: "New currency", exact: true });
+    await create.focus(); await expect(create).toBeInViewport({ ratio: 1 }); await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "New currency", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape"); await expect(create).toBeFocused();
+    expect(writes).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath("currencies-page-reflow.png"), fullPage: true });
+  });
+}

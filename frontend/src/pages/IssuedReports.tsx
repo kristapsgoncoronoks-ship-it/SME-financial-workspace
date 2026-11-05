@@ -152,11 +152,11 @@ function SummaryTab({ params }: { params: Record<string, string> }) {
               {rows.length === 0 ? <Empty /> : (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#94a3b8" }} />
-                    <YAxis tickFormatter={(v) => compactMoney(v)} tick={{ fontSize: 12, fill: "#94a3b8" }} width={60} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }} />
+                    <YAxis tickFormatter={(v) => compactMoney(v)} tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }} width={60} />
                     <Tooltip formatter={(v) => money(Number(v), d.currency)} />
-                    <Bar dataKey="gross" radius={[4, 4, 0, 0]} fill="#3b6ef2" />
+                    <Bar dataKey="gross" radius={[4, 4, 0, 0]} fill="var(--color-chart-1)" />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -355,9 +355,9 @@ function VatTab({ params, schemeLabels }: { params: Record<string, string>; sche
                 <h2 className="mb-3 text-sm font-semibold text-slate-600">Output VAT by rate</h2>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={rateRows} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#94a3b8" }} />
-                    <YAxis tickFormatter={(v) => compactMoney(v)} tick={{ fontSize: 12, fill: "#94a3b8" }} width={60} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }} />
+                    <YAxis tickFormatter={(v) => compactMoney(v)} tick={{ fontSize: 12, fill: "var(--color-text-secondary)" }} width={60} />
                     <Tooltip formatter={(v) => money(Number(v), d.currency)} />
                     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                       {rateRows.map((r) => <Cell key={r.i} fill={PALETTE[r.i % PALETTE.length]} />)}

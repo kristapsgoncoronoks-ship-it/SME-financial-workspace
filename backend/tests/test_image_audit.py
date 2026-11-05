@@ -1,10 +1,13 @@
 """Seeded image/evidence failures must block without hiding later targets."""
 
+import hashlib
 import importlib.util
 import json
 import os
 import re
 import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -469,6 +472,151 @@ def test_timeout_is_a_tool_error_without_echoing_submitted_secrets(tmp_path, mon
     log = tmp_path / "timeout.log"
     assert audit.command(["synthetic"], log) == 2
     assert "synthetic-secret" not in log.read_text()
+
+
+def test_cache_receipt_hashes_observed_bytes_and_does_not_retain_stale_success(tmp_path):
+    cache = tmp_path / "cache"
+    (cache / "db").mkdir(parents=True)
+    database, metadata = cache / "db/trivy.db", cache / "db/metadata.json"
+    database.write_bytes(b"synthetic database bytes")
+    metadata.write_text('{"Version":2,"NextUpdate":"synthetic-next-update"}\n')
+    output = tmp_path / "trivy-db.json"
+    audit.write_cache_evidence(cache, output)
+    receipt = json.loads(output.read_text())
+    assert receipt["status"] == "recorded" and receipt["stable_during_hash"] is True
+    assert receipt["database_sha256"] == hashlib.sha256(database.read_bytes()).hexdigest()
+    assert receipt["metadata_sha256"] == hashlib.sha256(metadata.read_bytes()).hexdigest()
+    assert receipt["metadata"]["NextUpdate"] == "synthetic-next-update"
+    metadata.write_text("not JSON")
+    audit.write_cache_evidence(cache, output)
+    failed = json.loads(output.read_text())
+    assert failed["status"] == "unavailable"
+    assert "database_sha256" not in failed and "metadata" not in failed
+
+
+def test_cache_receipt_marks_database_changed_during_hash_unstable(tmp_path, monkeypatch):
+    cache = tmp_path / "cache"
+    (cache / "db").mkdir(parents=True)
+    database = cache / "db/trivy.db"
+    database.write_bytes(b"before")
+    (cache / "db/metadata.json").write_text('{"Version":2}\n')
+    sha256 = hashlib.sha256
+
+    class ChangedWhileHashing:
+        def __init__(self):
+            self.digest = sha256()
+
+        def update(self, block):
+            self.digest.update(block)
+            database.write_bytes(b"a changed database")
+
+        def hexdigest(self):
+            return self.digest.hexdigest()
+
+    monkeypatch.setattr(
+        audit.hashlib, "sha256", lambda *args: sha256(*args) if args else ChangedWhileHashing()
+    )
+    output = tmp_path / "trivy-db.json"
+    audit.write_cache_evidence(cache, output)
+    receipt = json.loads(output.read_text())
+    assert receipt["status"] == "unstable" and receipt["stable_during_hash"] is False
+
+
+def test_failed_cli_writes_cache_receipt_without_masking_failure(
+    source, fake_docker, tmp_path, monkeypatch
+):
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    monkeypatch.setenv("TRIVY_CACHE_DIR", str(cache))
+    monkeypatch.setenv("IMAGE_AUDIT_FAULT", "scanner")
+    out = tmp_path / "reports"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/image_audit.py"),
+            "--root",
+            str(source),
+            "--output",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    summary = json.loads((out / "summary.json").read_text())
+    assert summary["passed"] is False and len(summary["results"]) == len(BUILT) + 1
+    receipt = json.loads((out / "trivy-db.json").read_text())
+    assert receipt["status"] == "unavailable" and "database_sha256" not in receipt
+
+
+@pytest.mark.parametrize(
+    "audit_exit,cleanup_exit,signal,expected_exit",
+    [
+        (0, 0, "", 0),
+        (7, 0, "", 7),
+        (0, 9, "", 1),
+        (7, 9, "", 7),
+        (0, 0, "TERM", 143),
+        (0, 0, "INT", 130),
+    ],
+)
+def test_run_owned_cache_cleanup_preserves_audit_and_cleanup_failures(
+    tmp_path, audit_exit, cleanup_exit, signal, expected_exit
+):
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    step = next(
+        s for s in workflow["jobs"]["docker-build"]["steps"] if s.get("id") == "image_audit"
+    )
+    binaries = tmp_path / "bin"
+    binaries.mkdir()
+    (binaries / "python").write_text(
+        "#!/bin/bash\nset -eu\n"
+        'test -d "$TRIVY_CACHE_DIR"\n'
+        'test -z "$(ls -A "$TRIVY_CACHE_DIR")"\n'
+        'printf "%s" "$TRIVY_CACHE_DIR" > "$CACHE_TEST_PATH"\n'
+        'mkdir "$TRIVY_CACHE_DIR/root-owned-simulation"\n'
+        'if [ -n "$CACHE_TEST_SIGNAL" ]; then kill "-$CACHE_TEST_SIGNAL" "$PPID"; fi\n'
+        'exit "$CACHE_TEST_AUDIT_EXIT"\n'
+    )
+    (binaries / "sudo").write_text(
+        "#!/bin/bash\nset -eu\n"
+        'if [ "$CACHE_TEST_CLEANUP_EXIT" -ne 0 ]; then exit "$CACHE_TEST_CLEANUP_EXIT"; fi\n'
+        'exec "$@"\n'
+    )
+    for binary in binaries.iterdir():
+        binary.chmod(0o755)
+    runner = tmp_path / "runner"
+    runner.mkdir()
+    inherited = runner / "unrelated-cache"
+    inherited.mkdir()
+    sentinel = inherited / "must-remain"
+    sentinel.write_text("unrelated")
+    path = tmp_path / "created-cache.txt"
+    result = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", step["run"]],
+        env=dict(
+            os.environ,
+            PATH=str(binaries) + ":" + os.environ["PATH"],
+            RUNNER_TEMP=str(runner),
+            GITHUB_RUN_ID="12345",
+            GITHUB_RUN_ATTEMPT="2",
+            TRIVY_CACHE_DIR=str(inherited),
+            CACHE_TEST_PATH=str(path),
+            CACHE_TEST_AUDIT_EXIT=str(audit_exit),
+            CACHE_TEST_CLEANUP_EXIT=str(cleanup_exit),
+            CACHE_TEST_SIGNAL=signal,
+        ),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == expected_exit
+    created = Path(path.read_text())
+    assert created.parent == runner and created.name.startswith("bidit-trivy-12345-2.")
+    assert created.exists() is bool(cleanup_exit)
+    assert sentinel.read_text() == "unrelated"
+    assert ("::error::" in result.stdout) is bool(cleanup_exit)
 
 
 @pytest.mark.parametrize("mode", ["vulnerable", "pull", "malformed"])

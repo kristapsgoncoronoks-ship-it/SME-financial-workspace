@@ -67,6 +67,7 @@ from app.models.partner import Partner, PartnerDocument
 from app.models.payment import Payment
 from app.models.payment_run import PaymentRun
 from app.models.plan_policy import PlanPolicy
+from app.models.planning_command import PlanningCommand
 from app.models.project_assignment import ProjectAssignment
 from app.models.project_link import ProjectCostEntry, ProjectDocument
 from app.models.project_offer import InvoicingPlanRow, ProjectOffer
@@ -108,6 +109,7 @@ __all__ = [
     "OrgTemplate",
     "PlatformTemplate",
     "ProjectAssignment",
+    "PlanningCommand",
     "ProjectCostEntry",
     "ProjectDocument",
     "ProjectOffer",

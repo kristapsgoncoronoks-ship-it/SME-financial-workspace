@@ -19,7 +19,7 @@ interface Options {
   items?: Record<string, unknown>[];
   total?: number;
   url?: string;
-  onRead?: (url: URL) => void;
+  onRead?: (url: URL) => void | Promise<void>;
   onBulk?: (body: Record<string, unknown>) => void;
   failure?: { active: boolean };
 }
@@ -47,11 +47,12 @@ async function open(page: Page, options: Options = {}) {
       return json({ deleted: body.invoice_ids.length, skipped: 0, failed: 0, outcomes: [], deleted_records: [] });
     }
     if (path === "/invoices") {
-      options.onRead?.(url);
+      await options.onRead?.(url);
       if (options.failure?.active) return json({ detail: "Synthetic read unavailable" }, 500);
       const items = options.items ?? [invoice()];
       return json({ items, total: options.total ?? items.length, page: Number(url.searchParams.get("page")), page_size: 20 });
     }
+    if (path === "/invoices/trash") return json({ items: [], total: 0 });
     return json([]);
   });
   await page.goto(options.url ?? "/invoices");
@@ -157,7 +158,7 @@ test("intermediate-width export actions do not cover the page title", async ({ p
 
 test("list filters, twenty-row pagination and workflow-filter removal keep their original request scope", async ({ page }) => {
   const reads: URL[] = [];
-  await open(page, { url: "/invoices?status=overdue&q=INV-KEEP&workflow_state=in_approval", total: 41, onRead: (url) => reads.push(url) });
+  await open(page, { url: "/invoices?status=overdue&q=INV-KEEP&workflow_state=in_approval", total: 41, onRead: (url) => { reads.push(url); } });
   await expect(visibleText(page, "Synthetic Transport OÜ")).toBeVisible();
   expect(reads[0].searchParams.get("page_size")).toBe("20");
   expect(reads[0].searchParams.get("status")).toBe("overdue");
@@ -171,6 +172,77 @@ test("list filters, twenty-row pagination and workflow-filter removal keep their
   expect(reads.at(-1)!.searchParams.get("q")).toBe("INV-KEEP");
   expect(reads.at(-1)!.searchParams.get("page")).toBe("1");
   await expect(visibleText(page, "Scheduled for payment")).toBeVisible();
+});
+
+test("number search settles once, applies Enter and clear immediately, and retains filter/page/export scope", async ({ page }) => {
+  await page.clock.install();
+  const reads: URL[] = [];
+  await open(page, { url: "/invoices?status=overdue&q=INV-KEEP&workflow_state=in_approval", total: 41, onRead: (url) => { reads.push(url); } });
+  await expect(visibleText(page, "Synthetic Transport OÜ")).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect.poll(() => reads.at(-1)?.searchParams.get("page")).toBe("2");
+  const count = reads.length;
+  const search = page.getByRole("textbox", { name: "Search number", exact: true });
+  for (const value of ["I", "IN", "INV"]) {
+    await search.fill(value);
+    await page.clock.runFor(100);
+  }
+  expect(reads).toHaveLength(count);
+  await page.clock.runFor(149);
+  expect(reads).toHaveLength(count);
+  await page.clock.runFor(1);
+  await expect.poll(() => reads.length).toBe(count + 1);
+  expect(Object.fromEntries(reads.at(-1)!.searchParams)).toEqual({ page: "1", page_size: "20", status: "overdue", q: "INV", workflow_state: "in_approval" });
+  await search.fill("INV-ENTER");
+  await search.press("Enter");
+  await expect.poll(() => reads.at(-1)?.searchParams.get("q")).toBe("INV-ENTER");
+  await search.fill("");
+  await expect.poll(() => reads.at(-1)?.searchParams.has("q")).toBe(false);
+  await search.fill("INV-FILTER");
+  await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("paid");
+  await expect.poll(() => reads.at(-1)?.searchParams.get("status")).toBe("paid");
+  expect(reads.at(-1)!.searchParams.get("q")).toBe("INV-FILTER");
+  await page.getByRole("button", { name: "Clear workflow filter", exact: true }).click();
+  await expect.poll(() => reads.at(-1)?.searchParams.has("workflow_state")).toBe(false);
+  expect(Object.fromEntries(reads.at(-1)!.searchParams)).toEqual({ page: "1", page_size: "20", status: "paid", q: "INV-FILTER" });
+  // Local filters retain their existing URL-initialized behavior; removing the
+  // workflow chip edits only that URL parameter.
+  await expect(page).toHaveURL(/\/invoices\?status=overdue&q=INV-KEEP$/);
+  await page.getByRole("button", { name: "Accounting CSV", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Accounting export preview" })).toContainText("List filters: status paid; number INV-FILTER; workflow any.");
+  const finalCount = reads.length;
+  await page.clock.runFor(500);
+  expect(reads).toHaveLength(finalCount);
+});
+
+test("superseding or leaving a held invoice search aborts its read without an error toast", async ({ page }, testInfo) => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  const reads: string[] = [];
+  const aborted: string[] = [];
+  page.on("requestfailed", (request) => {
+    if (new URL(request.url()).pathname === "/api/v1/invoices") aborted.push(new URL(request.url()).searchParams.get("q") ?? "");
+  });
+  await open(page, { onRead: async (url) => {
+    const q = url.searchParams.get("q") ?? "";
+    reads.push(q);
+    if (q.startsWith("HELD")) await held;
+  } });
+  await expect(visibleText(page, "Synthetic Transport OÜ")).toBeVisible();
+  const search = page.getByRole("textbox", { name: "Search number", exact: true });
+  await search.fill("HELD-OLD"); await search.press("Enter");
+  await expect.poll(() => reads.includes("HELD-OLD")).toBe(true);
+  await search.fill("CURRENT"); await search.press("Enter");
+  await expect.poll(() => aborted.includes("HELD-OLD")).toBe(true);
+  await expect(visibleText(page, "Synthetic Transport OÜ")).toBeVisible();
+  await search.fill("HELD-LEAVE"); await search.press("Enter");
+  await expect.poll(() => reads.includes("HELD-LEAVE")).toBe(true);
+  await page.getByRole("link", { name: "Deleted", exact: true }).click();
+  await expect(page).toHaveURL(/\/invoices\/trash$/);
+  await expect.poll(() => aborted.includes("HELD-LEAVE")).toBe(true);
+  release();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await testInfo.attach("invoice-search-requests", { body: JSON.stringify({ reads, aborted }), contentType: "application/json" });
 });
 
 test("responsive rows keep one draft checkbox and the explicit agreed-count delete contract", async ({ page }) => {
