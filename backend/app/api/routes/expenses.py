@@ -297,7 +297,7 @@ async def receipt_scan(current: CurrentUser, db: DbSession, file: UploadFile):
         raise AppError(
             str(exc),
             code=exc.code,
-            status=(503 if exc.code == "capture_unavailable" else 422),
+            status=(503 if exc.code in {"capture_unavailable", "image_reading_busy"} else 422),
             headers={"Cache-Control": "private, no-store"},
         ) from exc
     except receipt_ocr.pdf_ocr.OcrUnavailable as exc:
