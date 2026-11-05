@@ -23,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEST_ONLY = {"pytest", "pytest-asyncio", "iniconfig", "pluggy", "pygments"}
 SHA = re.compile(r"sha256:[0-9a-f]{64}\Z")
+SMOKE_TMPFS = "/tmp:uid=10001,gid=10001,mode=0700,size=1g,exec"
 
 
 def image_id(reference: str) -> str:
@@ -236,6 +237,7 @@ def run(
                         "runtime_image_id": identity,
                         "builder_image_id": builder_id,
                         "uv_sha256": hashlib.sha256(uv.read_bytes()).hexdigest(),
+                        "private_scratch_tmpfs": SMOKE_TMPFS,
                         "test_file_count": len(staged_hashes),
                         "test_tree_sha256": hashlib.sha256(
                             json.dumps(staged_hashes, sort_keys=True).encode()
@@ -248,6 +250,8 @@ def run(
                 "docker",
                 "run",
                 "--rm",
+                "--tmpfs",
+                SMOKE_TMPFS,
                 "--network",
                 network,
                 "-v",

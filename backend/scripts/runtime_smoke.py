@@ -25,6 +25,36 @@ def distributions() -> dict:
     return result
 
 
+def check_dependencies() -> dict:
+    """Check the interpreter-visible graph, including system-site packages."""
+    from packaging.requirements import InvalidRequirement, Requirement
+    from packaging.version import InvalidVersion, Version
+
+    installed = distributions()
+    try:
+        for identity in installed.values():
+            Version(identity["version"])
+    except InvalidVersion as exc:
+        raise RuntimeError("Invalid installed distribution version") from exc
+    checked = 0
+    for dist in importlib.metadata.distributions():
+        for raw in dist.requires or ():
+            try:
+                requirement = Requirement(raw)
+            except InvalidRequirement as exc:
+                raise RuntimeError("Malformed installed requirement metadata") from exc
+            # Match ordinary pip-check semantics: optional extras are inactive.
+            if requirement.marker is not None and not requirement.marker.evaluate({"extra": ""}):
+                continue
+            name = re.sub(r"[-_.]+", "-", requirement.name.lower())
+            if name not in installed:
+                raise RuntimeError(f"Missing interpreter-visible dependency: {name}")
+            if not requirement.specifier.contains(installed[name]["version"], prereleases=True):
+                raise RuntimeError(f"Incompatible interpreter-visible dependency: {name}")
+            checked += 1
+    return {"distributions": installed, "checked_requirements": checked}
+
+
 def main() -> int:
     if os.getuid() != 10001 or os.getgid() != 10001:
         raise RuntimeError("Smoke must retain the runtime image's non-root UID/GID")
@@ -84,15 +114,13 @@ def main() -> int:
             env=environment,
             check=True,
         )
-        subprocess.run(
-            ["/tmp/smoke-uv", "pip", "check", "--python", python], env=environment, check=True
-        )
         probe = (
             "import json,runpy; "
             "m=runpy.run_path('/app/scripts/runtime_smoke.py',run_name='smoke_inventory'); "
-            "print(json.dumps(m['distributions']()))"
+            "print(json.dumps(m['check_dependencies']()))"
         )
-        after = json.loads(subprocess.check_output([python, "-c", probe], text=True))
+        checked = json.loads(subprocess.check_output([python, "-c", probe], text=True))
+        after = checked["distributions"]
         if any(after.get(name) != identity for name, identity in before.items()):
             raise RuntimeError("Smoke tooling replaced an installed runtime distribution")
         result = subprocess.run(
@@ -104,6 +132,7 @@ def main() -> int:
                 {
                     "runtime_distributions_unchanged": True,
                     "runtime_distribution_count": len(before),
+                    "checked_visible_requirements": checked["checked_requirements"],
                     "test_distributions": sorted(after.keys() - before.keys()),
                     "pytest_exit": result.returncode,
                     "uid": os.getuid(),
