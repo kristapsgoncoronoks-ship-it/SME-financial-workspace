@@ -27,6 +27,7 @@ from app.core.ratelimit import client_ip
 from app.core.security import hash_password, verify_password
 from app.models.email_token import PURPOSE_PASSWORD_RESET, PURPOSE_VERIFY_EMAIL
 from app.models.invitation import Invitation
+from app.models.membership import Membership
 from app.models.organization import Organization
 from app.models.session import Session
 from app.models.sso import SsoConnection
@@ -279,20 +280,21 @@ async def authz_matrix(current: CurrentUser) -> dict:
 async def my_organizations(session: CurrentSessionUnscoped, db: DbSession) -> list[dict]:
     """Every organization the caller is a member of (the org switcher's data).
     Runs unscoped so all memberships are visible; filtered by the caller's id."""
-    out = []
-    for m in await memberships.for_user(db, session.user_id):
-        if m.status != "active":
-            continue
-        org = await db.get(Organization, m.org_id)
-        out.append(
-            {
-                "org_id": m.org_id,
-                "name": org.name if org else "?",
-                "role": m.role.value,
-                "current": m.org_id == session.org_id,
-            }
-        )
-    return out
+    rows = await db.execute(
+        select(Membership.org_id, Organization.name, Membership.role)
+        .outerjoin(Organization, Organization.id == Membership.org_id)
+        .where(Membership.user_id == session.user_id, Membership.status == "active")
+        .order_by(Membership.created_at.desc())
+    )
+    return [
+        {
+            "org_id": org_id,
+            "name": name if name is not None else "?",
+            "role": role.value,
+            "current": org_id == session.org_id,
+        }
+        for org_id, name, role in rows
+    ]
 
 
 @router.post("/switch-org/{org_id}")
