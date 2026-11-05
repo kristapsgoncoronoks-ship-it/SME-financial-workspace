@@ -16,13 +16,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentOrg, CurrentUser, DbSession, require_perm
+from app.api.deps import CurrentOrg, CurrentUser, DbSession, refresh_current_identity, require_perm
 from app.api.upload_read import read_upload
-from app.core import authz
+from app.core import authz, storage
 from app.core.dimensions import DIMENSION_KEYS
 from app.core.money import q2 as _q
 from app.core.security_headers import content_disposition
@@ -871,8 +871,9 @@ async def add_attachment(
 
 @router.get("/invoices/{invoice_id}/attachments/{attachment_id}/download")
 async def download_attachment(
-    invoice_id: str, attachment_id: str, current: CurrentUser, db: DbSession
+    invoice_id: str, attachment_id: str, current: CurrentUser, db: DbSession, request: Request
 ):
+    await _load(db, current.org_id, invoice_id)
     row = await db.scalar(
         select(InvoiceAttachment).where(
             InvoiceAttachment.id == attachment_id,
@@ -882,7 +883,29 @@ async def download_attachment(
     )
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Attachment not found")
-    data = await documents.load(documents.INVOICE_ATTACHMENTS, current.org_id, row.sha256)
+    identity = (row.sha256, row.size, row.filename, row.mime)
+    try:
+        data = await documents.load_verified_original(
+            documents.INVOICE_ATTACHMENTS, current.org_id, row.sha256, size=row.size
+        )
+    except storage.StorageReadError:
+        raise
+    except storage.StorageError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Attachment bytes missing") from None
+    fresh, _ = await refresh_current_identity(request, db, current)
+    authz.require(fresh, authz.Permission.INVOICE_READ)
+    await _load(db, current.org_id, invoice_id)
+    row = await db.scalar(
+        select(InvoiceAttachment).where(
+            InvoiceAttachment.id == attachment_id,
+            InvoiceAttachment.invoice_id == invoice_id,
+            InvoiceAttachment.org_id == current.org_id,
+        )
+    )
+    if row is None or (row.sha256, row.size, row.filename, row.mime) != identity:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Attachment changed while preparing the download"
+        )
     if data is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Attachment bytes missing")
     return Response(
@@ -891,6 +914,7 @@ async def download_attachment(
         headers={
             "Content-Disposition": content_disposition(row.filename, fallback="attachment"),
             "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
         },
     )
 

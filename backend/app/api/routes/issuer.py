@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentUser, DbSession, require_perm
+from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
 from app.api.upload_read import read_upload
-from app.core import authz, bank_id
+from app.core import authz, bank_id, storage
 from app.models.document_version import OWNER_ISSUER_LOGO
 from app.models.issued_invoice import IssuedInvoice
 from app.schemas.document_version import DocumentVersionOut
@@ -187,15 +187,34 @@ async def upload_logo(current: CurrentUser, db: DbSession, file: UploadFile):
 
 
 @router.get("/logo")
-async def get_logo(current: CurrentUser, db: DbSession):
+async def get_logo(current: CurrentUser, db: DbSession, request: Request):
     profile = await issuer.get_or_create(db, current.org_id)
     if not profile.logo_sha256:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No logo set")
-    content = await documents.load(documents.LOGOS, current.org_id, profile.logo_sha256)
+    identity = (profile.id, profile.logo_sha256, profile.logo_size, profile.logo_mime)
+    try:
+        content = await documents.load_verified_original(
+            documents.LOGOS, current.org_id, profile.logo_sha256, size=profile.logo_size
+        )
+    except storage.StorageReadError:
+        raise
+    except storage.StorageError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stored logo missing") from None
+    fresh, _ = await refresh_current_identity(request, db, current)
+    authz.require(fresh, authz.Permission.ISSUED_READ)
+    profiles = await issuer.list_issuers(db, current.org_id)
+    visible = profiles[0] if profiles else None
+    if (
+        visible is None
+        or (visible.id, visible.logo_sha256, visible.logo_size, visible.logo_mime) != identity
+    ):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Logo changed while preparing the download")
+    if content is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stored logo missing")
     return Response(
         content=content,
-        media_type=profile.logo_mime or "image/png",
-        headers={"X-Content-Type-Options": "nosniff"},
+        media_type=visible.logo_mime or "image/png",
+        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"},
     )
 
 

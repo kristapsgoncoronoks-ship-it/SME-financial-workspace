@@ -1247,7 +1247,9 @@ async def _render_pdf(db: DbSession, org_id: str, inv: IssuedInvoice) -> bytes:
     ) or await issuer.get_or_create(db, org_id)
     logo = None
     if profile.logo_sha256:
-        logo_bytes = await documents.load(documents.LOGOS, org_id, profile.logo_sha256)
+        logo_bytes = await documents.load_verified_original(
+            documents.LOGOS, org_id, profile.logo_sha256, size=profile.logo_size
+        )
         if logo_bytes:
             logo = (profile.logo_mime or "image/png", logo_bytes)
     return await run_in_threadpool(invoice_pdf.build_pdf, inv, seller, result, xml, logo)
