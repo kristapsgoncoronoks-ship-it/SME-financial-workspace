@@ -520,9 +520,20 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
     assert set(head_schema) - set(schema_before) == {"planning_commands"}
-    assert {
+    expected_marker_schema = {
         key: value for key, value in head_schema.items() if key != "planning_commands"
-    } == schema_before
+    }
+    if "_rls" in head_schema:
+        assert [row for row in head_schema["_rls"] if row[0] == "planning_commands"] == [
+            ["planning_commands", True, True]
+        ]
+        policies = [row for row in head_schema["_policies"] if row[0] == "planning_commands"]
+        assert len(policies) == 1 and policies[0][1] == "tenant_isolation"
+        for key in ("_rls", "_policies"):
+            expected_marker_schema[key] = [
+                row for row in head_schema[key] if row[0] != "planning_commands"
+            ]
+    assert expected_marker_schema == schema_before
     assert database(migration_url, snapshot) == after
     # An unqualified relative downgrade is ambiguous at a merge point.
     refused = _run_alembic(["downgrade", "-1"], migration_url)

@@ -68,7 +68,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/**/*.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Generated-contract diagnostic diff
         run: python scripts/r010_ci_diagnostics.py
@@ -97,6 +97,9 @@ jobs:
           pip-audit -r requirements.txt -r requirements-dev.txt
 
   backend:
+    # Avoid a full backend run after the existing lint/type/security preflight
+    # has already failed. Required completion still refuses a skipped backend.
+    needs: [lint]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -109,7 +112,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/**/*.txt
       - name: Install Tesseract (OCR fallback)
         run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
       - run: pip install -r requirements.txt
@@ -154,7 +157,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/**/*.txt
       - run: pip install -r requirements.txt
       - name: Install psql client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -178,6 +181,8 @@ jobs:
           python -m pytest -q
           tests/test_planning_ocr_migration_integration.py
           tests/test_pg_migration_schema_contract.py
+          tests/test_historical_policy_downgrade.py
+          tests/test_planning_command_migration.py
       - name: Development PostgreSQL bootstrap contracts
         env:
           RLS_TEST_DATABASE_URL: postgresql+asyncpg://appuser:apppw@localhost:5432/invoiceiq
@@ -221,6 +226,14 @@ jobs:
           tests/test_capture_retry_pg.py
           tests/test_capture_authorization_pg.py
           tests/test_capture_download_access_pg.py
+          tests/test_email_concurrency_pg.py
+          tests/test_jobs_startup_concurrency.py
+          tests/test_original_document_download_pg.py
+          tests/test_project_document_read_bounds.py
+          tests/test_project_thumbnails.py
+          tests/test_planning_create_commands_pg.py
+          tests/test_expense_review_cycle_pg.py
+          tests/test_payment_run_cancel_export_guard.py
           tests/test_n1_supplier_iban_pg.py
           tests/test_transport_lock_concurrency.py
           tests/test_credit_note_lock_concurrency.py
@@ -323,6 +336,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Verify npm toolchain integrity guard regressions
+        run: node --test scripts/verify-npm-toolchain.test.mjs
       # Use the same source-pinned security rebuild as the audited image rather
       # than npm's native compiler with its older embedded Go runtime.
       - name: Install verified TypeScript security rebuild for host CI
@@ -517,6 +532,7 @@ jobs:
         if: ${{ !cancelled() && steps.backend_runtime.conclusion == 'success' }}
         run: python3 scripts/check_storage_volume.py bidit-ci-backend:review
       - name: Load backend build stage for auditing
+        id: backend_build
         if: ${{ !cancelled() }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -527,6 +543,15 @@ jobs:
           tags: bidit-ci-backend-build:review
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Verify installer-free backend with offline test tooling
+        if: ${{ !cancelled() && steps.backend_runtime.conclusion == 'success' && steps.backend_build.conclusion == 'success' }}
+        run: |
+          mkdir -p image-security
+          wheelhouse="${RUNNER_TEMP:?}/bidit-runtime-smoke-wheels"
+          python scripts/backend_runtime_smoke.py prepare --image bidit-ci-backend:review --wheelhouse "$wheelhouse" > image-security/runtime-smoke-prepare.log
+          cp "$wheelhouse/manifest.json" image-security/runtime-smoke-wheel-manifest.json
+          cp "$wheelhouse/test-tools.lock" image-security/runtime-smoke-test-tools.lock
+          python scripts/backend_runtime_smoke.py run --image bidit-ci-backend:review --builder-image bidit-ci-backend-build:review --wheelhouse "$wheelhouse" -- tests/test_fx.py tests/test_jobs.py -q > image-security/runtime-smoke.log
       - name: Build frontend image
         if: ${{ !cancelled() }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -604,7 +629,23 @@ jobs:
       - name: Build, final and deployment service image audit
         id: image_audit
         if: ${{ !cancelled() }}
-        run: python scripts/image_audit.py
+        run: |
+          # Every attempt starts empty; only this step's twenty scans share it.
+          TRIVY_CACHE_DIR="$(mktemp -d "${RUNNER_TEMP:?}/bidit-trivy-${GITHUB_RUN_ID:?}-${GITHUB_RUN_ATTEMPT:?}.XXXXXX")"
+          export TRIVY_CACHE_DIR
+          cleanup() {
+            audit_status=$?
+            trap - EXIT
+            if ! sudo rm -rf -- "$TRIVY_CACHE_DIR"; then
+              echo "::error::Could not remove the run-owned Trivy cache"
+              if [ "$audit_status" -eq 0 ]; then audit_status=1; fi
+            fi
+            exit "$audit_status"
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          python scripts/image_audit.py
       - name: Native S3 initialization, persistence and refusal checks
         if: ${{ !cancelled() && steps.image_audit.conclusion == 'success' }}
         run: python scripts/check_s3_storage.py bidit-ci-backend:review > image-security/storage-smoke.json

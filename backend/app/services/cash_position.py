@@ -63,7 +63,9 @@ async def _ap_row(db: AsyncSession, org_id: str, today: date, currency: str):
             select(
                 func.coalesce(func.sum(case((in_currency, outstanding), else_=0)), 0),
                 func.coalesce(
-                    func.sum(case((and_(in_currency, overdue_condition(today)), outstanding), else_=0)),
+                    func.sum(
+                        case((and_(in_currency, overdue_condition(today)), outstanding), else_=0)
+                    ),
                     0,
                 ),
                 func.count(Invoice.id),

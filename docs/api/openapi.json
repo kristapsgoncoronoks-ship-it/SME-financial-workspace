@@ -1658,6 +1658,8 @@
             "type": "boolean"
           },
           "assignee_user_id": {
+            "maxLength": 120,
+            "minLength": 1,
             "title": "Assignee User Id",
             "type": "string"
           },
@@ -1708,6 +1710,8 @@
             "type": "boolean"
           },
           "project_id": {
+            "maxLength": 120,
+            "minLength": 1,
             "title": "Project Id",
             "type": "string"
           },
@@ -1749,6 +1753,84 @@
           "ends_at"
         ],
         "title": "AssignmentIn",
+        "type": "object"
+      },
+      "AssignmentNotificationOut": {
+        "properties": {
+          "can_retry": {
+            "title": "Can Retry",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "error",
+          "sent_at",
+          "created_at",
+          "can_retry"
+        ],
+        "title": "AssignmentNotificationOut",
+        "type": "object"
+      },
+      "AssignmentNotificationsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentNotificationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "smtp_configured": {
+            "title": "Smtp Configured",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "smtp_configured",
+          "items"
+        ],
+        "title": "AssignmentNotificationsOut",
         "type": "object"
       },
       "AssignmentOut": {
@@ -2480,6 +2562,74 @@
           "created_at"
         ],
         "title": "BankStatementOut",
+        "type": "object"
+      },
+      "BatchCancel": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "report_versions": {
+            "additionalProperties": {
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxProperties": 1000,
+            "title": "Report Versions",
+            "type": "object"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "report_versions"
+        ],
+        "title": "BatchCancel",
+        "type": "object"
+      },
+      "BatchCancelOut": {
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/BatchDetailOut"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "released_reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReimbursementReportOut"
+            },
+            "title": "Released Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "batch",
+          "released_reports"
+        ],
+        "title": "BatchCancelOut",
         "type": "object"
       },
       "BatchCreate": {
@@ -4073,6 +4223,133 @@
           "cadence"
         ],
         "title": "CadenceSetIn",
+        "type": "object"
+      },
+      "CalendarConnectionOut": {
+        "properties": {
+          "calendar_name": {
+            "title": "Calendar Name",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "calendar_name",
+          "last_synced_at",
+          "error",
+          "pending",
+          "failed"
+        ],
+        "title": "CalendarConnectionOut",
+        "type": "object"
+      },
+      "CalendarConnectionsOut": {
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarProviderOut"
+            },
+            "title": "Providers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "providers"
+        ],
+        "title": "CalendarConnectionsOut",
+        "type": "object"
+      },
+      "CalendarProviderOut": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalendarConnectionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "provider",
+          "configured",
+          "reason",
+          "connection"
+        ],
+        "title": "CalendarProviderOut",
+        "type": "object"
+      },
+      "CalendarRetryOut": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CalendarRetryOut",
         "type": "object"
       },
       "CaptureAcknowledgeIn": {
@@ -19756,6 +20033,59 @@
           "remaining"
         ],
         "title": "PlanTrackingOut",
+        "type": "object"
+      },
+      "PlanningCommandOut": {
+        "properties": {
+          "actor_user_id": {
+            "title": "Actor User Id",
+            "type": "string"
+          },
+          "command_key": {
+            "title": "Command Key",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "assignment_created",
+            "default": "assignment_created",
+            "title": "Operation",
+            "type": "string"
+          },
+          "org_id": {
+            "title": "Org Id",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/AssignmentIn"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AssignmentWriteOut"
+          },
+          "status": {
+            "const": "committed",
+            "default": "committed",
+            "title": "Status",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "actor_user_id",
+          "command_key",
+          "target_id",
+          "payload",
+          "result"
+        ],
+        "title": "PlanningCommandOut",
         "type": "object"
       },
       "PlatformTemplateBody": {
@@ -44107,6 +44437,63 @@
         ]
       }
     },
+    "/api/v1/masters/projects/{entity_id}/documents/{document_id}/thumbnail": {
+      "get": {
+        "operationId": "project_photo_thumbnail_api_v1_masters_projects__entity_id__documents__document_id__thumbnail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Project Photo Thumbnail",
+        "tags": [
+          "masters"
+        ]
+      }
+    },
     "/api/v1/masters/projects/{entity_id}/final-invoice-draft": {
       "post": {
         "description": "Compose the final invoice for the issuing form: contracted remainder \u00b1\nlabelled adjustments (owner decision: ADJUSTABLE \u2014 damages and unexpected\ncosts either way reconcile in the open). Refuses a non-positive total\n(credit note territory) and honours the org's acceptance gate. Pure\ncomposition \u2014 the invoice itself is issued through the normal flow.",
@@ -47150,7 +47537,7 @@
     },
     "/api/v1/reimbursements/{batch_id}": {
       "delete": {
-        "description": "Cancel an OPEN batch, releasing its reports back to the payable pool.\n\nLoaded FOR UPDATE like the pay path \u2014 WO-Y. `_load` has always documented\nthe lock as covering \"pay/cancel\"; cancel was the one state-changing route\nthat did not take it. Concurrently with a pay, the plain read decided\n\"still open\" in Python, then blocked on the payer's row lock and wrote\n`cancelled` over a batch that had just been PAID \u2014 unlinking reports the\npayment had already stamped `reimbursed`, leaving money recorded as sent\nagainst a batch recorded as never run.",
+        "description": "Compatibility adapter; old no-key attempts retain their no-replay semantics.",
         "operationId": "cancel_batch_api_v1_reimbursements__batch_id__delete",
         "parameters": [
           {
@@ -47161,8 +47548,42 @@
               "title": "Batch Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BatchCancel"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -47229,6 +47650,81 @@
           }
         ],
         "summary": "Get Batch",
+        "tags": [
+          "reimbursements"
+        ]
+      }
+    },
+    "/api/v1/reimbursements/{batch_id}/cancel": {
+      "post": {
+        "description": "Cancel the exact reviewed batch; replay returns its original released set.",
+        "operationId": "cancel_batch_command_api_v1_reimbursements__batch_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "title": "Batch Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchCancelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Batch Command",
         "tags": [
           "reimbursements"
         ]
@@ -47718,6 +48214,26 @@
       },
       "post": {
         "operationId": "create_assignment_api_v1_schedule_assignments_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -47762,6 +48278,51 @@
       }
     },
     "/api/v1/schedule/assignments/{assignment_id}": {
+      "get": {
+        "operationId": "current_assignment_api_v1_schedule_assignments__assignment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Current Assignment",
+        "tags": [
+          "schedule"
+        ]
+      },
       "patch": {
         "operationId": "update_assignment_api_v1_schedule_assignments__assignment_id__patch",
         "parameters": [
@@ -47836,7 +48397,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentNotificationsOut"
+                }
               }
             },
             "description": "Successful Response"
@@ -47890,7 +48453,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentNotificationOut"
+                }
               }
             },
             "description": "Successful Response"
@@ -47982,7 +48547,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarConnectionsOut"
+                }
               }
             },
             "description": "Successful Response"
@@ -48096,13 +48663,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
+          "303": {
+            "description": "Return to work planning with the connection outcome."
           },
           "422": {
             "content": {
@@ -48186,7 +48748,9 @@
           "202": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarRetryOut"
+                }
               }
             },
             "description": "Successful Response"
@@ -48208,6 +48772,53 @@
           }
         ],
         "summary": "Retry",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/api/v1/schedule/commands/{command_key}": {
+      "get": {
+        "operationId": "planning_command_status_api_v1_schedule_commands__command_key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "command_key",
+            "required": true,
+            "schema": {
+              "title": "Command Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanningCommandOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Planning Command Status",
         "tags": [
           "schedule"
         ]

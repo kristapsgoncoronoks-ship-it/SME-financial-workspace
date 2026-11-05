@@ -10,9 +10,9 @@ entitlement-gated and reachable end to end — statement upload through filed cl
 **Stack:** FastAPI + async SQLAlchemy 2.0 + Alembic on PostgreSQL (SQLite for
 zero-setup dev/test) · React 19 + Vite + TypeScript + Tailwind SPA · Docker.
 
-**Scale of the codebase (verified against this tree):** 119 database tables
-(155 Alembic revisions, single head), 67 model modules, 128 service modules,
-50 route modules, 69 SPA pages, 5447 collected backend tests, 10 CI jobs.
+**Scale of the codebase (verified against this tree):** 120 database tables
+(156 Alembic revisions, single head), 68 model modules, 130 service modules,
+50 route modules, 69 SPA pages, 5890 collected backend tests, 10 CI jobs.
 
 Direct non-production PostgreSQL startup creates the four tenant-safe optional
 project/issuer links using dialect-specific development metadata. This convenience
@@ -155,6 +155,11 @@ make openapi      # regenerate docs/api/openapi.json (CI fails if it drifts)
 make build        # frontend: tsc --noEmit && vite build
 make up / down / logs          # docker compose
 ```
+
+Production images install the runtime dependency graph. The existing combined
+requirements entry point still supports local/CI pytest; the
+[disposable in-container smoke](docs/development-runtime-smoke.md) runs test tools
+offline over the unchanged installed runtime packages.
 
 **CI is authoritative and stricter than the Makefile shortcuts.** The 10 jobs in
 [.github/workflows/ci.yml](./.github/workflows/ci.yml): `pii-scan` (WO-6
