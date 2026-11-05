@@ -1,5 +1,13 @@
 # Engineering backlog
 
+## Current160 sibling tenant-parent follow-up
+
+[Expense comment/approval-step parent integrity](plan/EXPENSE-PARENT-TENANT-160-2026-11-05.md)
+adds the two mandatory composite report parents, retaining159, its index and
+unrelated schema/history.122 focused and83 integration controls pass; fresh
+CI remains required. Six dated candidates remain separate. PR107 is now all13
+green, with its original browser retry retained and a separate fixture repair.
+
 ## Current159 tenant-parent follow-up
 
 [Expense item/report tenant integrity](plan/EXPENSE-PARENT-TENANT-159-2026-11-05.md)
