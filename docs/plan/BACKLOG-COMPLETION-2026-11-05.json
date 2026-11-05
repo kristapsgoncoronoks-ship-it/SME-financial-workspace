@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "Two reviewable repair waves with scoped local/native/browser/image evidence. PR105 exact-source hosted CI has a preserved mobile visual failure; first-wave release clearance is withheld. Finance/lease follow-ups have local qualification and need all13 hosted contexts. OCR/resource safety remains under development in a third isolated checkout. No merge/deploy/settings/production migrations.",
+  "qualification": "Two reviewable waves with scoped local/native/browser/image evidence. Exact01a9912 hosted failures are preserved; guard classifications are repaired and the user approved exactly one reviewed mobile baseline. Fresh delivered-source all13 contexts are required. Finance/lease follow-ups are locally qualified; OCR/resource safety remains active in a third checkout. No release clearance/merge/deploy/settings/production migrations.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -525,7 +525,7 @@
         "inventory/ui-source.md",
         "docs/BACKLOG.md"
       ],
-      "next": "Pinned Chromium156 reproduced fractional Archive focus clipping at320px. Mobile-only trailing padding+scroll margin restore full visibility;13 responsive checks and hosted functional1071 pass, assertions/baselines unchanged. Separate supplier-invoices mobile visual failure remains under investigation.",
+      "next": "Pinned Chromium156 reproduced fractional Archive focus clipping at320px. Mobile-only trailing padding+scroll margin restore full visibility;13 responsive checks and hosted functional1071 pass, assertions/baselines unchanged. Separate supplier-invoice mobile screenshot was explicitly approved by the user; only that exact baseline is updated, fresh CI pending.",
       "dependencies": []
     },
     {
@@ -1447,14 +1447,14 @@
     },
     {
       "id": "IMPECCABLE-FINAL-AUDIT",
-      "status": "BLOCKED-HUMAN-VISUAL-ACCEPTANCE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY-AFTER-DEPENDENCY",
       "title": "Final same-source polish and design acceptance",
       "sources": [
         "docs/BACKLOG.md:569",
         "inventory/ui-source.md"
       ],
-      "next": "Exact01a9912 hosted functional browser suite passes but mobile supplier-invoice visual expected38/36px targets differ from intentional44px accessible targets.12 other visual checks pass. Baseline unchanged by standing constraint; preserve screenshot/diff/trace and obtain explicit human acceptance before a reviewed baseline-only update. No density hack/assertion waiver.",
+      "next": "User explicitly approved only mobile supplier-invoice44px screenshot. Exact CI actual bytes replace that single baseline; otherimages/assertions/tolerances unchanged. Fresh visual/full CI remains required.",
       "dependencies": [
         "Open IMP/CTX/UI engineering"
       ]

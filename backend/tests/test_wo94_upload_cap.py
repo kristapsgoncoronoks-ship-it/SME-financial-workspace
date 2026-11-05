@@ -260,6 +260,11 @@ def test_the_cap_scanner_accepts_only_known_central_processing_budgets():
 #: integer to slip past a gate. Adding an entry is a decision; the test below
 #: refuses a stale one, so a moved line cannot leave a silent hole.
 NOT_AN_UPLOAD_CAP: dict[str, str] = {
+    "app/core/storage.py:33": (
+        "S3 file multipart transfer buffer: one provider part is 8MiB, and a "
+        "larger file is sent as successive parts. This never rejects an upload "
+        "based on total size or replaces the caller's filesec admission limit."
+    ),
     "app/core/config.py:207": (
         "PROD-009 `workspace_export_max_bytes` — the ceiling on ONE produced "
         "whole-workspace export zip, sized from the smallest pod that must "
@@ -349,6 +354,17 @@ def test_storage_parameter_exception_rejects_seeded_literal_default_and_reassign
         ),
     ):
         assert _cap_policy_violations(seeded, filename="app/core/storage.py")
+
+
+def test_multipart_buffer_exception_does_not_permit_an_upload_gate():
+    source = (APP / "core/storage.py").read_text()
+    seeded = source + (
+        "\ndef accidental_upload_gate(content):\n"
+        "    if len(content) > _MULTIPART_BYTES:\n"
+        "        raise ValueError('unapproved upload cap')\n"
+    )
+    found = _cap_policy_violations(seeded, filename="app/core/storage.py")
+    assert any("byte-size gate" in finding for finding in found), found
 
 
 def test_the_not_an_upload_cap_list_points_at_real_megabyte_literals():

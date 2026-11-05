@@ -2,8 +2,9 @@
 
 This reviewable wave follows draft PR #105. Main remains unchanged; no merge,
 deployment, external setting change or production migration is part of this work.
-The parent wave retains a failed mobile supplier-invoice visual check, so neither
-that wave nor these additional local checks constitutes release clearance.
+The parent wave retains its original failed mobile visual/backend guard checks;
+its guard coverage is repaired and the user approved one exact mobile baseline.
+Fresh integrated checks remain required; local evidence is not release clearance.
 
 ## Changes and evidence
 
@@ -63,7 +64,7 @@ these overlap nine historical/lease cases above.
 ## Remaining work and qualification
 
 Generated OpenAPI/ERD, explicit native CI discovery and README counts are updated.
-The integrated tree collects 6,099 backend cases. Fresh delivered-source lint,
+The integrated tree collects 6,101 backend cases. Fresh delivered-source lint,
 types, SQLite migrations/parity, PostgreSQL, functional/visual browsers, bundles,
 all ten image targets/twenty scan reports and supply-chain checks are still
 required. Previous green source cannot qualify this revision. No security waiver,

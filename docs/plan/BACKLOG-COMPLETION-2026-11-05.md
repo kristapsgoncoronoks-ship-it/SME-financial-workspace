@@ -9,7 +9,7 @@ unchanged. Work is on `dev/backlog-completion-20261105`.
 
 Nine subsequently identified entries are appended separately, preserving the
 197-row baseline inventory. Current schema: 120 tables, 157 revisions, single
-head `b2e4f6a8c0d3`; current collection is 6,099 backend cases.
+head `b2e4f6a8c0d3`; current collection is 6,101 backend cases.
 
 ## Current implementation
 
@@ -56,9 +56,9 @@ fencing. It also repairs stale manual retry, finishes the delivery/claim-pack
 verified reads, adds complete issued-invoice pagination and read-only rebate
 preview. Fresh hosted qualification is required.
 
-PR #105's latest functional and image jobs pass, but one mobile supplier-invoice
-visual check fails. Its expected/actual images and original trace are preserved;
-no baseline is regenerated. The image resource investigation reproduced a valid
+PR #105's exact01a9912 functional/image/native jobs passed, but backend guard
+classification and one mobile screenshot failed. Guard coverage is repaired and
+the user explicitly approved only that reviewed screenshot; fresh CI is required. The image resource investigation reproduced a valid
 80Mpx upload exhausting a 768MiB process. A separate isolated OCR wave is now
 implementing supervised decoding with visible derivative warnings; this is not
 production-capacity or customer-extraction acceptance.
@@ -90,3 +90,25 @@ requirements. Native OCR/font/PDF/zlib/timezone/ECB XML probes pass. The extra
 local image-to-PostgreSQL smoke could not start because the local Docker daemon
 ran out of disk; no database test ran in that attempt. Its failed context is
 retained. Hosted native/image/visual qualification remains mandatory.
+
+## Delivered-source failures and repair
+
+Exact head `01a9912` completed with 5,450 backend passes, 443 skips and two
+failures. The new planning receipt lacked a tenant-probe classification; a real
+HTTP probe now tests overlapping keys, foreign-only keys and same-workspace
+actor privacy. No tenant table is exempted. The upload-cap scanner also treated
+the S3 multipart transfer buffer as an upload admission cap. Its existing named,
+stale-checked non-upload quantity register now identifies that exact buffer,
+with a negative control proving a true upload gate using it still fails.
+The combined tenancy/upload-cap/planning/storage suite passes 182 cases.
+
+All 1,071 functional browser cases passed at that source. Twelve visual cases
+passed; the mobile supplier-invoice screenshot differed by the intended 44px
+target height. The user explicitly approved only that reviewed screenshot on
+5 November. Its exact CI actual bytes replace one baseline; no other image,
+assertion, tolerance, retry or timeout changes. The old failed run, all image
+hashes and the approval receipt remain preserved. New full CI is mandatory.
+
+Finance and lease follow-ups are in draft PR #106; main remains unchanged.
+Those source gaps and external policy/provider/corpus/capacity dependencies
+remain separate from this repair wave's qualification.
