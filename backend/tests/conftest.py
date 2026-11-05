@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from datetime import date
 
@@ -24,31 +25,49 @@ async def _db():
         poolclass=StaticPool,
     )
 
-    # QA-011 (audit 2026-09-06): the app engine turns SQLite's foreign-key
-    # enforcement on per connection (`app.core.database`); this engine never
-    # did, so no test had exercised an ON DELETE rule or an FK refusal — the
-    # batch-3 RESTRICT tests passed vacuously until they set the pragma for
-    # their own connection. Mirror the listener so the suite runs against the
-    # constraints production runs against.
-    @event.listens_for(engine.sync_engine, "connect")
-    def _sqlite_fk_pragma(dbapi_connection, _record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+    try:
+        # QA-011 (audit 2026-09-06): the app engine turns SQLite's foreign-key
+        # enforcement on per connection (`app.core.database`); this engine never
+        # did, so no test had exercised an ON DELETE rule or an FK refusal — the
+        # batch-3 RESTRICT tests passed vacuously until they set the pragma for
+        # their own connection. Mirror the listener so the suite runs against the
+        # constraints production runs against.
+        @event.listens_for(engine.sync_engine, "connect")
+        def _sqlite_fk_pragma(dbapi_connection, _record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
 
-    sm = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        sm = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
-    # ASGITransport doesn't run the app lifespan, so seed the bundled ECB rates.
-    from app.services import fx
+        # ASGITransport doesn't run the app lifespan, so seed the bundled ECB rates.
+        from app.services import fx
 
-    async with sm() as session:
-        await fx.ensure_seed_rates(session, date(2026, 7, 18))
-        await fx.ensure_european_coverage(session, date(2026, 7, 18))
+        async with sm() as session:
+            await fx.ensure_seed_rates(session, date(2026, 7, 18))
+            await fx.ensure_european_coverage(session, date(2026, 7, 18))
 
-    yield sm
-    await engine.dispose()
+        yield sm
+    finally:
+        # Setup errors, cancellation and early generator close also own cleanup.
+        disposal = asyncio.create_task(engine.dispose())
+        try:
+            await asyncio.shield(disposal)
+        except asyncio.CancelledError:
+            # Repeated cancellation must not let the loop close while this
+            # engine's SQLite worker is still completing its queued close.
+            while not disposal.done():
+                try:
+                    await asyncio.shield(disposal)
+                except asyncio.CancelledError:
+                    continue
+                except Exception:
+                    break
+            if not disposal.cancelled():
+                disposal.exception()
+            raise
 
 
 @pytest.fixture(autouse=True)
