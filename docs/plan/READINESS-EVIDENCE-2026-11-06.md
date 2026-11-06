@@ -1,5 +1,44 @@
 # Readiness evidence and remaining decisions — 6 November 2026
 
+## Dated qualification follow-up after the original freeze
+
+The original 09:48:51Z metadata freeze correctly recorded PR122 as pending. That
+history is preserved below and in the ledger. Its later final seal records all 13
+required contexts successful at head `5d4c7ef78ffdcd28eab6545172be06404066cd0d`,
+tested merge `ece1cd09d12908977f52671cff713b116416471c`. ARCH-006 now gains only
+that source-scoped hosted qualification; other inline/postparse work remains open.
+
+Backend passes 6,693 with 1,019 skips and 4,930 warnings in 3,192.08 s, collecting 7,712.
+The 15 source-qualified renderer cases are included in that full tree, not an
+extra hosted per-file run or added unique total. PostgreSQL cohorts remain
+302 passed/3 skipped migration, 15 bootstrap, 839 native, 6 growth and 16 real-browser;
+frontend 1,322 first-attempt functional plus 13 visual, no flaky result. All 10
+image targets/20 saved reports, runtime 47, new custom PostgreSQL and 7 S3 groups
+pass with cleanup. The two retained medium provider objects remain complete and
+unchanged; no scanner/rating change or platform clearance is inferred. Root's
+separate log review identifies the two added fixture warnings as 22-byte PyJWT
+HMAC encode/decode warnings, not runtime/resource/coroutine warnings; the seal
+itself records the total warning count.
+
+This parent evidence does not qualify the later request-ID repair. The CAD TCP
+failure with legal unrelated obs-text is a genuine product blocker despite
+previous local checks and any eventual old-CAD gate outcome. At the old collector
+snapshot 10:13:11Z there were 9 successes/3 active and aggregate not scheduled.
+The repaired same-PR delivery has fresh CI pending. See the [header follow-up](UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md)
+for the narrow fix, 53-case source-bound proof and three root-owned real TCP reads.
+No new pool/timeout/audit default or completed measurement below is rewritten.
+
+PR122 final verification:
+`/workspace/artifacts/project-document-rendering-2026-11-06/hosted-ci/head-5d4c7ef/final-verification.json`,
+SHA-256 `23e7cdb902c8766ea33cb40f0bd17a7564ba74f23360448e594103c310342e2c`.
+Read-only extraction:
+`/tmp/error-request-id-delivery-v2-20261106/evidence-inputs/FACTS.json`,
+SHA-256 `499e20b8bfefc58a052ce01f5fb49ec01cb87c880cbeaff100a1d1a49a15f5a9`.
+The extraction does not repeat linked tests/queries or independently classify
+warnings. Root's existing log review supplies the warning classification above.
+
+## Earlier evidence and freeze record
+
 These are completed, source-scoped observations, not operating-policy changes.
 The three studies bind frozen PR122 `5d4c7ef78ffdcd28eab6545172be06404066cd0d`
 and PostgreSQL revision166 `e2f4a6b8d0c3`; they are not new timings of the request-ID

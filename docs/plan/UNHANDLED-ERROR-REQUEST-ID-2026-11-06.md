@@ -1,5 +1,68 @@
 # Traceable unexpected errors — 6 November 2026
 
+## Header decoding follow-up: current delivery
+
+A healthy HTTP request carrying unrelated legal obs-text bytes could return 500
+because ID selection decoded every header value as UTF-8. Component
+`9244627557572c92c905cd58739d8f78db3dd72c` fixes that confirmed product defect in
+the same PR123 delivery. Both middleware and fallback now filter raw header names
+case-insensitively to `X-Request-ID` **before** their existing value decoding.
+Matching targets still decode in original order: valid duplicates keep last-value
+selection, empty generates, spaces/UTF-8 retain existing behavior, and an invalid
+matching target retains the existing safe 500 fallback. No decode-final-map or
+broader header admission/normalization policy is added. Error-ID state/logging,
+context reset, single raw UTF-8 output and generic 500 body/status remain.
+
+Failure-first evidence records 3 failed/16 passed module cases at immutable CAD:
+two healthy supplied/generated requests returned 500 and an error route never
+reached its selected/logged context. The existing negative fallback test now uses
+an invalid TARGET header; its coverage is retained. The new cohort passes 53
+cases in 20.97 s: 19 request-ID controls (16 prior plus 3 new) and 34 other incumbents.
+The old 50 and new 53 overlap; they are not 69 unique cases. Scoped Ruff/format 3 and
+Mypy 2 pass, with independent review and whole-module AST projection showing only
+one new raw-name predicate per comprehension. All other source behavior is exact.
+
+Root's real localhost TCP/Uvicorn h11 after-check passes three health reads:
+ordinary, unrelated `X-Test-Note: FF` with a generated ID, and the same bytes with
+a supplied ID, all 200 with exactly one ID. The supplied ID matches. Lifespan is
+off, with no database/provider startup; owned server task/listener close. This
+is health-path correctness, not performance, production or full-stack acceptance.
+The baseline before-observation is explicitly a faithful transcription of the
+original tool output, not a pretend raw log. It records CAD's ordinary 200 versus
+unrelated-obs-text 500. That is a product blocker regardless of CI outcome.
+
+The old CAD collector snapshot at 10:13:11Z had 9 required successes, 3 active
+(frontend functional, application PostgreSQL and backend), and aggregate not yet
+scheduled; it was not 13 green. The corrected source needs fresh hosted CI and
+human review. Current delivery collects **7,731 cases**, not a full-suite pass;
+full Ruff/format checks 1,026 files and Mypy 452 app files. The separate 51-control
+docs/generated/discovery cohort passes all 51 controls in 13.78 seconds. No focused,
+TCP, frontend, native or full suite is repeated by the delivery owner.
+
+Current component hashes:
+
+| Path | SHA-256 |
+|---|---|
+| `backend/app/core/observability.py` | `a014cd418a0cb3af065f1da338be52847585a6beaa04075dab732edff635abb2` |
+| `backend/app/main.py` | `1d32272b9a5f232d8bc667812732d2a4c8b465e5fef9ba2fd90605396131702f` |
+| `backend/tests/test_unhandled_request_id.py` | `35b188784b730ff1785e489ba12f5462c812bca9821640d2400d8390df7253c1` |
+
+- Component receipt: `/tmp/request-id-header-read-20261106/FINAL-COMPONENT-RECEIPT-9244627.json`, SHA-256 `92028d34a78531253e4cf3e7768f3a1629d742ba932e77a07d1fe4ea61070dde`.
+- Peer receipt: `/tmp/request-id-header-read-20261106/independent-review/REVIEW-9244627.json`, SHA-256 `8431baa06998fde966eb31ddc8dfcc4b07a6bcf32a0013ee767d9a8b8b5eaef6`.
+- Failure-first receipt: `/workspace/artifacts/unhandled-request-id-header-read-2026-11-06/RED-RECEIPT-cad54e4.json`, SHA-256 `8438ffc7001392ce553caff4445f9680b19a83c239fa79d59db92ca772a19777`.
+- Root TCP after: `root-tcp/after-verification.json` in that packet, SHA-256 `693dc7eb15f74c75e6be56b74301212beffee64f430a3e01328ebf68a652f9eb`.
+- Before transcription: `root-tcp/before-observation.json`, SHA-256 `9bb93dcdbb20843c46146e22756090aedb49e2d6cab2326a39ff890c113f2331`.
+
+Finding 221 is distinct from the original missing-error-ID finding 220. All 220
+parent identities/statuses/inventory/provenance remain; only finding 220 and
+ARCH-006 gain dated progress. 218 unrelated complete parent rows remain exact.
+No default, schema, helper, workflow, dependency, audit, financial or provider
+policy changes. The original CAD plan below remains dated history, including
+its 50-case proof, 7,728 collection and pending qualification; its source hashes
+are not relabeled as the current repaired component.
+
+## Original CAD delivery record
+
 An unexpected API failure now returns the same `X-Request-ID` used in its error
 log. Operators can correlate the user's generic error response without exposing
 internal exception text. Status 500 and the existing `{detail, code}` body remain.
