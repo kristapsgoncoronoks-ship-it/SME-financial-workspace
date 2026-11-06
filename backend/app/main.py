@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -203,9 +204,26 @@ async def _unhandled_error_handler(request, exc: Exception):
     the client gets a stable JSON envelope + the X-Request-ID header to quote."""
     from fastapi.responses import JSONResponse
 
-    return JSONResponse(
+    scope = getattr(request, "scope", {})
+    state = scope.get("state")
+    rid = state.get("request_id") if isinstance(state, dict) else None
+    if not isinstance(rid, str) or not rid:
+        # Header decode failures and middleware-bypassing fixtures have no
+        # resolved ID to recover. Never reuse ambient context for the fallback.
+        try:
+            headers = {
+                k.decode().lower(): v.decode()
+                for k, v in scope.get("headers", [])
+                if k.lower() == b"x-request-id"
+            }
+        except UnicodeDecodeError:
+            headers = {}
+        rid = headers.get("x-request-id") or uuid.uuid4().hex
+    response = JSONResponse(
         status_code=500, content={"detail": "Internal server error", "code": "internal_error"}
     )
+    response.raw_headers.append((b"x-request-id", rid.encode()))
+    return response
 
 
 @app.get("/health", tags=["meta"])

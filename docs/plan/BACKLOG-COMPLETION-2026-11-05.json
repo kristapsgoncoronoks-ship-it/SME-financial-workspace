@@ -522,7 +522,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md:128",
         "backend/app/core/database.py:22"
       ],
-      "next": "No command_timeout currently. Measure longest legitimate archive/integrity/growth queries, qualify bounded timeout and rollback/recovery before adopting value; no guessed global limit.\n\n6 November: the partial Facts 6ed908d/schema 165 seven-service 400/1600 study retains 56 successful samples with separate statement/service/stream/lock spans. No timeout is chosen. Agree the supported row/history/original-size/deployment envelope, measure legitimate tails, then qualify client/server/whole-operation scope with cancellation, rollback, pool, connection-loss, PgBouncer and uncertain-commit recovery.",
+      "next": "No command_timeout currently. Measure longest legitimate archive/integrity/growth queries, qualify bounded timeout and rollback/recovery before adopting value; no guessed global limit.\n\n6 November: the partial Facts 6ed908d/schema 165 seven-service 400/1600 study retains 56 successful samples with separate statement/service/stream/lock spans. No timeout is chosen. Agree the supported row/history/original-size/deployment envelope, measure legitimate tails, then qualify client/server/whole-operation scope with cancellation, rollback, pool, connection-loss, PgBouncer and uncertain-commit recovery.\n\n6 November 2026 native followup at frozen 5d4/schema 166: one observed active pre-COMMIT task cancellation completed explicit rollback/join/connection exit in 6.308 ms; the marker is absent, same-engine next query succeeds, checked-out count 0 and all 122 recorded table hashes unchanged. The cancelled connection was invalidated, not proven physically reused. No HTTP/worker cancellation, network/PgBouncer, financial command, uncertain/lost COMMIT or global timeout qualification; defaults remain unchanged. See docs/plan/READINESS-EVIDENCE-2026-11-06.md.",
       "dependencies": [],
       "qualification": {
         "local_measurement_2026_11_06": {
@@ -542,6 +542,50 @@
           "limits": "No asyncpg command_timeout adopted. LocalPG statement/lock/idle-transaction timeouts0; production settings unknown. Direct services are notHTTP/router/worker/delivery acceptance. Smallcompressible bodies/scales do not qualify20k/large valid histories, dead network/failover, PgBouncer, cold/stale-statistics or fleet hardware.",
           "receipt": "/workspace/artifacts/backlog-db021-measure-2026-11-06/FINAL-RECEIPT.json",
           "receipt_sha256": "d47420852adb317964f1904aa9ae1dd85eacafc343b131e5131b20d71c8f872f"
+        },
+        "actual_readiness_followup_20261106_5d4": {
+          "plan": "docs/plan/READINESS-EVIDENCE-2026-11-06.md",
+          "receipt": {
+            "path": "/tmp/bidit-db021-cancellation-20261106-5d4c7ef/attempt2/FINAL-RECEIPT.json",
+            "sha256": "93e74de6227440a94be4cddfb29123983f32e7d6c7708d733d6d6636c8c14977",
+            "verified": true
+          },
+          "source": "5d4c7ef78ffdcd28eab6545172be06404066cd0d",
+          "actual_head": "166 / e2f4a6b8d0c3",
+          "classification": "PARTIAL-LOCAL-EVIDENCE-NO-POLICY-CHANGE",
+          "observations": {
+            "native_pre_COMMIT_cancellation_schedules": 1,
+            "observed_query_state": "active",
+            "wait_event": "PgSleep",
+            "wait_event_type": "Timeout",
+            "exact_query_equality": true,
+            "query_sha256": "36fcae86fdcf0e2654e57167cc5c430f236dfb434c9e8b316670110362b0fa84",
+            "transaction_open": true,
+            "separate_connection_marker_count_before_cancel": 0,
+            "own_uncommitted_marker_count": 1,
+            "cancel_through_explicit_rollback_and_connection_exit_ms": 6.30848397850059
+          },
+          "authority": {
+            "alembic_head": "e2f4a6b8d0c3",
+            "database": "backlog_db021_cancel166",
+            "database_owner": "backlog_app",
+            "forced_rls_tables": 115,
+            "rls_tables": 115,
+            "rolbypassrls": false,
+            "role": "backlog_app",
+            "rolsuper": false
+          },
+          "policy_conclusion": "Native pre-COMMIT task cancellation/rollback/recovery only; not HTTP/worker cancellation, network interruption or a lost/uncertain COMMIT result. No timeout or pool policy follows.",
+          "limits": [
+            "uncertain COMMIT",
+            "network or deployment faults",
+            "PgBouncer",
+            "financial commands",
+            "HTTP/worker request cancellation",
+            "global timeout policy",
+            "production data/capacity"
+          ],
+          "not_current_performance_or_fleet_or_lost_COMMIT": true
         }
       }
     },
@@ -2491,7 +2535,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "6 November 2026: The implemented bounded transport parser offload and admission has source-bound hosted CI qualification; see docs/plan/BACKLOG-HOSTED-QUALIFICATION-2026-11-06.md (G03). Human review and existing partial, policy, acceptance and remediation limits remain. Pending-CI wording below is preserved dated local-delivery history, superseded only for this implementation. Partial local progress at 404b1c3: transport estimate and statement ingestion await only the pure filename/bytes parser in the existing thread pool, with one nonblocking process slot owned through physical parser completion, including inner/repeated cancellation and late canceled submission. Explicit busy 503 has retryable true and string detail; estimates store/write nothing, while statements retain the exact original before parser admission and report original_stored true without catalog/refusal/audit/import writes from the busy attempt. Existing successful 200 workflow, FX/review/session/audit/DML ownership, all seven network rules and natural-key behavior remain. Owner 312 portable cases include 11 focused; final 11 is overlapping subset. Actual same-fixture TCP/ordinary-role PostgreSQL 164 comparison improves loop/health availability with equal complete responses and unchanged 115 table entries per synthetic org; host Python 3.12 local scope only. Residual EUR aggregation/postparse work and inventoried inline renderers remain open. DB-021 timeout and ARCH-010 audit-lock studies are not qualified; no guessed limit or audit change. Facts parent 6ed908d is composed at c6d78d5 with five unchanged hashes. Composed static/collection/build, 51 docs controls and 11 focused adapter cases pass; fresh delivered-source CI remains pending. 6 November 2026 renderer followup: component c6557b11 moves only detached project text/PDF construction off loop, with one nonblocking physical slot per process and typed project_document_render_busy 503 before attachment/storage/audit. Caller Task cancellation retains physical ownership; this is not automatic browser-disconnect cancellation or an uncertain-save retry guarantee. Same synthetic TCP/real-renderer fixture improves health median 415.800 to 118.019 ms while render median increases 429.241 to 476.396 ms. Component 80 passes include 15 new and 65 incumbent, with 18 existing native-gate skips; the strengthened one-pass target overlaps. Current collection 7,712 and full static checks pass; fresh delivered-source hosted CI is pending. Other inline/postparse paths and DB-021/ARCH-010 remain open. See docs/plan/PROJECT-DOCUMENT-RENDERING-2026-11-06.md.",
+      "next": "6 November 2026: The implemented bounded transport parser offload and admission has source-bound hosted CI qualification; see docs/plan/BACKLOG-HOSTED-QUALIFICATION-2026-11-06.md (G03). Human review and existing partial, policy, acceptance and remediation limits remain. Pending-CI wording below is preserved dated local-delivery history, superseded only for this implementation. Partial local progress at 404b1c3: transport estimate and statement ingestion await only the pure filename/bytes parser in the existing thread pool, with one nonblocking process slot owned through physical parser completion, including inner/repeated cancellation and late canceled submission. Explicit busy 503 has retryable true and string detail; estimates store/write nothing, while statements retain the exact original before parser admission and report original_stored true without catalog/refusal/audit/import writes from the busy attempt. Existing successful 200 workflow, FX/review/session/audit/DML ownership, all seven network rules and natural-key behavior remain. Owner 312 portable cases include 11 focused; final 11 is overlapping subset. Actual same-fixture TCP/ordinary-role PostgreSQL 164 comparison improves loop/health availability with equal complete responses and unchanged 115 table entries per synthetic org; host Python 3.12 local scope only. Residual EUR aggregation/postparse work and inventoried inline renderers remain open. DB-021 timeout and ARCH-010 audit-lock studies are not qualified; no guessed limit or audit change. Facts parent 6ed908d is composed at c6d78d5 with five unchanged hashes. Composed static/collection/build, 51 docs controls and 11 focused adapter cases pass; fresh delivered-source CI remains pending. 6 November 2026 renderer followup: component c6557b11 moves only detached project text/PDF construction off loop, with one nonblocking physical slot per process and typed project_document_render_busy 503 before attachment/storage/audit. Caller Task cancellation retains physical ownership; this is not automatic browser-disconnect cancellation or an uncertain-save retry guarantee. Same synthetic TCP/real-renderer fixture improves health median 415.800 to 118.019 ms while render median increases 429.241 to 476.396 ms. Component 80 passes include 15 new and 65 incumbent, with 18 existing native-gate skips; the strengthened one-pass target overlaps. Current collection 7,712 and full static checks pass; fresh delivered-source hosted CI is pending. Other inline/postparse paths and DB-021/ARCH-010 remain open. See docs/plan/PROJECT-DOCUMENT-RENDERING-2026-11-06.md.\n\n6 November 2026 later hosted renderer qualification: actual PR122 head 5d4/tested merge ece1cd09 passes all 13 required contexts after the preserved 09:48 pending freeze. Backend 6,693 passed/1,019 skipped in 3,192.08 s (7,712 collected) includes the 15 source-qualified renderer cases; PG 302/3+15+839+6+16, frontend 1,322 first-attempt plus 13 visual and all images/new custom PG qualify their separate scopes. These are not added as a unique total or current request-ID CI/performance. Prior pending/local/q records remain dated. ARCH-006 remains partial for other inline/postparse work; no timeout/pool/audit policy changes. See docs/plan/READINESS-EVIDENCE-2026-11-06.md.",
       "dependencies": [],
       "delivery": {
         "proposed_plan": "docs/plan/TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md",
@@ -2577,6 +2621,98 @@
           ],
           "delivery": "7,712 collected; full Ruff/format 1,025 files and Mypy 452 app files pass. Fresh hosted CI pending; no frontend/native/full suite repeated",
           "limits": "No new size/time/RAM/global policy or automatic retry; physical cancellation ownership is not browser-disconnect cancellation; other ARCH-006/DB-021/ARCH-010 work remains open"
+        },
+        "project_document_rendering_hosted_5d4_20261106": {
+          "plan": "docs/plan/READINESS-EVIDENCE-2026-11-06.md",
+          "final_verification": {
+            "path": "/workspace/artifacts/project-document-rendering-2026-11-06/hosted-ci/head-5d4c7ef/final-verification.json",
+            "sha256": "23e7cdb902c8766ea33cb40f0bd17a7564ba74f23360448e594103c310342e2c",
+            "expected_sha256_matched": true
+          },
+          "source": {
+            "pr": 122,
+            "head": "5d4c7ef78ffdcd28eab6545172be06404066cd0d",
+            "base": "9b8e4647adac233ee81bc74505c3c2905d9f294b",
+            "tested_merge": "ece1cd09d12908977f52671cff713b116416471c",
+            "event": "pull_request",
+            "attempt": 1,
+            "recorded_at": "2026-11-06T09:55:13.563696+00:00"
+          },
+          "required_contexts": {
+            "exact_name_set_verified": true,
+            "count": 13,
+            "outcomes": {
+              "success": 13
+            },
+            "all13_passed": true,
+            "all_required_raw_logs_present": true
+          },
+          "backend": {
+            "passed": 6693,
+            "skipped": 1019,
+            "warnings": 4930,
+            "seconds": 3192.08,
+            "total_collected": 7712
+          },
+          "renderer_source_scope": {
+            "receipt": "renderer-fulltree-coverage.json",
+            "sha256": "12a2573c28b13b65545cde073bb011797b7ba537d0b6a69b3a501b3f6fd04304",
+            "new_source_qualified_cases": 15,
+            "full_tree_expected_and_actual": 7712,
+            "separate_hosted_per_file_telemetry": false,
+            "source_scope_receipt_is_dated_before_backend_completed": true
+          },
+          "postgres_cohorts": {
+            "migration_passed": 302,
+            "migration_skipped": 3,
+            "bootstrap_passed": 15,
+            "native_passed": 839,
+            "native_warnings": 1148,
+            "growth_passed": 6,
+            "real_browser_passed": 16
+          },
+          "frontend": {
+            "functional_first_attempt": 1322,
+            "visual_passed": 13,
+            "flaky": 0
+          },
+          "images_runtime_storage": {
+            "targets": 10,
+            "reports_hash_verified": 20,
+            "runtime_passed": 47,
+            "runtime_distributions_unchanged": true,
+            "S3_groups_passed": 7,
+            "S3_cleanup": true,
+            "postgres_runtime_probe": {
+              "passed": true,
+              "check_groups": 2,
+              "owned_cleanup_verified": true,
+              "image_id": "sha256:2d7983cf9e211e9f19cd15d718d4df17cd5ae4ca8c3ced6f94f9f0b2fca345f4",
+              "binary_sha256": "41df0e8735a2159314aeea96ad817db90792cc2cbba4df7ac25bab4e35f84ee3",
+              "binary_bytes": 1938895,
+              "all6public_helper_records_verified": true,
+              "runtime_and_builder_binary_graphs_verified": true,
+              "module_identity": "Go1.27.3;gosuv1.20.0+dirty/vcs.modified=true;Moby0.4.1;xsys0.49.0+exacth1",
+              "receipt": "postgres-candidate-verification.json",
+              "receipt_sha256": "35a44846587c49a8a32bc5e53482cb6ce880179178c2c015919f7c79e8a05308",
+              "raw_runtime_receipt_sha256": "d3611673df625030251d79474713fdc46bf9fabbd7599e73662331ce0fd7d1fd"
+            },
+            "full_unfiltered_inventory": {
+              "parent_rows": 2,
+              "current_rows": 2,
+              "all_provider_objects_parent_equal": true,
+              "target_CVE2026_39824_current_rows": 0,
+              "comparison": "advisory-comparison.json",
+              "comparison_sha256": "ceedcee03db59c31eb8baab8eaa1de89603be423ee7cabd183f1a04d86100b9c",
+              "full_provider_records": "all-provider-vulnerabilities.json",
+              "full_provider_records_sha256": "a577aec3924d080c103fb4d24d3fc4ec725bccd3762bba2eece36ca5c58e87e8"
+            }
+          },
+          "run_urls": [
+            "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42190826337",
+            "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42190827281"
+          ],
+          "chronology": "New later source-scoped qualification; original09:48 pending/local records preserved. This does not qualify current request-ID source or performance. No current worker adoption/policy change."
         }
       }
     },
@@ -2589,7 +2725,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Measure legitimate transaction/lock contention before narrowing audit advisory lock, preserving chain/atomic rollback.\n\n6 November: partial ordinary-role PostgreSQL lock-lifetime evidence at Facts 6ed908d/schema 165 preserves chain validity and atomic rollback. The roughly 277/261 ms same-tenant waits include an injected 250 ms hold. Keep the transaction-scoped audit lock. Measure legitimate first-append-to-commit spans and wait attribution before considering preparation changes.",
+      "next": "Measure legitimate transaction/lock contention before narrowing audit advisory lock, preserving chain/atomic rollback.\n\n6 November: partial ordinary-role PostgreSQL lock-lifetime evidence at Facts 6ed908d/schema 165 preserves chain validity and atomic rollback. The roughly 277/261 ms same-tenant waits include an injected 250 ms hold. Keep the transaction-scoped audit lock. Measure legitimate first-append-to-commit spans and wait attribution before considering preparation changes.\n\n6 November 2026 actual caller followup at frozen 5d4/schema 166: one supported 1,000-row CSV expense import commits in 384.118 ms, audit-call-to-commit 12.139 ms and lock-ack-to-commit 11.028 ms; 62 observer samples see 5 granted and 0 waiting samples, with no injected hold/contender. Exactly 4 intended tables change, 118 other hashes remain, exact source/rows/total/command result and existing receipt are preserved, exactly 1 new audit and valid 2-event chain. This is not contention distribution, HTTP write, retry/rollback or uncertain-COMMIT proof. No audit-lock optimization defect or policy change is justified. See docs/plan/READINESS-EVIDENCE-2026-11-06.md.",
       "dependencies": [],
       "qualification": {
         "local_measurement_2026_11_06": {
@@ -2609,6 +2745,50 @@
           "limits": "Synthetic holds prove lock lifetime, not legitimate customer delay or a global hash-key independence claim. No HTTP/browser/provider/capacity result and no early-unlock/independent-audit-commit change.",
           "receipt": "/workspace/artifacts/backlog-audit-lock-measurement-2026-11-06/RECEIPT.json",
           "receipt_sha256": "8dfd653613100a6d56782f0cafe3689e31663a88f154ff64fb7550ff6f6cd432"
+        },
+        "actual_readiness_followup_20261106_5d4": {
+          "plan": "docs/plan/READINESS-EVIDENCE-2026-11-06.md",
+          "receipt": {
+            "path": "/tmp/bidit-arch010-expense-bulk-20261106/RECEIPT.json",
+            "sha256": "d623e30f4d0d4035e497b756d08c19cc44d8e782f9d86f4e3792886057f3822d",
+            "verified": true
+          },
+          "source": "5d4c7ef78ffdcd28eab6545172be06404066cd0d",
+          "actual_head": "166 / e2f4a6b8d0c3",
+          "classification": "PARTIAL-LOCAL-EVIDENCE-NO-POLICY-CHANGE",
+          "observations": {
+            "supported_bulk_caller_actions": 1,
+            "rows": 1000,
+            "method": "csv",
+            "source_bytes": 42033,
+            "all_debit": true,
+            "total_exact": "1469.95",
+            "source_sha256": "95574ae4de4c33f0b88a2b904a1a746a36679deaa4fba17d20f6ee5b90c15a8b",
+            "action_to_commit_ack_ms": 384.1175390116405,
+            "before_first_audit_ms": 371.9786510046106,
+            "audit_call_to_commit_ack_ms": 12.138888007029891,
+            "lock_acquire_call_ms": 0.7724919996690005,
+            "lock_ack_to_commit_ack_ms": 11.028218024875969,
+            "commit_call_to_ack_ms": 1.6875880246516317,
+            "native_observer_samples": 62,
+            "audit_lock_granted_samples": 5,
+            "blocking_wait_samples": 0,
+            "observer_cadence_seconds": 0.001
+          },
+          "authority": {
+            "database": "backlog_arch010_bulk166",
+            "role": "backlog_app",
+            "rolsuper": false,
+            "rolbypassrls": false,
+            "rolcreatedb": false
+          },
+          "policy_conclusion": "No demonstrated audit-lock optimization defect in this measured caller; no lock-placement or audit-policy change justified.",
+          "limits": [
+            "A single supported1000-row CSV caller, with no artificial hold or contender, does not establish a contention or production latency distribution.",
+            "The lock-ack-to-commit-ack span is an observed client-side interval corroborated by sampled grants, not an exact continuously sampled server lock lifetime.",
+            "No HTTP write, retry/rollback schedule, uncertain COMMIT, source repair, SLA or audit-policy optimization is qualified. Preserve atomic source/audit commit behavior."
+          ],
+          "not_current_performance_or_fleet_or_lost_COMMIT": true
         }
       }
     },
@@ -2708,7 +2888,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Measure current db_pool_timeout and native starvation/recovery before lower timeout; retain valid long workloads.\n\n6 November: a separately labeled 1+0 pool fixture at Facts 6ed908d/schema 165 retains the current 30-second checkout timeout and recovers after queued/running cancellation; the actual 10+10 engine shape was inspected. Keep defaults. Measure legitimate checkout/hold distributions and actual HTTP/UI recovery at intended deployment capacity before a deadline decision; DB-021 remains separate.",
+      "next": "Measure current db_pool_timeout and native starvation/recovery before lower timeout; retain valid long workloads.\n\n6 November: a separately labeled 1+0 pool fixture at Facts 6ed908d/schema 165 retains the current 30-second checkout timeout and recovers after queued/running cancellation; the actual 10+10 engine shape was inspected. Keep defaults. Measure legitimate checkout/hold distributions and actual HTTP/UI recovery at intended deployment capacity before a deadline decision; DB-021 remains separate.\n\n6 November 2026 actual HTTP followup at frozen 5d4/schema 166: one ASGI HTTP read in a deliberately exhausted fixture pool returned safe 500 after 30.038 s; explicit retry 200 after 0.278 s, all 122 recorded table hashes/selection and defaults unchanged. No live browser/TCP, representative workload/hardware or capacity distribution was measured. The missing 500 request-ID is now a separate source-backed finding 220/component 17ffa19; old timing is not repaired-source performance. Keep timeout/pool defaults; no shorter value is justified. See docs/plan/READINESS-EVIDENCE-2026-11-06.md.",
       "dependencies": [],
       "qualification": {
         "local_measurement_2026_11_06": {
@@ -2728,6 +2908,43 @@
           "limits": "Default20 possible slots were not saturated; no HTTP envelope, legitimate longest command, deployment concurrency, PgBouncer or black-hole qualification. No shorter timeout chosen.",
           "receipt": "/workspace/artifacts/backlog-pool-timeout-measurement-2026-11-06/RECEIPT.json",
           "receipt_sha256": "7bfb9f19c9ccdc2b1d7ad30c694fa01f03b87cdbb7c74018554845da6411ff9e"
+        },
+        "actual_readiness_followup_20261106_5d4": {
+          "plan": "docs/plan/READINESS-EVIDENCE-2026-11-06.md",
+          "receipt": {
+            "path": "/workspace/artifacts/perf015-org-read-http-2026-11-06/RECEIPT.json",
+            "sha256": "4f62556d51a06360d0012f03ef0e9e13afb442fa8796626ce515e55dffdb4291",
+            "verified": true
+          },
+          "source": "5d4c7ef78ffdcd28eab6545172be06404066cd0d",
+          "actual_head": "166 / e2f4a6b8d0c3",
+          "classification": "PARTIAL-LOCAL-EVIDENCE-NO-POLICY-CHANGE",
+          "observations": {
+            "failed_HTTP_reads": 1,
+            "explicit_HTTP_retries": 1,
+            "refusal_status": 500,
+            "refusal_seconds": 30.03756416597753,
+            "retry_status": 200,
+            "retry_seconds": 0.27774026500992477,
+            "browser_or_TCP_measured": false
+          },
+          "authority": {
+            "database": "backlog_org_pool166",
+            "registered": true,
+            "role": {
+              "role": "backlog_app",
+              "rolsuper": false,
+              "rolbypassrls": false,
+              "rolcreatedb": false
+            },
+            "postgres": "16.15",
+            "head": "e2f4a6b8d0c3",
+            "retained": true,
+            "engines_disposed": true
+          },
+          "policy_conclusion": "One measured refusal/recovery does not justify a shorter timeout, larger pool or new capacity setting.",
+          "limits": "Representative workload/hardware and proxy/browser qualification plus any owner-approved timeout/capacity policy remain; no shorter timeout or new setting justified.",
+          "not_current_performance_or_fleet_or_lost_COMMIT": true
         }
       }
     },
@@ -3209,7 +3426,7 @@
     },
     {
       "id": "SEC-X-SYS",
-      "status": "INVESTIGATE",
+      "status": "CI-PASS-HUMAN-REVIEW",
       "inventory_status": "INVESTIGATE",
       "title": "Retained Go x/sys advisory in PostgreSQL helper roles",
       "sources": [
@@ -3217,7 +3434,7 @@
         "docs/BACKLOG.md:80",
         "deploy/postgres/Dockerfile"
       ],
-      "next": "Retain x/sys0.1.0 Windows-specific CVE2026-39824 applicability and all ratings for observed linux/amd64. Investigate compatible supported parent/source maintenance; do not suppress module or imply future-platform clearance.\n\n6 November: an isolated downstream source recipe pins official x/sys 0.49.0 with canonical readonly Go 1.26 manifests, unchanged Go 1.27.3/Moby 0.4.1/upstream gosu source, exact notices and truthful v1.20.0+dirty metadata. The target-aware gosu-only guard refuses old, forged-clean, missing, duplicate, replaced, wrong-compiler or mismatched-target evidence. Local 147 incumbent/audit and 54 focused controls pass; 17 paired prototype contracts match in 34 accepted observations, with acknowledged runtime DefaultGODEBUG differences and no forced legacy settings. Current PR120 images still contain x/sys 0.1.0 and two unscored CVE-2026-39824 rows. Status stays INVESTIGATE pending actual builder/runtime images, full inventories/all ratings, UID70/entrypoint/PGDATA/Moby/volume contracts and delivered-source CI. No suppression, Windows/current-Linux-exploit or future-platform clearance claim.\n\nRuntime-proof composition: accepted component 1e9c232 adds one custom-PostgreSQL Docker-job qualifier after image audit/before S3. Its 65 fake controls and old-image fresh-init/same-volume result retain their owner/source scope; no duplicate execution or new-helper clearance is inferred. The composed tree collects 7697, with all eight helper files unchanged. The separate approved36 status reconciliation excludes this row. Actual new-image metadata/inventories/PG behavior and hosted CI still required; SEC-X-SYS remains INVESTIGATE.",
+      "next": "Retain x/sys0.1.0 Windows-specific CVE2026-39824 applicability and all ratings for observed linux/amd64. Investigate compatible supported parent/source maintenance; do not suppress module or imply future-platform clearance.\n\n6 November: an isolated downstream source recipe pins official x/sys 0.49.0 with canonical readonly Go 1.26 manifests, unchanged Go 1.27.3/Moby 0.4.1/upstream gosu source, exact notices and truthful v1.20.0+dirty metadata. The target-aware gosu-only guard refuses old, forged-clean, missing, duplicate, replaced, wrong-compiler or mismatched-target evidence. Local 147 incumbent/audit and 54 focused controls pass; 17 paired prototype contracts match in 34 accepted observations, with acknowledged runtime DefaultGODEBUG differences and no forced legacy settings. Current PR120 images still contain x/sys 0.1.0 and two unscored CVE-2026-39824 rows. Status stays INVESTIGATE pending actual builder/runtime images, full inventories/all ratings, UID70/entrypoint/PGDATA/Moby/volume contracts and delivered-source CI. No suppression, Windows/current-Linux-exploit or future-platform clearance claim.\n\nRuntime-proof composition: accepted component 1e9c232 adds one custom-PostgreSQL Docker-job qualifier after image audit/before S3. Its 65 fake controls and old-image fresh-init/same-volume result retain their owner/source scope; no duplicate execution or new-helper clearance is inferred. The composed tree collects 7697, with all eight helper files unchanged. The separate approved36 status reconciliation excludes this row. Actual new-image metadata/inventories/PG behavior and hosted CI still required; SEC-X-SYS remains INVESTIGATE.\n\n6 November 2026 actual PR121 hosted followup: head 9b8e464/tested merge 4d7d16c passes all 13 required contexts. Actual builder/runtime binary graph, exact Go 1.27.3/gosu 1.20.0+dirty/modifiedtrue/Moby 0.4.1/x/sys 0.49.0 manifests/notices and six public helper records match. New custom PostgreSQL fresh-init/graceful same-volume restart/cleanup passes. All 20 reports/10 targets retain unrelated complete provider objects/ratings; the two CVE2026-39824 target metadata rows disappear after the real module change. Prior INVESTIGATE/pending/source/prototype/old-image records remain dated history. Status now CI-PASS-HUMAN-REVIEW for this implemented linux/amd64 maintenance, not Windows runtime, Linux exploit, future-platform, production or release clearance. No suppression or unrelated rating change; fresh request-ID delivery CI remains pending. See docs/plan/READINESS-EVIDENCE-2026-11-06.md.",
       "dependencies": [],
       "qualification": {
         "downstream_source_2026_11_06": {
@@ -3286,6 +3503,58 @@
           "new_candidate_images_CI": "Pending; no new local pull/build/scan/runtime cohort. StockPGapplicationjob does not qualify custom helper.",
           "reconciliation_exclusion": "Separate36 sourced hosted-label corrections do not qualify this candidate or change SEC status.",
           "status": "INVESTIGATE until actual hosted new-image evidence"
+        },
+        "hosted_candidate_9b8_20261106": {
+          "plan": "docs/plan/READINESS-EVIDENCE-2026-11-06.md",
+          "receipt": {
+            "path": "/workspace/artifacts/sec-x-sys-investigation-2026-11-06/hosted-ci/head-9b8e464/final-verification.json",
+            "sha256": "03f38bf6ecf2e14a5917b1103faf01514323edae90d6b693aa2c5943499dc48e",
+            "verified": true
+          },
+          "head": "9b8e4647adac233ee81bc74505c3c2905d9f294b",
+          "tested_merge": "4d7d16cf717bb3af4b390bb8e6b6a75e3080c589",
+          "required_contexts": {
+            "exact_name_set_verified": true,
+            "count": 13,
+            "outcomes": {
+              "success": 13
+            },
+            "all13_passed": true,
+            "raw_logs_present": true
+          },
+          "run_urls": [
+            "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42184307235",
+            "https://github.com/kristapsgoncoronoks-ship-it/SME-financial-workspace/actions/runs/42184307291"
+          ],
+          "actual_postgres_image_probe": {
+            "passed": true,
+            "check_groups": 2,
+            "owned_cleanup_verified": true,
+            "image_id": "sha256:8ccae5b533b7b1af07a15814ed93f2afd1d58c88615a7257ed0735cf2230d441",
+            "binary_sha256": "41df0e8735a2159314aeea96ad817db90792cc2cbba4df7ac25bab4e35f84ee3",
+            "binary_bytes": 1938895,
+            "all6public_helper_records_verified": true,
+            "runtime_and_builder_binary_graphs_verified": true,
+            "module_identity": "Go1.27.3;gosuv1.20.0+dirty/vcs.modified=true;Moby0.4.1;xsys0.49.0+exacth1",
+            "receipt": "postgres-candidate-verification.json",
+            "receipt_sha256": "84958ec78a30011b0fff759f3eee8b5e19fd03bddee1d68da4c35c2f7f3ba241",
+            "raw_runtime_receipt_sha256": "d49e8f19735443ff33f3fd945992569c01e57307e347567810195a486c5b42b4"
+          },
+          "full_unfiltered_inventory": {
+            "target_advisory": "CVE-2026-39824",
+            "old_rows": 4,
+            "current_rows": 2,
+            "old_target_metadata_rows": 2,
+            "current_target_advisory_rows": 0,
+            "old_target_ratings_preserved": [],
+            "unrelated_complete_objects_equal": true,
+            "comparison": "advisory-comparison.json",
+            "comparison_sha256": "22b91969de04500bb769e85d22993a7101b6a1434e6212b171f18af37c18f19a",
+            "full_provider_records": "all-provider-vulnerabilities.json",
+            "full_provider_records_sha256": "a577aec3924d080c103fb4d24d3fc4ec725bccd3762bba2eece36ca5c58e87e8",
+            "comparison_method": "Complete parsedJSONobject equality, including arrays; not original whole-document serialization equality."
+          },
+          "limits": "Implemented Linux/amd64 downstream helper maintenance only; old Windows-specific advisory/empty ratings preserved historically. No Windows runtime, Linux exploit, future-platform, production or release clearance. Other complete provider objects/ratings unchanged. ParentCI does not qualify current delivery."
         }
       }
     },
@@ -4635,6 +4904,154 @@
           "group": "G06",
           "hosted_head": "76d6d7f9babbbf4ef4707f5b1dfdc980d16a693d",
           "current_1fee_candidate_ci": "Not qualified by this record"
+        }
+      }
+    },
+    {
+      "id": "ERROR-UNHANDLED-REQUEST-ID",
+      "status": "LOCAL-CHECKS-CI-PENDING-HUMAN-REVIEW",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Keep unexpected error responses correlated with their request logs",
+      "sources": [
+        "backend/app/core/observability.py",
+        "backend/app/main.py",
+        "backend/tests/test_unhandled_request_id.py",
+        "docs/plan/UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md"
+      ],
+      "next": "Component 17ffa19 saves the existing resolved request ID in per-request ASGI state so the outer generic 500 response returns the same logged ID after context reset. Raw UTF-8/header selection, logging/redaction, safe body/status and handled responses remain. A UnicodeDecodeError-only unresolved fallback preserves safe JSON without ambient-context reuse. Fifty focused cases pass (16 new, 34 incumbent); full delivery static/collection/docs are recorded separately. Obtain fresh delivered-source hosted CI and human review; no new timeout/pool/audit/cache/body/security policy or production action.\n\n6 November 2026 header-read follow-up: component 9244627 filters raw header names before decoding only matching X-Request-ID values in both middleware and fallback. Legal unrelated obs-text no longer breaks a healthy request; target decode order/admission is preserved. The existing negative fallback input now targets invalid X-Request-ID. The new 53-case proof overlaps the old 50, with three additional cases; root actual TCP confirms ordinary and unrelated-byte supplied/generated health 200/single-ID. See docs/plan/UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md. Fresh corrected-head CI remains pending; prior cad receipts stay dated.",
+      "dependencies": [
+        "Fresh delivered-source hosted CI and human review"
+      ],
+      "denominator_provenance": {
+        "original_rows": 197,
+        "prior_rows_preserved": 219,
+        "prior_appended_findings": 22,
+        "appended_finding_ordinal": 23,
+        "current_rows": 220
+      },
+      "qualification": {
+        "plan": "docs/plan/UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md",
+        "component": "17ffa19cbe4242d6f637e35c12a25003684fd595",
+        "base": "5d4c7ef78ffdcd28eab6545172be06404066cd0d",
+        "source_sha256": {
+          "backend/app/core/observability.py": "baaf7d39fc3e2819b2d378c8fcb49d0a139484f4c6df470437f8e17cc08f2236",
+          "backend/app/main.py": "3f494b09b5c9eedc524ee9c0a847b446f46017ff9149617e0071776584026113",
+          "backend/tests/test_unhandled_request_id.py": "9f9b7d4f7f4ed861fac78caf0a8a468a1e9f4df21e4b00b287544dab8a517e0a"
+        },
+        "component_receipt": "/tmp/error-request-id-20261106/FINAL-COMPONENT-RECEIPT-17ffa19.json",
+        "component_receipt_sha256": "244f7af276a7b322ff2cfeb4314cb0a7dec1b6fd46cb1895dd635a752c86325c",
+        "peer_receipt": "/tmp/error-request-id-20261106/independent-review/REVIEW-17ffa19.json",
+        "peer_sha256": "c94b0b53f44dd21237d53bcff0269885636a151f21e2d56a2972e0acf2268137",
+        "focused": {
+          "passed": 50,
+          "new_included": 16,
+          "incumbent_included": 34,
+          "seconds": 22.32,
+          "failures_errors_skips": 0
+        },
+        "failure_first": "Actual FastAPI full middleware stack: 6 missing-header failures/6 handled successes; separate working-candidate invalid UTF-8 fallback failure retained before narrow fix",
+        "delivery": "7,728 collected (not full execution); full Ruff/format 1,026 files and Mypy 452 app files pass. All 51 docs/generated/discovery controls pass in 16.34 seconds. Fresh hosted CI pending",
+        "boundary": "Actual ASGI/SQLite tests; no repeated native/frontend/full cohort. No new performance/fleet/browser/timeout/pool/audit/financial or uncertain-COMMIT proof.",
+        "header_read_followup_20261106": {
+          "plan": "docs/plan/UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md",
+          "component": "9244627557572c92c905cd58739d8f78db3dd72c",
+          "base": "cad54e4adc1a2494ff53b15561ba1f35146c3be6",
+          "source_sha256": {
+            "backend/app/core/observability.py": "a014cd418a0cb3af065f1da338be52847585a6beaa04075dab732edff635abb2",
+            "backend/app/main.py": "1d32272b9a5f232d8bc667812732d2a4c8b465e5fef9ba2fd90605396131702f",
+            "backend/tests/test_unhandled_request_id.py": "35b188784b730ff1785e489ba12f5462c812bca9821640d2400d8390df7253c1"
+          },
+          "component_receipt": "/tmp/request-id-header-read-20261106/FINAL-COMPONENT-RECEIPT-9244627.json",
+          "component_receipt_sha256": "92028d34a78531253e4cf3e7768f3a1629d742ba932e77a07d1fe4ea61070dde",
+          "peer_receipt": "/tmp/request-id-header-read-20261106/independent-review/REVIEW-9244627.json",
+          "peer_sha256": "8431baa06998fde966eb31ddc8dfcc4b07a6bcf32a0013ee767d9a8b8b5eaef6",
+          "focused": {
+            "passed": 53,
+            "request_ID_cases": 19,
+            "new_vs_parent_included": 3,
+            "other_incumbents": 34,
+            "seconds": 20.97,
+            "failures_errors_skips": 0
+          },
+          "root_TCP_after": {
+            "path": "/workspace/artifacts/unhandled-request-id-header-read-2026-11-06/root-tcp/after-verification.json",
+            "sha256": "693dc7eb15f74c75e6be56b74301212beffee64f430a3e01328ebf68a652f9eb"
+          },
+          "TCP_before_transcription": {
+            "path": "/workspace/artifacts/unhandled-request-id-header-read-2026-11-06/root-tcp/before-observation.json",
+            "sha256": "9bb93dcdbb20843c46146e22756090aedb49e2d6cab2326a39ff890c113f2331"
+          },
+          "scope": "Three real localhost TCP health 200/single-ID reads, lifespan off/no DB/provider, root-owned cleanup; no capacity or broader target-policy claim. Before observation is faithful transcription, not raw log",
+          "preservation": "Only one raw-name predicate per existing decoded comprehension. Original target decode order/last-valid selection/empty/UTF8/spaces/single output/state/log/reset/safe 500 remain. New53 and old50 overlap, not 69 unique.",
+          "fresh_current_head_CI": "Pending"
+        }
+      }
+    },
+    {
+      "id": "REQUEST-ID-UNRELATED-HEADER-DECODE",
+      "status": "LOCAL-CHECKS-CI-PENDING-HUMAN-REVIEW",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Ignore unrelated legal header bytes when selecting request IDs",
+      "sources": [
+        "backend/app/core/observability.py",
+        "backend/app/main.py",
+        "backend/tests/test_unhandled_request_id.py",
+        "docs/plan/UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md"
+      ],
+      "next": "A real TCP health request with unrelated legal obs-text returned 500 because request-ID selection eagerly decoded every header value. Component 9244627 filters raw names before existing decoding in middleware/fallback; root actual TCP now returns 200 with exactly one supplied/generated ID. Existing target decode order, malformed-target fallback, ID/context/logging/body/security policy remain. Fifty-three focused cases and scoped static pass; final delivery static/collection/docs are separate. Obtain fresh corrected-head hosted CI and human review; old CAD is blocked regardless of old gate results.",
+      "dependencies": [
+        "Fresh corrected-head hosted CI and human review"
+      ],
+      "denominator_provenance": {
+        "original_rows": 197,
+        "prior_rows_preserved": 220,
+        "prior_appended_findings": 23,
+        "appended_finding_ordinal": 24,
+        "current_rows": 221
+      },
+      "qualification": {
+        "plan": "docs/plan/UNHANDLED-ERROR-REQUEST-ID-2026-11-06.md",
+        "component": "9244627557572c92c905cd58739d8f78db3dd72c",
+        "base": "cad54e4adc1a2494ff53b15561ba1f35146c3be6",
+        "source_sha256": {
+          "backend/app/core/observability.py": "a014cd418a0cb3af065f1da338be52847585a6beaa04075dab732edff635abb2",
+          "backend/app/main.py": "1d32272b9a5f232d8bc667812732d2a4c8b465e5fef9ba2fd90605396131702f",
+          "backend/tests/test_unhandled_request_id.py": "35b188784b730ff1785e489ba12f5462c812bca9821640d2400d8390df7253c1"
+        },
+        "component_receipt": "/tmp/request-id-header-read-20261106/FINAL-COMPONENT-RECEIPT-9244627.json",
+        "component_receipt_sha256": "92028d34a78531253e4cf3e7768f3a1629d742ba932e77a07d1fe4ea61070dde",
+        "peer_receipt": "/tmp/request-id-header-read-20261106/independent-review/REVIEW-9244627.json",
+        "peer_sha256": "8431baa06998fde966eb31ddc8dfcc4b07a6bcf32a0013ee767d9a8b8b5eaef6",
+        "focused": {
+          "passed": 53,
+          "request_ID_cases": 19,
+          "new_vs_parent_included": 3,
+          "other_incumbents": 34,
+          "seconds": 20.97,
+          "failures_errors_skips": 0
+        },
+        "root_TCP_after": {
+          "path": "/workspace/artifacts/unhandled-request-id-header-read-2026-11-06/root-tcp/after-verification.json",
+          "sha256": "693dc7eb15f74c75e6be56b74301212beffee64f430a3e01328ebf68a652f9eb"
+        },
+        "TCP_before_transcription": {
+          "path": "/workspace/artifacts/unhandled-request-id-header-read-2026-11-06/root-tcp/before-observation.json",
+          "sha256": "9bb93dcdbb20843c46146e22756090aedb49e2d6cab2326a39ff890c113f2331"
+        },
+        "scope": "Three real localhost TCP health 200/single-ID reads, lifespan off/no DB/provider, root-owned cleanup; no capacity or broader target-policy claim. Before observation is faithful transcription, not raw log",
+        "preservation": "Only one raw-name predicate per existing decoded comprehension. Original target decode order/last-valid selection/empty/UTF8/spaces/single output/state/log/reset/safe 500 remain. New53 and old50 overlap, not 69 unique.",
+        "fresh_current_head_CI": "Pending",
+        "delivery_validation": {
+          "collection": 7731,
+          "collection_seconds": 21.85,
+          "Ruff_format_files": 1026,
+          "Mypy_app_files": 452,
+          "docs_generated_discovery": {
+            "passed": 51,
+            "seconds": 13.78,
+            "failures_errors_skips": 0
+          },
+          "scope": "No repeated focused/native/frontend/full suite or TCP experiment by delivery owner; fresh corrected-head CI pending"
         }
       }
     }
