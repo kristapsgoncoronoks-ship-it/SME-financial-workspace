@@ -414,6 +414,24 @@ def _ocr_pages(
                 bounded_scale = min(
                     scale, math.sqrt(40_000_000 / (width * height)), 20_000 / max(width, height)
                 )
+                # PDFium rounds each output dimension up. At a ceiling, the
+                # ideal area can fit while the integer bitmap does not. Reserve
+                # an integer-pixel margin before choosing the shared scale, only
+                # when needed; ordinary pages retain their requested scale.
+                raster_width = math.ceil(width * bounded_scale)
+                raster_height = math.ceil(height * bounded_scale)
+                if (
+                    raster_width * raster_height > 40_000_000
+                    or max(raster_width, raster_height) > 20_000
+                ):
+                    bounded_scale = math.nextafter(
+                        min(
+                            bounded_scale,
+                            max(1, raster_width - 1) / width,
+                            max(1, raster_height - 1) / height,
+                        ),
+                        0.0,
+                    )
                 geometry = {"source_width": width, "source_height": height, "source_unit": "points"}
                 capture_reading.record(
                     {
