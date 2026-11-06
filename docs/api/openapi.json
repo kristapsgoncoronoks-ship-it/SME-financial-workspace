@@ -2414,7 +2414,22 @@
       "BankLineOut": {
         "properties": {
           "amount": {
-            "title": "Amount",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "amount_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Amount Status",
             "type": "string"
           },
           "balance": {
@@ -2427,6 +2442,15 @@
               }
             ],
             "title": "Balance"
+          },
+          "balance_status": {
+            "enum": [
+              "valid",
+              "invalid",
+              "unprovided"
+            ],
+            "title": "Balance Status",
+            "type": "string"
           },
           "currency": {
             "anyOf": [
@@ -2493,7 +2517,9 @@
           "line_date",
           "description",
           "amount",
+          "amount_status",
           "direction",
+          "balance_status",
           "status"
         ],
         "title": "BankLineOut",

@@ -56,11 +56,11 @@ export default function ReconciliationPage() {
             return (
               <div key={s.id} className="rounded-lg border border-slate-200 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
                     <Badge tone={complete ? "success" : "info"}>
                       {done}/{s.line_count} reconciled
                     </Badge>
-                    <span className="font-medium">{s.filename}</span>
+                    <span className="min-w-0 break-all font-medium">{s.filename}</span>
                     <span className="text-xs text-text-secondary">
                       {shortDate(s.created_at)} · {s.method}
                       {s.unmatched > 0 ? ` · ${s.unmatched} to review` : ""}
@@ -124,7 +124,7 @@ function ImportStatement({
           ref={fileRef}
           type="file"
           accept=".csv,.pdf"
-          className="text-sm"
+          className="min-w-0 max-w-full text-sm"
           disabled={upload.isPending}
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -184,7 +184,7 @@ function StatementLines({
   });
 
   return (
-    <div className="mt-3 border-t border-slate-100 pt-3">
+    <div role="region" aria-label="Statement lines" tabIndex={0} className="mt-3 max-w-full overflow-x-auto border-t border-slate-100 pt-3">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-text-secondary">
@@ -197,7 +197,8 @@ function StatementLines({
         </thead>
         <tbody>
           {(lines.data ?? []).map((ln) => {
-            const negative = Number(ln.amount) < 0;
+            const amount = typeof ln.amount === "string" && ln.amount.trim() !== "" && Number.isFinite(Number(ln.amount)) && ln.amount_status !== "invalid" ? ln.amount : null;
+            const negative = amount !== null && Number(amount) < 0;
             const currency = ln.currency?.trim().toUpperCase() || null;
             const foreign = currency !== null && currency !== "EUR";
             return (
@@ -205,11 +206,15 @@ function StatementLines({
                 <td className="py-1 text-slate-500">{shortDate(ln.line_date)}</td>
                 <td className="py-1">{ln.description || "—"}</td>
                 <td
-                  className={`py-1 text-right tabular-nums ${negative ? "text-rose-600" : "text-emerald-700"}`}
+                  className={`py-1 text-right tabular-nums ${amount === null ? "text-amber-800" : negative ? "text-rose-600" : "text-emerald-700"}`}
                 >
-                  {currency && /^[A-Z]{3}$/.test(currency)
-                    ? `${money(ln.amount, currency)} ${currency}`
-                    : `${formatNumber(ln.amount, 2)} · Currency unknown`}
+                  {amount === null ? <>
+                    <span>Amount unavailable · {currency || "Currency unknown"}</span>
+                    <p className="text-xs text-amber-700">This stored amount cannot be used for matching. Check your original bank statement with your accountant.</p>
+                  </> : currency && /^[A-Z]{3}$/.test(currency)
+                    ? `${money(amount, currency)} ${currency}`
+                    : `${formatNumber(amount, 2)} · Currency unknown`}
+                  {ln.balance_status === "invalid" && <p className="text-xs text-amber-700">Balance unavailable. Check your original bank statement with your accountant.</p>}
                   {!currency && <p className="text-xs text-amber-700">Source did not state currency. Matching assumes EUR; verify before confirming.</p>}
                   {foreign && <p className="text-xs text-amber-700">Matching supports EUR cash records. Reconcile this {currency} line separately.</p>}
                 </td>
@@ -222,7 +227,7 @@ function StatementLines({
                       <Button
                         size="sm"
                         variant="secondary"
-                        disabled={foreign}
+                        disabled={foreign || amount === null}
                         onClick={() => setOpenLine(openLine === ln.id ? null : ln.id)}
                       >
                         {openLine === ln.id ? "Close" : "Find match"}
@@ -242,7 +247,7 @@ function StatementLines({
                       Restore
                     </Button>
                   )}
-                  {openLine === ln.id && (
+                  {openLine === ln.id && amount !== null && !foreign && (
                     <Candidates lineId={ln.id} onMatched={() => { setOpenLine(null); refresh(); }} onErr={onErr} />
                   )}
                 </td>
@@ -293,7 +298,7 @@ function Candidates({
   return (
     <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-left">
       {candidates.isError && (
-        <ErrorState title="Couldn’t search for matches" onRetry={() => candidates.refetch()} />
+        <ErrorState title="Couldn’t search for matches" description={apiError(candidates.error)} onRetry={() => candidates.refetch()} />
       )}
       {!candidates.isError && (candidates.data ?? []).length === 0 && (
         <p className="text-xs text-text-secondary">No matching receipt or payout found.</p>
