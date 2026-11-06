@@ -1,3 +1,5 @@
+import type { ReadingSummary } from "./readingFacts";
+
 export type InvoiceStatus = "draft" | "pending" | "paid" | "overdue";
 
 // Shape of every paginated list endpoint ({ items, total }).
@@ -805,6 +807,7 @@ export interface UploadAccepted {
 }
 
 export interface ExtractionResult {
+  reading_observation?: ReadingSummary | null;
   extraction_run_id: string;
   status: "queued" | "running" | "parsed" | "failed" | "saved";
   method?: string | null;
@@ -1248,6 +1251,7 @@ export interface InboundInvoice {
 }
 
 export interface InboundInvoiceDetail extends InboundInvoice {
+  reading_observation?: ReadingSummary | null;
   draft: ParsedDraft | null;
   has_file: boolean;
 }
