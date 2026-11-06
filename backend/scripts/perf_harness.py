@@ -404,7 +404,7 @@ SCENARIOS: list[tuple[str, str]] = [
     ("invoice_list", "/api/v1/invoices?page=1&page_size=50"),
     ("ap_aging", "/api/v1/analytics/ap-aging"),
     ("cash_position", "/api/v1/analytics/cash-position"),
-    ("explore_by_vendor", "/api/v1/analytics/explore?measure=net&dim=vendor"),
+    ("explore_by_vendor", "/api/v1/analytics/explore?measure=net&dim=vendor&currency=EUR"),
     ("transport_reliability", "/api/v1/transport/reliability"),
 ]
 

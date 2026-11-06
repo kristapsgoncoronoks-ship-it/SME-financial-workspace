@@ -272,6 +272,8 @@ jobs:
           tests/test_bank_numeric_boundary_pg.py
           tests/test_reconciliation_legacy_amount_pg.py
           tests/test_expense_transaction_amount_pg.py
+          tests/test_explore_scope_pg.py
+          tests/test_explore_currency_pg.py
           tests/test_reconciliation_commands_pg.py
           tests/test_reconciliation_line_concurrency_pg.py
           tests/test_transport_lock_concurrency.py
