@@ -1,5 +1,21 @@
 # Backlog completion — 5 November 2026
 
+**Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combines phase3 `c9e63db` and legacy `f847e3d` at `fee1042`, following initial
+PR112 delivery `ebf0a84`. Invalid imported amount/balance returns existing HTTP
+422 before writes; bank reads expose unavailable money as null plus status.
+Suggestions/Confirm refuse bad bank/cash-target money with existing HTTP 409;
+the UI marks manual review and withholds Match/Suggest. Stored facts stay unchanged.
+Combined 230 portable, 34 native and 51 docs/generated/CI-discovery checks pass
+with zero failures/errors/skips; full Ruff/format (986 files), Mypy (448 app
+files), frontend lint and build pass. The tree collects 6,724 backend cases;
+collection is not a full-suite pass. Eight source-scoped mocked-data browser
+checks are reused against unchanged frontend hashes; fresh new-head hosted CI
+remains pending. RN03/RN06 and historical remediation/source verification remain
+partial; RN07–RN09 durable intent/reason/versioned history remain open. All 214
+ledger identities are preserved. Separate ExpenseTransaction NaN candidate-read
+failure remains open; no production-data repair, deployment or complete-backlog claim.
+
 **Current163 reading facts:** [Per-page selection and fenced publication](OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native
 authority/cache,40 boxed runtime and658 broader portable controls pass; those
@@ -10,30 +26,57 @@ their dated source scope. No main/PR merge, deployment or complete-backlog claim
 
 The user's instruction is to finish actionable work. The
 [execution inventory](BACKLOG-COMPLETION-2026-11-05.json) preserves197 original
-named rows and16 separately appended findings. These are differently sized
-engineering/review/policy items, not213 equivalent features or a completion
-percentage. Source references retain their original baseline context.
+named rows and 17 separately appended findings; all prior 213 rows are preserved.
+These are differently sized engineering/review/policy items, not 214 equivalent
+features or a completion percentage. Source references retain their original baseline context.
 
-## Current composite qualification boundary
+## Current bank follow-up qualification
 
-The current tree has121 tables,163 revisions and6528 collected backend cases.
+Merged source `fee1042` passes 230 portable cases (91.81s), 34 actual PostgreSQL
+cases (22.52s) and 51 docs/generated/CI-discovery controls (14.60s), all with zero
+failures/errors/skips. Full Ruff/format checks 986 files, Mypy checks 448 app
+files, and frontend lint/build pass. The four-asset bundle passes at
+442.5 kB raw/129.8 kB gzip against 460/135 kB budgets. The 121-table/163-revision tree collects
+6,724 backend cases and has 134 service modules. OpenAPI retains 425 paths;
+only `BankLineOut` changes, with no ERD/model/migration change. Collection is not
+a full-suite pass. Eight source-scoped mocked-data browser checks are reused
+against unchanged frontend hashes; they do not establish a live browser/API
+journey. Fresh new-head hosted CI remains pending.
+[Follow-up receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/FINAL-RECEIPT.json).
+
+## Dated initial bank-delivery qualification (`ebf0a84`, PR112)
+
+These results belong to the initial delivery, before the phase3 follow-up.
+Those results do not qualify the follow-up; its local checks are recorded above.
+Fresh hosted CI remains pending. That dated tree has 121 tables, 163 revisions and 6,646 collected backend cases.
 PR105–PR110 each pass all13 required contexts at their frozen sources; this new
-composite still needs fresh CI. Its447-file app snapshot differs from the frozen
-reading matrix only in the expense-list GET ordering. Component evidence is
-source-bound; overlapping cohorts are not added as unique coverage.
+composite still needs fresh hosted CI. Its 447-file app snapshot differs from the
+frozen reading matrix in the two bank services (`bank_statement.py` and
+`reconciliation.py`) plus the tested TEN expense-list GET ordering. Combined bank
+qualification passes 163 distinct portable cases (64.91s) and 12 actual native
+PostgreSQL cases (5.33s, zero skips). The 51 docs controls (11.67s), full
+Ruff/format (981 files) and Mypy (447 app files) also pass. Collection is not a
+full-suite pass. [Delivery receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json).
+Component evidence is source-bound; overlapping cohorts are not added as unique coverage.
 
 TEN source42d09b5 also passed actual Chrome→API→PostgreSQL158 navigation:
 201 own/101 approval reports, foreign/employee isolation, reload/Back and all13
-checked table snapshots unchanged. The combined447-file browser/native-worker/PG163 reading journey also passes:
+checked table snapshots unchanged. The preceding combined447-file browser/native-worker/PG163 reading journey passed at its recorded source:
 one bounded observation, two ordered native/OCR pages, original checksum and
-foreign/absent404 opacity. Source proof includes no invoice confirmation. No new source is silently qualified by a parent green result.
+foreign/absent404 opacity. Source proof includes no invoice confirmation. The
+new bank composition has the scoped local checks above; fresh hosted CI remains
+required. No new source is silently qualified by a parent green result.
 
 The older9October uploaded register was found (1735lines/424261bytes,
 SHA5fa192cbd5af8ae2f1d93d315325bd68145f316d2908580745c7e75a38028df1).
-RN03/RN06–09 now have independently reviewed current contracts. Their isolated
-CSV-accounting53c996e and line-serializationedf6d6e repairs pass62/66 scoped
-checks but are not included in this composite. RN07–09 reason/history/version
-work remains open. The newer29October83-action register remains unavailable;
+RN03/RN06–09 now have independently reviewed current contracts. CSV-accounting
+and numeric-boundary `c1c822d` (including `53c996e`) and line-serialization
+`edf6d6e` were included in the initial delivery, published as PR112 `ebf0a84`
+after corrected PR111 `df2c344`.
+Their source-bound 133 portable/3 PostgreSQL and 66-case receipts overlap;
+combined qualification of 163 distinct portable and 12 native cases passes locally.
+RN07–09 durable intent/reason/history/version and the appended
+BANK-LEGACY-NONFINITE-READ finding remain open. The newer29October83-action register remains unavailable;
 EX11–16/ACC01 are not silently reconstructed from unrelated older IDs.
 
 ## Current160 sibling follow-up

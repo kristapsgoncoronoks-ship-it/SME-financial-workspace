@@ -1,5 +1,20 @@
 # TODO — Task Board
 
+**Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combines shared numeric validation, safe historical bank reads, line locking,
+the Projects layout/fixture correction and the backend CI repairs. Invalid
+imported amounts return 422 before writes; historical unavailable money remains
+visible without zero substitution. Combined 350 portable checks (including 51
+docs controls) and 49 PostgreSQL checks pass, with full Ruff/format 987,
+Mypy 448, frontend lint/build and the 442.5/129.8kB bundle gate. The tree
+collects 6,732 cases; this is not a full-suite pass. The 64 Projects and 8 bank
+browser checks retain their own source-bound mocked-browser scope.
+Fresh hosted CI remains required. RN03/RN06 and historical source remediation
+remain partial; RN07–RN09 durable versioned commands are a separate active
+slice. All 214 ledger identities remain preserved. The separately reproduced
+expense-transaction invalid-money failure is under repair in its own branch.
+No production-data repair, deployment or complete-backlog claim.
+
 **6 November backend CI repairs:** [Reading facts qualification](docs/plan/OCR-READING-FACTS-2026-11-05.md)
 now includes native fixture opt-in, real reading-history tenant parity and a
 bounded PDF raster-rounding repair. The original failed hosted runs remain

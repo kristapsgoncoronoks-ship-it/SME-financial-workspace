@@ -191,8 +191,8 @@ export default function CostObjectsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Master kind">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 max-w-full flex-wrap gap-1 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Master kind">
           {KINDS.map((k) => (
             <button
               key={k.kind}
@@ -235,6 +235,7 @@ export default function CostObjectsPage() {
           errorTitle={`Couldn’t load ${meta.label.toLowerCase()}`}
         >
           {(rows) => (
+            <div className="min-w-0 max-w-full overflow-x-auto" role="region" aria-label={`${meta.label} table`} tabIndex={0}>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-text-secondary">
@@ -314,6 +315,7 @@ export default function CostObjectsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </QueryState>
       </Card>

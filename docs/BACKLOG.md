@@ -1,5 +1,21 @@
 # Engineering backlog
 
+**Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combines phase3 `c9e63db` and legacy `f847e3d` at `fee1042`, following initial
+PR112 delivery `ebf0a84`. Invalid imported amount/balance returns existing HTTP
+422 before writes; bank reads expose unavailable money as null plus status.
+Suggestions/Confirm refuse bad bank/cash-target money with existing HTTP 409;
+the UI marks manual review and withholds Match/Suggest. Stored facts stay unchanged.
+Combined 230 portable, 34 native and 51 docs/generated/CI-discovery checks pass
+with zero failures/errors/skips; full Ruff/format (986 files), Mypy (448 app
+files), frontend lint and build pass. The tree collects 6,724 backend cases;
+collection is not a full-suite pass. Eight source-scoped mocked-data browser
+checks are reused against unchanged frontend hashes; fresh new-head hosted CI
+remains pending. RN03/RN06 and historical remediation/source verification remain
+partial; RN07–RN09 durable intent/reason/versioned history remain open. All 214
+ledger identities are preserved. Separate ExpenseTransaction NaN candidate-read
+failure remains open; no production-data repair, deployment or complete-backlog claim.
+
 **Current163 reading facts:** [Per-page selection and fenced publication](plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native
 authority/cache,40 boxed runtime and658 broader portable controls pass; those
@@ -47,7 +63,7 @@ and owner/provider/operations dependencies remain explicit.
 ## Active backlog completion — 5 November 2026
 
 [Current implementation and dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)
-and the [197-row baseline plus 16 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
+and the [197-row baseline plus 17 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
 are the current entry points. PR1059efcd1c and PR10637b826b passed all13 required
 actual PR contexts. [The current OCR/workflow wave](plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
 has local/native/connected qualification and needs fresh hosted CI. The current

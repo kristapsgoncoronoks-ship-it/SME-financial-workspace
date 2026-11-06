@@ -1520,10 +1520,12 @@ export interface BankLine {
   statement_id: string;
   line_date: string;
   description: string;
-  amount: string; // signed: credit +, debit −
+  amount: string | null; // signed when valid; unavailable is never zero
+  amount_status: "valid" | "invalid";
   currency: string | null; // bank-stated; null is unknown, not EUR
   direction: "credit" | "debit";
   balance: string | null;
+  balance_status: "valid" | "invalid" | "unprovided";
   status: "unmatched" | "matched" | "ignored";
   matched_kind: "receipt" | "reimbursement" | "payment_run" | "issued_payment" | null;
   matched_id: string | null;

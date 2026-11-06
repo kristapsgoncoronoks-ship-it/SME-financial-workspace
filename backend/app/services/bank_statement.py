@@ -20,8 +20,9 @@ import io
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, DecimalException
 
+from app.core import money
 from app.services import pdf_ocr
 
 _CENTS = Decimal("0.01")
@@ -143,6 +144,9 @@ _AMOUNT_COLS = ("amount", "value")
 _DEBIT_COLS = ("debit", "withdrawal", "paid out", "money out", "out")
 _CREDIT_COLS = ("credit", "deposit", "paid in", "money in", "in")
 _CURRENCY_COLS = ("currency", "ccy", "transaction currency")
+_CSV_ROW_WARNING_LIMIT = 20
+# BankLine.amount and ExpenseTransaction.amount both use Numeric(14, 2).
+_CSV_MAX_AMOUNT = Decimal("999999999999.99")
 
 
 def _pick(fieldmap: dict, names) -> str | None:
@@ -166,41 +170,87 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
     if not date_c or (not amount_c and not debit_c and not credit_c):
         raise ValueError("CSV must have a date column and an amount (or debit/credit) column")
 
+    skipped_dates = 0
+    skipped_amounts = 0
+    row_warnings: list[str] = []
+
+    def warn_skip(row_number: int, reason: str) -> None:
+        if len(row_warnings) < _CSV_ROW_WARNING_LIMIT:
+            row_warnings.append(f"CSV row {row_number} skipped: {reason}.")
+
+    def invalid_amount(row_number: int) -> ValueError:
+        return ValueError(
+            f"Invalid amount on CSV row {row_number}; use a finite value within the supported range."
+        )
+
     txns: list[Txn] = []
     for row_number, row in enumerate(reader, start=2):
         d = pdf_ocr._to_date((row.get(date_c) or "").strip())
         if d is None:
+            skipped_dates += 1
+            warn_skip(row_number, "invalid or missing date")
             continue
         desc = (row.get(desc_c) or "").strip() if desc_c else "Transaction"
-        if amount_c:
-            amt = pdf_ocr._num(row.get(amount_c) or "0")
-            direction = "credit" if amt > 0 else "debit"
-            amount = abs(amt)
-        else:
-            debit = pdf_ocr._num(row.get(debit_c) or "0") if debit_c else Decimal("0")
-            credit = pdf_ocr._num(row.get(credit_c) or "0") if credit_c else Decimal("0")
-            if debit:
-                direction, amount = "debit", abs(debit)
-            elif credit:
-                direction, amount = "credit", abs(credit)
+        try:
+            if amount_c:
+                amt = pdf_ocr._num(row.get(amount_c) or "0")
+                if not amt.is_finite():
+                    raise invalid_amount(row_number)
+                direction = "credit" if amt > 0 else "debit"
+                amount = abs(amt)
             else:
-                continue
+                debit = pdf_ocr._num(row.get(debit_c) or "0") if debit_c else Decimal("0")
+                credit = pdf_ocr._num(row.get(credit_c) or "0") if credit_c else Decimal("0")
+                if not debit.is_finite() or not credit.is_finite():
+                    raise invalid_amount(row_number)
+                if debit:
+                    direction, amount = "debit", abs(debit)
+                elif credit:
+                    direction, amount = "credit", abs(credit)
+                else:
+                    skipped_amounts += 1
+                    warn_skip(row_number, "no nonzero amount was recognized")
+                    continue
+            if not amount.is_finite():
+                raise invalid_amount(row_number)
+        except DecimalException:
+            raise invalid_amount(row_number) from None
         if amount == 0:
+            skipped_amounts += 1
+            warn_skip(row_number, "no nonzero amount was recognized")
             continue
         currency = (row.get(currency_c) or "").strip().upper() if currency_c else ""
         if currency and re.fullmatch(r"[A-Z]{3}", currency) is None:
             # Refuse the whole import rather than treating a stated invalid unit
             # as unknown (which the legacy matcher permits). Do not echo source data.
             raise ValueError(f"Invalid currency code on CSV row {row_number}; use three letters.")
+        try:
+            rounded_amount = amount.quantize(_CENTS)
+        except DecimalException:
+            raise invalid_amount(row_number) from None
+        if not rounded_amount.is_finite() or rounded_amount > _CSV_MAX_AMOUNT:
+            raise invalid_amount(row_number)
         txns.append(
             Txn(
                 date=d,
                 description=(desc or "Transaction")[:300],
-                amount=amount.quantize(_CENTS),
+                amount=rounded_amount,
                 direction=direction,
                 currency=currency or None,
             )
         )
+    skipped = skipped_dates + skipped_amounts
+    if skipped:
+        summary = (
+            f"Skipped {skipped} CSV {'row' if skipped == 1 else 'rows'}: "
+            f"{skipped_dates} with an invalid or missing date; "
+            f"{skipped_amounts} with no nonzero recognized amount."
+        )
+        omitted = skipped - len(row_warnings)
+        if omitted:
+            summary += f" Additional skipped rows not listed: {omitted}."
+        warnings.append(summary)
+        warnings.extend(row_warnings)
     return txns
 
 
@@ -462,7 +512,7 @@ def _parse_mt940(content: bytes, warnings: list[str]) -> list[Txn]:
 # --------------------------------------------------------------------------- #
 # Public API
 # --------------------------------------------------------------------------- #
-def parse(filename: str, content: bytes) -> StatementResult:
+def _parse(filename: str, content: bytes) -> StatementResult:
     warnings: list[str] = []
     lower = filename.lower()
     if lower.endswith(".csv"):
@@ -491,3 +541,36 @@ def parse(filename: str, content: bytes) -> StatementResult:
         "Unsupported file type. Upload a .pdf, .csv, camt.053 .xml, or MT940 "
         "(.940/.sta) bank statement."
     )
+
+
+_INVALID_MONEY = (
+    "Statement contains an invalid amount or balance; use finite values within the supported range."
+)
+
+
+def _validate_result(result: StatementResult) -> StatementResult:
+    """Check both consumers' Numeric(14,2) storage without changing parsed facts."""
+    for txn in result.transactions:
+        for value in (txn.amount, txn.balance):
+            if value is None:
+                continue
+            if not value.is_finite():
+                raise ValueError(_INVALID_MONEY)
+            # Reconciliation stores both amounts and balances with q2. This is
+            # only a representability check: retain the parser's original value,
+            # direction, currency and rounding for its callers.
+            rounded = money.q2(value)
+            if not rounded.is_finite() or rounded.copy_abs() > _CSV_MAX_AMOUNT:
+                raise ValueError(_INVALID_MONEY)
+    return result
+
+
+def parse(filename: str, content: bytes) -> StatementResult:
+    """Read a complete statement, refusing unsafe money before either import."""
+    try:
+        return _validate_result(_parse(filename, content))
+    except DecimalException:
+        # Known numeric context failures are invalid input. Other failures,
+        # including the existing OCR availability/timeout errors, keep their
+        # original behavior and are not hidden by a broad exception handler.
+        raise ValueError(_INVALID_MONEY) from None
