@@ -11,6 +11,8 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.services import filesec
+
 PROFILE_ID: Final = "builtin-local-default-v1"
 METADATA_BYTES = 128 * 1024
 Count = Annotated[int, Field(strict=True, ge=0, le=2**63 - 1)]
@@ -249,7 +251,7 @@ class PageReadingFacts(_Facts):
         if self.selected_stream_complete:
             if self.selected_stream_bytes is None or self.selected_stream_sha256 is None:
                 raise ValueError("A complete selected stream requires its count and hash")
-            if self.selected_stream_bytes > 2 * 1024 * 1024:
+            if self.selected_stream_bytes > filesec.RESOURCE_BYTES["pdf_decoded_text"]:
                 raise ValueError("Selected stream exceeds the existing text budget")
         elif self.selected_stream_bytes is not None or self.selected_stream_sha256 is not None:
             raise ValueError("An incomplete stream cannot have complete output facts")

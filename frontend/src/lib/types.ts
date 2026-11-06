@@ -1519,6 +1519,7 @@ export interface BankStatement {
 export interface BankLine {
   id: string;
   statement_id: string;
+  version: number; // persisted command version; never inferred from time or status
   line_date: string;
   description: string;
   amount: string | null; // signed when valid; unavailable is never zero

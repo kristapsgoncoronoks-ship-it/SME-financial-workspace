@@ -17,8 +17,8 @@ async function setup(page: Page, options: { role?: "owner" | "auditor"; foreign?
       wire.reads += 1;
       if (wire.fail) return route.fulfill({ status: 503, ...json({ detail: "Synthetic statement read unavailable" }) });
       return route.fulfill(json([
-        { id: "invalid", statement_id: "statement", line_date: "2026-11-06", description: "Legacy amount unavailable", amount: null, amount_status: "invalid", currency: options.foreign ? "USD" : "EUR", direction: "credit", balance: null, balance_status: "unprovided", status: "unmatched", matched_kind: null, matched_id: null },
-        { id: "valid", statement_id: "statement", line_date: "2026-11-06", description: "Valid amount invalid balance", amount: "-25.00", amount_status: "valid", currency: "EUR", direction: "debit", balance: null, balance_status: "invalid", status: "unmatched", matched_kind: null, matched_id: null },
+        { id: "invalid", statement_id: "statement", version: 1, line_date: "2026-11-06", description: "Legacy amount unavailable", amount: null, amount_status: "invalid", currency: options.foreign ? "USD" : "EUR", direction: "credit", balance: null, balance_status: "unprovided", status: "unmatched", matched_kind: null, matched_id: null },
+        { id: "valid", statement_id: "statement", version: 1, line_date: "2026-11-06", description: "Valid amount invalid balance", amount: "-25.00", amount_status: "valid", currency: "EUR", direction: "debit", balance: null, balance_status: "invalid", status: "unmatched", matched_kind: null, matched_id: null },
       ]));
     }
     if (path.endsWith("/candidates")) {

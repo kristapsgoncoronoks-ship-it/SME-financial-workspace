@@ -39,6 +39,11 @@ class IssuedInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "issued_invoices"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "partner_id"],
+            ["partners.org_id", "partners.id"],
+            name="fk_issued_invoices_partner",
+        ),
         # Listing/ordering issued invoices by date within a tenant.
         Index("ix_issued_org_issue", "org_id", "issue_date"),
         UniqueConstraint("org_id", "create_command_key", name="uq_issued_create_command"),

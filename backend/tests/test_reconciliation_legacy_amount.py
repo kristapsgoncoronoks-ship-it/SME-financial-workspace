@@ -18,6 +18,7 @@ from app.services.reconciliation_amounts import bank_decimal, finite_decimal
 def test_unreadable_money_is_null_and_explicit_without_mutating_the_source(value, field):
     values = dict(
         id="line",
+        version=1,
         statement_id="statement",
         line_date=date(2026, 11, 6),
         description="Synthetic stored line",
@@ -51,6 +52,7 @@ def test_current_finite_money_keeps_its_exact_wire_value_and_missing_balance_is_
     result = BankLineOut.model_validate(
         dict(
             id="line",
+            version=1,
             statement_id="statement",
             line_date=date(2026, 11, 6),
             description="Synthetic finite line",

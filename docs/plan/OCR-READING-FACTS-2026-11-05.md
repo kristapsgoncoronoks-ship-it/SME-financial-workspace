@@ -126,7 +126,7 @@ Tesseract is5.5.2, with engine-default resolved settings left NULL.
 
 The sealed receipt is `connected-reading/receipt.json` under the ninth-wave
 artifact directory (SHA3735fa929c0dd6cd51414351ee698490b6480a5a82cf7d35949aebae8091bb39).
-Combined-source collection is6528 cases; Ruff/format977 files, Mypy447,
+Combined-source collection is6528 cases; Ruff/format977 files, Mypy 447,
 51 OpenAPI/ERD/docs/native-discovery checks, frontend lint/build and the existing
 bundle gate pass. First-load output is442.5kB raw/129.8kB gzip within460/135.
 These checks do not replace fresh full CI. Original customer OCR accuracy,
@@ -149,3 +149,31 @@ exactly that table in the migration registry; the strict guard is unchanged.
 All other migration module AST, including DDL/rollback functions, is identical.
 25 targeted RLS/schema checks pass after preserving the local/hosted failure.
 App files and prior decoder behavior remain unchanged; fresh full CI is required.
+
+### Backend CI correction — 6 November
+
+The complete `df2c344` run passed its browser, PostgreSQL and image checks but
+failed the backend job: three failed cases and fifteen setup errors. All logs
+remain retained; this source is not release-qualified. The initial bank PR112
+head independently reproduced those same backend failures.
+
+The shared native fixture now skips before opening an engine when PostgreSQL
+is absent, including when imported into another test module. Its fifteen cases
+pass against actual restricted-role PostgreSQL. The tenant parity registry now
+tests reading-history summaries through the authenticated detail route for two
+companies with identical source content, including both foreign-owner 404s;
+no exemption was added. The full cohort passes 109 checks, with 15 expected
+native-only skips when no PostgreSQL URL is configured.
+
+The scanned PDF failure was an integer-raster rounding error: the capped native
+reader observed 5292×7560 pixels, or 40,007,520, at the ideal 40,000,000-pixel scale.
+The scale now accounts for the renderer's ceiling before rendering. Existing
+40,000,000-pixel/20,000-dimension limits and post-render guards remain intact;
+ordinary pages keep their requested scale. The original scanned 12-row fixture
+and 69 focused PDF/facts/upload-budget checks pass. The reading DTO reuses the
+existing decoded-text budget; no upload or processing budget is increased.
+
+Scoped receipts: [fixture and parity](/workspace/artifacts/backlog-pr111-backend-repair-2026-11-06/root/TEST-RECEIPT.json)
+and [PDF and budget](/workspace/artifacts/backlog-pr111-backend-2026-11-06/OWNED-TEST-RECEIPT.json).
+Full Ruff/format checks 978 files and Mypy 447 app files; 6536 backend cases
+collect. These local results require a fresh hosted run of the delivered head.

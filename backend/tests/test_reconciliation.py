@@ -17,6 +17,7 @@ from app.models import Base
 from app.models.bank_import import BankLine, BankStatement
 from app.models.expense import ReimbursementBatch
 from app.models.organization import Organization
+from tests.reconciliation_command_client import transition
 
 CSV = (
     "date,description,credit,debit\n"
@@ -97,9 +98,8 @@ async def test_credit_matches_receipt(auth_client):
     ).json()
     assert any(c["kind"] == "receipt" and c["id"] == rec["id"] for c in cands)
 
-    m = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{credit['id']}/match",
-        json={"kind": "receipt", "target_id": rec["id"]},
+    m = await transition(
+        auth_client, credit["id"], "match", target={"kind": "receipt", "id": rec["id"]}
     )
     assert m.status_code == 200, m.text
     assert m.json()["status"] == "matched" and m.json()["matched_id"] == rec["id"]
@@ -109,7 +109,7 @@ async def test_credit_matches_receipt(auth_client):
     assert st["matched"] == 1 and st["unmatched"] == 1
 
     # Unmatch returns it to the pool.
-    u = await auth_client.delete(f"/api/v1/reconciliation/lines/{credit['id']}/match")
+    u = await transition(auth_client, credit["id"], "unmatch")
     assert u.status_code == 200 and u.json()["status"] == "unmatched"
 
 
@@ -138,9 +138,8 @@ async def test_debit_matches_paid_reimbursement(auth_client, db_session):
     cands = (await auth_client.get(f"/api/v1/reconciliation/lines/{debit['id']}/candidates")).json()
     assert any(c["kind"] == "reimbursement" and c["id"] == batch.id for c in cands)
 
-    m = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{debit['id']}/match",
-        json={"kind": "reimbursement", "target_id": batch.id},
+    m = await transition(
+        auth_client, debit["id"], "match", target={"kind": "reimbursement", "id": batch.id}
     )
     assert m.status_code == 200 and m.json()["status"] == "matched"
 
@@ -167,23 +166,20 @@ async def test_receipt_cannot_reconcile_to_two_lines(auth_client):
     lines = (await auth_client.get(f"/api/v1/reconciliation/statements/{sid}/lines")).json()
     a, b = lines[0], lines[1]
 
-    m1 = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{a['id']}/match",
-        json={"kind": "receipt", "target_id": rec["id"]},
+    m1 = await transition(
+        auth_client, a["id"], "match", target={"kind": "receipt", "id": rec["id"]}
     )
     assert m1.status_code == 200, m1.text
 
-    m2 = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{b['id']}/match",
-        json={"kind": "receipt", "target_id": rec["id"]},
+    m2 = await transition(
+        auth_client, b["id"], "match", target={"kind": "receipt", "id": rec["id"]}
     )
     assert m2.status_code == 400 and "already reconciled" in m2.json()["detail"]
 
     # After unmatching the first, the receipt is free to reconcile to the second.
-    await auth_client.delete(f"/api/v1/reconciliation/lines/{a['id']}/match")
-    m3 = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{b['id']}/match",
-        json={"kind": "receipt", "target_id": rec["id"]},
+    await transition(auth_client, a["id"], "unmatch")
+    m3 = await transition(
+        auth_client, b["id"], "match", target={"kind": "receipt", "id": rec["id"]}
     )
     assert m3.status_code == 200, m3.text
 
@@ -202,16 +198,14 @@ async def test_amount_mismatch_and_wrong_direction_refused(auth_client):
     credit = next(ln for ln in lines if ln["direction"] == "credit")  # 1210, ≠ 999
     debit = next(ln for ln in lines if ln["direction"] == "debit")
 
-    bad = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{credit['id']}/match",
-        json={"kind": "receipt", "target_id": rec["id"]},
+    bad = await transition(
+        auth_client, credit["id"], "match", target={"kind": "receipt", "id": rec["id"]}
     )
     assert bad.status_code == 400 and "mismatch" in bad.json()["detail"]
 
     # A debit line cannot match a receipt (money received).
-    wrong = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{debit['id']}/match",
-        json={"kind": "receipt", "target_id": rec["id"]},
+    wrong = await transition(
+        auth_client, debit["id"], "match", target={"kind": "receipt", "id": rec["id"]}
     )
     assert wrong.status_code == 400 and "debit" in wrong.json()["detail"]
 
@@ -222,7 +216,7 @@ async def test_ignore_line(auth_client):
     await _upload(auth_client)
     sid = (await auth_client.get("/api/v1/reconciliation/statements")).json()[0]["id"]
     line = (await auth_client.get(f"/api/v1/reconciliation/statements/{sid}/lines")).json()[0]
-    ig = await auth_client.post(f"/api/v1/reconciliation/lines/{line['id']}/ignore")
+    ig = await transition(auth_client, line["id"], "ignore")
     assert ig.status_code == 200 and ig.json()["status"] == "ignored"
     st = (await auth_client.get("/api/v1/reconciliation/statements")).json()[0]
     assert st["ignored"] == 1

@@ -1,5 +1,18 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current reconciliation delivery: [Durable versioned bank-line commands](DURABLE-RECONCILIATION-COMMANDS-2026-11-06.md).
+Ignore records a reason; all actions use reviewed versions and keys, with own
+immutable outcomes, separate current reads and bounded history. Old write aliases
+return 428. Local component and actual connected recovery proof is recorded;
+composed checks pass 432 portable and 43 RLS cases, with static/generated
+checks passing. These overlap the component evidence. Fresh delivered-source
+hosted CI remains pending. Remaining account attribution, historical remediation and unrelated decisions stay open.
+
+Current tenant-integrity follow-up: [Optional tenant parents — revision164](OPTIONAL-TENANT-PARENTS-164-2026-11-06.md).
+All nine original DB-010 candidates are repaired through159–164; current customer,
+inbound and session references retain their separate review boundaries. Component
+evidence and fresh delivered-source CI limits are recorded in the plan.
+
 Current reading foundation: [Published reading facts](OCR-READING-FACTS-2026-11-05.md).
 
 Current bounded follow-up: [Expense report navigation](EXPENSE-REPORT-PAGINATION-2026-11-05.md),

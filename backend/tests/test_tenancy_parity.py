@@ -590,14 +590,15 @@ async def _p_receipts(ctx: Ctx) -> None:
     _assert_404(await ctx.b.get(f"/api/v1/receipts/{ids[ctx.a.name]}"), "receipt GET by id")
 
 
-@probe("bank_statements", "bank_lines")
+@probe("bank_statements", "bank_lines", "reconciliation_commands")
 async def _p_bank_import(ctx: Ctx) -> None:
     csv = (
         "date,description,credit,debit\n"
         "2026-02-05,Payment from Overlap INV-1,1210.00,\n"
         "2026-02-10,Overlap payout,,250.00\n"
     )
-    st_ids, line_ids = {}, {}
+    st_ids, line_ids, command_ids, command_lines = {}, {}, {}, {}
+    shared_key = "parity-shared-bank-command"
     for org in (ctx.a, ctx.b):
         up = await org.post(
             "/api/v1/reconciliation/import",
@@ -609,6 +610,24 @@ async def _p_bank_import(ctx: Ctx) -> None:
         assert lines.status_code == 200, lines.text
         assert lines.json(), "statement import produced no lines"
         line_ids[org.name] = {ln["id"] for ln in lines.json()}
+        line = lines.json()[0]
+        command_lines[org.name] = line["id"]
+        committed = await org.client.post(
+            f"/api/v1/reconciliation/lines/{line['id']}/commands",
+            headers={**org.headers, "Idempotency-Key": shared_key},
+            json={
+                "operation": "ignore",
+                "expected_version": line["version"],
+                "expected": {
+                    "status": line["status"],
+                    "matched_kind": line["matched_kind"],
+                    "matched_id": line["matched_id"],
+                },
+                "reason": "Overlap synthetic exclusion",
+            },
+        )
+        assert committed.status_code == 200, committed.text
+        command_ids[org.name] = committed.json()["command_id"]
     for me, other in ((ctx.a, ctx.b), (ctx.b, ctx.a)):
         listing = await me.get("/api/v1/reconciliation/statements")
         assert listing.status_code == 200, listing.text
@@ -617,6 +636,29 @@ async def _p_bank_import(ctx: Ctx) -> None:
         lines = await me.get(f"/api/v1/reconciliation/statements/{st_ids[me.name]}/lines")
         seen_lines = {ln["id"] for ln in lines.json()}
         _assert_isolated("bank_lines", line_ids[me.name], line_ids[other.name], seen_lines)
+        outcome = await me.get(
+            f"/api/v1/reconciliation/lines/{command_lines[me.name]}/commands/{shared_key}"
+        )
+        assert outcome.status_code == 200, outcome.text
+        _assert_isolated(
+            "reconciliation_commands own outcome",
+            {command_ids[me.name]},
+            {command_ids[other.name]},
+            {outcome.json()["command_id"]},
+        )
+        history = await me.get(f"/api/v1/reconciliation/lines/{command_lines[me.name]}/history")
+        assert history.status_code == 200, history.text
+        _assert_isolated(
+            "reconciliation_commands history",
+            {command_ids[me.name]},
+            {command_ids[other.name]},
+            {event["command_id"] for event in history.json()["events"]},
+        )
+        for suffix in (f"commands/{shared_key}", "history"):
+            _assert_404(
+                await me.get(f"/api/v1/reconciliation/lines/{command_lines[other.name]}/{suffix}"),
+                "bank command outcome/history through the other tenant's line",
+            )
     _assert_404(
         await ctx.b.get(f"/api/v1/reconciliation/statements/{st_ids[ctx.a.name]}/lines"),
         "statement lines via A's statement",
@@ -985,8 +1027,11 @@ async def _p_dunning(ctx: Ctx) -> None:
 # --- Intake / capture ---------------------------------------------------------
 
 
-@probe("extraction_runs")
+@probe("extraction_runs", "capture_reading_observations")
 async def _p_extraction_runs(ctx: Ctx) -> None:
+    import json
+
+    from app.models.extraction_run import ExtractionRun
     from app.services import jobs
 
     csv = (
@@ -1004,6 +1049,14 @@ async def _p_extraction_runs(ctx: Ctx) -> None:
     for _ in range(30):  # the worker is org-agnostic; drain both parses
         if await jobs.run_once(ctx.db, "parity-worker") is None:
             break
+    # Identify the worker-created fixture rows independently of the HTTP read
+    # under test. The detail route exposes history summaries; the queue route
+    # exposes their owning extraction runs, without history content.
+    observation_ids = {}
+    for org in (ctx.a, ctx.b):
+        run = await ctx.db.get(ExtractionRun, run_ids[org.name], populate_existing=True)
+        assert run.reading_observation_json is not None
+        observation_ids[org.name] = json.loads(run.reading_observation_json)["id"]
     for me, other in ((ctx.a, ctx.b), (ctx.b, ctx.a)):
         own = await me.get(f"/api/v1/invoices/upload/{run_ids[me.name]}")
         assert own.status_code == 200, own.text
@@ -1011,9 +1064,21 @@ async def _p_extraction_runs(ctx: Ctx) -> None:
         assert queue.status_code == 200, queue.text
         seen = {i["extraction_run_id"] for i in queue.json()["items"]}
         _assert_isolated("extraction_runs", {run_ids[me.name]}, {run_ids[other.name]}, seen)
+        own_observation = own.json()["reading_observation"]
+        assert own_observation is not None
+        _assert_isolated(
+            "capture_reading_observations detail",
+            {observation_ids[me.name]},
+            {observation_ids[other.name]},
+            {own_observation["id"]},
+        )
     _assert_404(
         await ctx.b.get(f"/api/v1/invoices/upload/{run_ids[ctx.a.name]}"),
         "extraction run GET by id",
+    )
+    _assert_404(
+        await ctx.a.get(f"/api/v1/invoices/upload/{run_ids[ctx.b.name]}"),
+        "reading observation via the other tenant's extraction run",
     )
 
 

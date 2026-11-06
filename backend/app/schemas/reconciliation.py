@@ -13,6 +13,7 @@ class BankLineOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    version: int = Field(strict=True, ge=1, le=2147483647)
     statement_id: str
     line_date: date
     description: str

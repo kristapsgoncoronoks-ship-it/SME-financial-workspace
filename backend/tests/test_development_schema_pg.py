@@ -267,3 +267,49 @@ def test_repeated_bootstrap_preserves_existing_rows_catalog_and_metadata(request
     database(url, exercise)
     assert database(url, snapshot) == before
     assert metadata_signature(Base.metadata) == original_metadata
+
+
+def test_schema_qualified_bootstrap_compares_without_writes_or_shared_mutation(bootstrap_url):
+    from sqlalchemy import MetaData
+
+    from app.core.development_schema import development_metadata
+
+    before = database(bootstrap_url, snapshot)
+    original = metadata_signature(Base.metadata)
+    schema = "qualified_optional_" + uuid.uuid4().hex
+
+    def exercise(connection):
+        boundary = connection.begin_nested()
+        try:
+            connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+            metadata = MetaData(schema=schema, naming_convention=Base.metadata.naming_convention)
+            for table in Base.metadata.sorted_tables:
+                table.to_metadata(metadata, schema=schema)
+            source = metadata_signature(metadata)
+            projected = development_metadata(metadata, connection.dialect)
+            projected.create_all(connection)
+            statements = []
+
+            def record(_connection, _cursor, statement, *_args):
+                statements.append(statement)
+
+            event.listen(connection, "before_cursor_execute", record)
+            try:
+                comparison = postgresql_comparison_metadata(connection, metadata)
+            finally:
+                event.remove(connection, "before_cursor_execute", record)
+            assert statements and all(s.lstrip().upper().startswith("SELECT") for s in statements)
+            assert comparison.schema == metadata.schema
+            assert comparison.naming_convention == metadata.naming_convention
+            assert metadata_signature(comparison) == metadata_signature(projected)
+            assert metadata_signature(metadata) == source
+        finally:
+            boundary.rollback()
+        assert not connection.scalar(
+            text("SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=:schema)"),
+            {"schema": schema},
+        )
+
+    database(bootstrap_url, exercise)
+    assert database(bootstrap_url, snapshot) == before
+    assert metadata_signature(Base.metadata) == original
