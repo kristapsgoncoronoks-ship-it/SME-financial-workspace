@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -27,7 +37,14 @@ class RecurringInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_by: Mapped[str | None] = mapped_column(String(320), nullable=True)
     # Worker sweep: find active schedules that are due.
-    __table_args__ = (Index("ix_recurring_org_due", "org_id", "active", "next_run_date"),)
+    __table_args__ = (
+        Index("ix_recurring_org_due", "org_id", "active", "next_run_date"),
+        ForeignKeyConstraint(
+            ["org_id", "partner_id"],
+            ["partners.org_id", "partners.id"],
+            name="fk_recurring_invoices_partner",
+        ),
+    )
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True

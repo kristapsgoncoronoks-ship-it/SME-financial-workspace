@@ -39,6 +39,11 @@ CR_STATUSES = (CR_PENDING, CR_APPROVED, CR_REJECTED)
 class VendorChangeRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "vendor_change_requests"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "source_document_id"],
+            ["documents.org_id", "documents.id"],
+            name="fk_vendor_change_requests_source_document",
+        ),
         # Cross-tenant-safe link: the vendor MUST belong to the same org.
         ForeignKeyConstraint(
             ["org_id", "vendor_id"],

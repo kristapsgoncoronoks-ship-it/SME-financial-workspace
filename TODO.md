@@ -1,5 +1,25 @@
 # TODO — Task Board
 
+**Current optional tenant parents — 6 November:** [Revision 164 tenant guards](docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md)
+adds the four remaining dated optional links after 163, retaining the original
+single-column SET NULL actions and physical names. PostgreSQL clears only the
+optional ID; SQLite retains its original single-column action with immediate
+NO ACTION tenant guards. Organization IDs, nullability and stored history stay
+unchanged. All nine original DB-010 candidates are repaired through 159–164;
+five separately identified current links and session/membership semantics remain
+open. Source-reviewed evidence covers 637 distinct applicable component cases,
+including 28 full-graph passes/3 explicit SQLite-only skips; all 12 native graph
+cases executed. The composed ordinary-RLS/Bank native cohort passes 37 cases
+(21.56s: 36 database cases plus one registry control); these overlapping scopes are not added as a new unique total. The
+current tree collects 7,102 backend cases; full Ruff/format (994 files), Mypy
+(448 app files) and 51 docs/generated/CI-discovery controls (zero
+failures/errors/skips) pass. OpenAPI and ERD retain the qualified bank contracts. The CI
+split preserves existing paths and filters; fresh delivered-source hosted CI
+remains pending. Collection is not a full-suite pass. All 214 ledger identities
+and unrelated row statuses are preserved. The current source includes Bank `964b26b` and the bounded backend CI repairs.
+Bank555 and prior records below
+retain their dated source scope.
+
 **Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
 combines shared numeric validation, safe historical bank reads, line locking,
 the Projects layout/fixture correction and the backend CI repairs. Invalid

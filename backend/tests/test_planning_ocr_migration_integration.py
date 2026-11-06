@@ -38,7 +38,8 @@ EXPENSE_CHILDREN = "e6f8a0b2c4d7"
 PARTNER_DOCUMENTS = "f7a9c1e3b5d8"
 WEBHOOK_DELIVERIES = "a8b0d2f4c6e9"
 READING_OBSERVATIONS = "b9c1e3f5a7d0"
-EXPECTED_HEAD = READING_OBSERVATIONS
+OPTIONAL_PARENTS = "c0d2e4f6a8b1"
+EXPECTED_HEAD = OPTIONAL_PARENTS
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -801,11 +802,186 @@ def _reading_marker_schema(expected, head, marker, backend):
         ]
 
 
+def _optional_parent_marker_schema(head, marker, backend):
+    """Validate exactly164's dual guards, then project an explicit163 head.
+
+    Older helper expectations see the proven prior shape. Unknown foreign keys,
+    indexes or other schema changes remain in the final whole-schema comparison.
+    """
+    projected = deepcopy(head)
+    for parent in ("expense_items", "documents"):
+        index = {
+            "name": f"uq_{parent}_org_id",
+            "unique": True,
+            "column_names": ["org_id", "id"],
+            "dialect_options": {"postgresql_include": []} if backend == "postgresql" else {},
+        }
+        assert [entry for entry in head[parent]["indexes"] if entry["name"] == index["name"]] == [
+            index
+        ]
+        assert all(entry["name"] != index["name"] for entry in marker[parent]["indexes"])
+        projected[parent]["indexes"].remove(index)
+    for table, column, parent, name, postgres_single, sqlite_single in (
+        (
+            "expense_transactions",
+            "item_id",
+            "expense_items",
+            "fk_expense_transactions_item",
+            "expense_transactions_item_id_fkey",
+            "fk_expense_transactions_item_id_expense_items",
+        ),
+        (
+            "issued_invoices",
+            "partner_id",
+            "partners",
+            "fk_issued_invoices_partner",
+            "fk_issued_partner",
+            "fk_issued_partner",
+        ),
+        (
+            "recurring_invoices",
+            "partner_id",
+            "partners",
+            "fk_recurring_invoices_partner",
+            "recurring_invoices_partner_id_fkey",
+            None,
+        ),
+        (
+            "vendor_change_requests",
+            "source_document_id",
+            "documents",
+            "fk_vendor_change_requests_source_document",
+            "vendor_change_requests_source_document_id_fkey",
+            None,
+        ),
+    ):
+        single = {
+            "name": postgres_single if backend == "postgresql" else sqlite_single,
+            "constrained_columns": [column],
+            "referred_schema": None,
+            "referred_table": parent,
+            "referred_columns": ["id"],
+            "options": {"ondelete": "SET NULL"},
+        }
+        pair = {
+            "name": name,
+            "constrained_columns": ["org_id", column],
+            "referred_schema": None,
+            "referred_table": parent,
+            "referred_columns": ["org_id", "id"],
+            # PostgreSQL targets only the optional ID. SQLite's immediate
+            # NO ACTION pair coexists with its unchanged single SET NULL FK.
+            "options": {"ondelete": f"SET NULL ({column})"} if backend == "postgresql" else {},
+        }
+        if backend == "postgresql":
+            single["comment"] = pair["comment"] = None
+        for snapshot_schema in (head, marker):
+            assert [
+                entry
+                for entry in snapshot_schema[table]["foreign_keys"]
+                if entry["constrained_columns"] == [column]
+            ] == [single]
+        assert [
+            entry
+            for entry in head[table]["foreign_keys"]
+            if entry["name"] == name or entry["constrained_columns"] == ["org_id", column]
+        ] == [pair]
+        assert all(
+            entry["name"] != name and entry["constrained_columns"] != ["org_id", column]
+            for entry in marker[table]["foreign_keys"]
+        )
+        projected[table]["foreign_keys"].remove(pair)
+    return projected
+
+
+def _optional_parent_native_contract(connection):
+    """Inspect targeted SET NULL and retained physical singles independently."""
+    for parent in ("expense_items", "documents"):
+        assert (
+            connection.scalar(
+                text(
+                    "SELECT i.indisunique AND i.indisvalid AND i.indisready AND i.indimmediate "
+                    "AND i.indpred IS NULL AND i.indexprs IS NULL AND i.indnkeyatts=2 AND i.indnatts=2 "
+                    "FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid "
+                    "WHERE i.indrelid=CAST(:parent AS regclass) AND c.relname=:name"
+                ),
+                {"parent": parent, "name": f"uq_{parent}_org_id"},
+            )
+            is True
+        )
+    for table, column, parent, pair, single in (
+        (
+            "expense_transactions",
+            "item_id",
+            "expense_items",
+            "fk_expense_transactions_item",
+            "expense_transactions_item_id_fkey",
+        ),
+        (
+            "issued_invoices",
+            "partner_id",
+            "partners",
+            "fk_issued_invoices_partner",
+            "fk_issued_partner",
+        ),
+        (
+            "recurring_invoices",
+            "partner_id",
+            "partners",
+            "fk_recurring_invoices_partner",
+            "recurring_invoices_partner_id_fkey",
+        ),
+        (
+            "vendor_change_requests",
+            "source_document_id",
+            "documents",
+            "fk_vendor_change_requests_source_document",
+            "vendor_change_requests_source_document_id_fkey",
+        ),
+    ):
+        for name, is_pair in ((pair, True), (single, False)):
+            row = (
+                connection.execute(
+                    text(
+                        "SELECT c.confrelid::regclass::text AS parent, c.confdeltype::text AS delete_action, "
+                        "c.confupdtype::text AS update_action, c.confmatchtype::text AS match_type, "
+                        "c.convalidated AS validated, c.condeferrable AS deferrable, c.condeferred AS deferred, "
+                        "ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY n(num,pos) "
+                        "JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=n.num ORDER BY n.pos) AS local_columns, "
+                        "ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY n(num,pos) "
+                        "JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=n.num ORDER BY n.pos) AS target_columns, "
+                        "c.confdelsetcols::int[] AS set_columns, "
+                        "(SELECT a.attnum FROM pg_attribute a WHERE a.attrelid=c.conrelid "
+                        "AND a.attname=:column AND NOT a.attisdropped) AS optional_column "
+                        "FROM pg_constraint c WHERE c.conrelid=CAST(:table AS regclass) "
+                        "AND c.conname=:name AND c.contype='f'"
+                    ),
+                    {"table": table, "column": column, "name": name},
+                )
+                .mappings()
+                .one()
+            )
+            assert dict(row) == {
+                "parent": parent,
+                "delete_action": "n",
+                "update_action": "a",
+                "match_type": "s",
+                "validated": True,
+                "deferrable": False,
+                "deferred": False,
+                "local_columns": ["org_id", column] if is_pair else [column],
+                "target_columns": ["org_id", "id"] if is_pair else ["id"],
+                "set_columns": [row["optional_column"]] if is_pair else None,
+                "optional_column": row["optional_column"],
+            }
+
+
 def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert EXPECTED_HEAD == READING_OBSERVATIONS
+    assert EXPECTED_HEAD == OPTIONAL_PARENTS
+    assert graph.get_revision(OPTIONAL_PARENTS).down_revision == READING_OBSERVATIONS
     assert graph.get_revision(READING_OBSERVATIONS).down_revision == WEBHOOK_DELIVERIES
     assert graph.get_heads() == [EXPECTED_HEAD]
     assert graph.get_revision(WEBHOOK_DELIVERIES).down_revision == PARTNER_DOCUMENTS
@@ -819,7 +995,7 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 163
+    assert len(revisions) == 164
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -872,6 +1048,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         assert index["column_names"] == ["org_id", "operation", "target_id"]
         assert not index["unique"]
         if connection.dialect.name == "postgresql":
+            _optional_parent_native_contract(connection)
             assert connection.scalar(
                 text(
                     "SELECT indisvalid AND indisready FROM pg_index WHERE indexrelid="
@@ -889,35 +1066,52 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     database(migration_url, index_contract)
 
     head_schema = database(migration_url, schemas)
+
     # Later additive heads introduce an empty planning receipt table, the
     # unused nullable job token, two unknown image-preparation fields, and
-    # report/partner/webhook-parent constraints and empty reading facts.
+    # report/partner/webhook-parent constraints, empty reading facts and four
+    # optional-parent guards. Populated reading-facts downgrade refusal remains
+    # independently qualified; this marker roundtrip creates no such evidence.
     # Compare only these exact deltas, then test
     # ambiguity AT the merge.
     # Separate tests guard destructive removal of populated evidence.
+    def unused_reading_contract(connection):
+        assert connection.scalar(text("SELECT count(*) FROM capture_reading_observations")) == 0
+        for owner in ("extraction_runs", "inbound_invoices"):
+            assert (
+                connection.scalar(
+                    text(f"SELECT count(*) FROM {owner} WHERE reading_observation_json IS NOT NULL")
+                )
+                == 0
+            )
+
+    database(migration_url, unused_reading_contract)
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
     assert set(head_schema) - set(schema_before) == {
         "planning_commands",
         "capture_reading_observations",
     }
-    expected_marker_schema = deepcopy(head_schema)
+    projected_163_head = _optional_parent_marker_schema(
+        head_schema, schema_before, make_url(migration_url).get_backend_name()
+    )
+    expected_marker_schema = deepcopy(projected_163_head)
     _reading_marker_schema(
         expected_marker_schema,
-        head_schema,
+        projected_163_head,
         schema_before,
         make_url(migration_url).get_backend_name(),
     )
     _expense_marker_schema(
         expected_marker_schema,
-        head_schema,
+        projected_163_head,
         schema_before,
         make_url(migration_url).get_backend_name(),
         EXPENSE_CHILDREN,
     )
     _partner_webhook_marker_schema(
         expected_marker_schema,
-        head_schema,
+        projected_163_head,
         schema_before,
         make_url(migration_url).get_backend_name(),
     )

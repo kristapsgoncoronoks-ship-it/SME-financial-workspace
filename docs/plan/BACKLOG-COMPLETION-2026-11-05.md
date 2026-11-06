@@ -1,5 +1,24 @@
 # Backlog completion — 5 November 2026
 
+**Current optional tenant parents — 6 November:** [Revision 164 tenant guards](OPTIONAL-TENANT-PARENTS-164-2026-11-06.md)
+adds the four remaining dated optional links after 163, retaining the original
+single-column SET NULL actions and physical names. PostgreSQL clears only the
+optional ID; SQLite retains its original single-column action with immediate
+NO ACTION tenant guards. Organization IDs, nullability and stored history stay
+unchanged. All nine original DB-010 candidates are repaired through 159–164;
+five separately identified current links and session/membership semantics remain
+open. Source-reviewed evidence covers 637 distinct applicable component cases,
+including 28 full-graph passes/3 explicit SQLite-only skips; all 12 native graph
+cases executed. The composed ordinary-RLS/Bank native cohort passes 37 cases
+(24.47s); these overlapping scopes are not added as a new unique total. The
+current tree collects 7,094 backend cases; full Ruff/format (993 files), Mypy
+(448 app files) and 51 docs/generated/CI-discovery controls (12.55s, zero
+failures/errors/skips) pass. OpenAPI and ERD match Bank555 byte-for-byte. The CI
+split preserves existing paths and filters; fresh delivered-source hosted CI
+remains pending. Collection is not a full-suite pass. All 214 ledger identities
+and unrelated row statuses are preserved. Bank555 and prior records below
+retain their dated source scope.
+
 **Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](BANK-IMPORT-RECONCILIATION-2026-11-06.md)
 combines phase3 `c9e63db` and legacy `f847e3d` at `fee1042`, following initial
 PR112 delivery `ebf0a84`. Invalid imported amount/balance returns existing HTTP

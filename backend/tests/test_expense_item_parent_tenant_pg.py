@@ -180,8 +180,17 @@ async def parent_pg():
 async def test_native_constraint_refuses_both_directions_of_wrong_tenant_pair(parent_pg, operation):
     _, db, ids = parent_pg
     await _scope(db, "" if operation == "org_update" else ids["org_a"])
+    before = await _snapshot(db, ids)
     with pytest.raises(IntegrityError) as caught:
         async with db.begin_nested():
+            if operation == "org_update":
+                # Isolate this outgoing report pair from the newer incoming
+                # optional transaction pair. Rollback restores the full link.
+                await db.execute(
+                    update(ExpenseTransaction.__table__)
+                    .where(ExpenseTransaction.item_id == ids["item_a"])
+                    .values(item_id=None)
+                )
             if operation == "insert":
                 await db.execute(
                     insert(ExpenseItem.__table__).values(
@@ -210,6 +219,7 @@ async def test_native_constraint_refuses_both_directions_of_wrong_tenant_pair(pa
         or getattr(getattr(original, "diag", None), "constraint_name", None)
     )
     assert constraint_name == migration.COMPOSITE_FK
+    assert await _snapshot(db, ids) == before
 
 
 async def test_native_rls_still_refuses_a_foreign_owned_correct_pair(parent_pg):

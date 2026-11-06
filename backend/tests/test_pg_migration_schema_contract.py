@@ -208,7 +208,7 @@ def test_native_cli_and_programmatic_checks_preserve_every_row_and_catalog(
     assert database(postgres_contract_url, snapshot) == before_database
 
 
-def test_comparison_copy_only_changes_four_existing_ondelete_forms_without_writes(
+def test_comparison_copy_only_changes_eight_actions_and_one_name_without_writes(
     postgres_contract_url,
 ):
     original = metadata_signature(Base.metadata)
@@ -240,6 +240,31 @@ def test_comparison_copy_only_changes_four_existing_ondelete_forms_without_write
             f"SET NULL ({column})",
             tuple(f"SET NULL ({column})" for _ in elements),
         )
+    # Independent additions; do not derive the new expected shapes/actions
+    # from the optional production registry being validated.
+    for table, name, column, parent in (
+        ("expense_transactions", "fk_expense_transactions_item", "item_id", "expense_items"),
+        ("issued_invoices", "fk_issued_invoices_partner", "partner_id", "partners"),
+        ("recurring_invoices", "fk_recurring_invoices_partner", "partner_id", "partners"),
+        (
+            "vendor_change_requests",
+            "fk_vendor_change_requests_source_document",
+            "source_document_id",
+            "documents",
+        ),
+    ):
+        key = (name, ("org_id", column), (parent + ".org_id", parent + ".id"))
+        columns, targets, ondelete, elements = expected[table]["fks"][key]
+        assert ondelete is None and elements == (None, None)
+        expected[table]["fks"][key] = (
+            columns,
+            targets,
+            f"SET NULL ({column})",
+            (f"SET NULL ({column})",) * 2,
+        )
+    old_name = (None, ("partner_id",), ("partners.id",))
+    canonical = ("fk_issued_partner", ("partner_id",), ("partners.id",))
+    expected["issued_invoices"]["fks"][canonical] = expected["issued_invoices"]["fks"].pop(old_name)
     assert copied == expected
     assert metadata_signature(Base.metadata) == original
 
