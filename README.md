@@ -11,15 +11,17 @@ entitlement-gated and reachable end to end — statement upload through filed cl
 zero-setup dev/test) · React 19 + Vite + TypeScript + Tailwind SPA · Docker.
 
 **Scale of the codebase (verified against this tree):** 122 database tables
-(165 Alembic revisions, single head), 70 model modules, 136 service modules,
-50 route modules, 69 SPA pages, 7351 collected backend tests, 10 CI jobs.
+(166 Alembic revisions, single head), 70 model modules, 136 service modules,
+50 route modules, 69 SPA pages, 7553 collected backend tests, 10 CI jobs.
 
-Direct non-production PostgreSQL startup creates eight tenant-safe optional
-links (project/issuer plus expense/partner/document) using dialect-specific
+Direct non-production PostgreSQL startup creates eleven tenant-safe optional
+links (project/issuer, expense/partner/document and inbound/customer/correction) using dialect-specific
 development metadata. This convenience does not install migration-only RLS or
 repair existing constraints; use Alembic for migrated environments.
 [Bootstrap contract and evidence](docs/plan/DEVELOPMENT-POSTGRES-BOOTSTRAP-2026-10-28.md)
 and [revision 164 scope](docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md).
+[Revision 166](docs/plan/RESIDUAL-TENANT-PARENTS-166-2026-11-06.md) also enforces the mandatory
+customer-contact tenant pair and records current qualification and remaining scope.
 
 > **The specification lives in [`docs/`](./docs), not here.**
 > [`docs/architecture/adr/`](./docs/architecture/adr/README.md) (30 ADRs) and
