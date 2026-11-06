@@ -1,14 +1,39 @@
 # Engineering backlog
 
-**Current bank CSV/reconciliation delivery — 6 November:** [Import guards and current-line serialization](plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
-combine safe skipped-row accounting, HTTP 422 numeric refusal before writes and
-current-state action locks on corrected PR111. RN03/RN06 remain partial;
-RN07–RN09 durable intent/reason/versioned history and historical nonfinite
-read/recovery remain open. The ledger preserves 197 original rows plus 17
-findings (214). Combined 163 portable/12 native and 51 docs controls pass locally;
-6,646 backend cases collect. Source-slice receipts overlap; fresh hosted CI
-remains pending. No production-data
-repair, deployment or complete-backlog claim.
+**Current optional tenant parents — 6 November:** [Revision 164 tenant guards](plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md)
+adds the four remaining dated optional links after 163, retaining the original
+single-column SET NULL actions and physical names. PostgreSQL clears only the
+optional ID; SQLite retains its original single-column action with immediate
+NO ACTION tenant guards. Organization IDs, nullability and stored history stay
+unchanged. All nine original DB-010 candidates are repaired through 159–164;
+five separately identified current links and session/membership semantics remain
+open. Source-reviewed evidence covers 637 distinct applicable component cases,
+including 28 full-graph passes/3 explicit SQLite-only skips; all 12 native graph
+cases executed. The composed ordinary-RLS/Bank native cohort passes 37 cases
+(24.47s); these overlapping scopes are not added as a new unique total. The
+current tree collects 7,094 backend cases; full Ruff/format (993 files), Mypy
+(448 app files) and 51 docs/generated/CI-discovery controls (12.55s, zero
+failures/errors/skips) pass. OpenAPI and ERD match Bank555 byte-for-byte. The CI
+split preserves existing paths and filters; fresh delivered-source hosted CI
+remains pending. Collection is not a full-suite pass. All 214 ledger identities
+and unrelated row statuses are preserved. Bank555 and prior records below
+retain their dated source scope.
+
+**Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combines phase3 `c9e63db` and legacy `f847e3d` at `fee1042`, following initial
+PR112 delivery `ebf0a84`. Invalid imported amount/balance returns existing HTTP
+422 before writes; bank reads expose unavailable money as null plus status.
+Suggestions/Confirm refuse bad bank/cash-target money with existing HTTP 409;
+the UI marks manual review and withholds Match/Suggest. Stored facts stay unchanged.
+Combined 230 portable, 34 native and 51 docs/generated/CI-discovery checks pass
+with zero failures/errors/skips; full Ruff/format (986 files), Mypy (448 app
+files), frontend lint and build pass. The tree collects 6,724 backend cases;
+collection is not a full-suite pass. Eight source-scoped mocked-data browser
+checks are reused against unchanged frontend hashes; fresh new-head hosted CI
+remains pending. RN03/RN06 and historical remediation/source verification remain
+partial; RN07–RN09 durable intent/reason/versioned history remain open. All 214
+ledger identities are preserved. Separate ExpenseTransaction NaN candidate-read
+failure remains open; no production-data repair, deployment or complete-backlog claim.
 
 **Current163 reading facts:** [Per-page selection and fenced publication](plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native

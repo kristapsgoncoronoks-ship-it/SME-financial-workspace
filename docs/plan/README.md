@@ -1,5 +1,10 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current tenant-integrity follow-up: [Optional tenant parents — revision164](OPTIONAL-TENANT-PARENTS-164-2026-11-06.md).
+All nine original DB-010 candidates are repaired through159–164; current customer,
+inbound and session references retain their separate review boundaries. Component
+evidence and fresh delivered-source CI limits are recorded in the plan.
+
 Current reading foundation: [Published reading facts](OCR-READING-FACTS-2026-11-05.md).
 
 Current bounded follow-up: [Expense report navigation](EXPENSE-REPORT-PAGINATION-2026-11-05.md),

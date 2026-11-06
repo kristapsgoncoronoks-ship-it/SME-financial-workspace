@@ -1,13 +1,45 @@
 # TODO — Task Board
 
-**Current bank CSV/reconciliation delivery — 6 November:** [Import guards and current-line serialization](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
-combine safe skipped-row accounting, HTTP 422 numeric refusal before writes and
-current-state action locks on corrected PR111. RN03/RN06 remain partial;
-RN07–RN09 intent/reason/versioned history and historical nonfinite read/recovery
-remain open. The ledger now preserves 197 original rows plus 17 findings (214).
-Combined 163 portable/12 native and 51 docs controls pass locally; 6,646 backend
-cases collect. Source-slice receipts overlap; fresh hosted CI remains pending.
+**Current optional tenant parents — 6 November:** [Revision 164 tenant guards](docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md)
+adds the four remaining dated optional links after 163, retaining the original
+single-column SET NULL actions and physical names. PostgreSQL clears only the
+optional ID; SQLite retains its original single-column action with immediate
+NO ACTION tenant guards. Organization IDs, nullability and stored history stay
+unchanged. All nine original DB-010 candidates are repaired through 159–164;
+five separately identified current links and session/membership semantics remain
+open. Source-reviewed evidence covers 637 distinct applicable component cases,
+including 28 full-graph passes/3 explicit SQLite-only skips; all 12 native graph
+cases executed. The composed ordinary-RLS/Bank native cohort passes 37 cases
+(21.56s: 36 database cases plus one registry control); these overlapping scopes are not added as a new unique total. The
+current tree collects 7,102 backend cases; full Ruff/format (994 files), Mypy
+(448 app files) and 51 docs/generated/CI-discovery controls (zero
+failures/errors/skips) pass. OpenAPI and ERD retain the qualified bank contracts. The CI
+split preserves existing paths and filters; fresh delivered-source hosted CI
+remains pending. Collection is not a full-suite pass. All 214 ledger identities
+and unrelated row statuses are preserved. The current source includes Bank `964b26b` and the bounded backend CI repairs.
+Bank555 and prior records below
+retain their dated source scope.
+
+**Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combines shared numeric validation, safe historical bank reads, line locking,
+the Projects layout/fixture correction and the backend CI repairs. Invalid
+imported amounts return 422 before writes; historical unavailable money remains
+visible without zero substitution. Combined 350 portable checks (including 51
+docs controls) and 49 PostgreSQL checks pass, with full Ruff/format 987,
+Mypy 448, frontend lint/build and the 442.5/129.8kB bundle gate. The tree
+collects 6,732 cases; this is not a full-suite pass. The 64 Projects and 8 bank
+browser checks retain their own source-bound mocked-browser scope.
+Fresh hosted CI remains required. RN03/RN06 and historical source remediation
+remain partial; RN07–RN09 durable versioned commands are a separate active
+slice. All 214 ledger identities remain preserved. The separately reproduced
+expense-transaction invalid-money failure is under repair in its own branch.
 No production-data repair, deployment or complete-backlog claim.
+
+**6 November backend CI repairs:** [Reading facts qualification](docs/plan/OCR-READING-FACTS-2026-11-05.md)
+now includes native fixture opt-in, real reading-history tenant parity and a
+bounded PDF raster-rounding repair. The original failed hosted runs remain
+recorded. Local checks pass; fresh delivered-source CI is required. No gate,
+limit, timeout or visual baseline was weakened.
 
 **Current163 reading facts:** [Per-page selection and fenced publication](docs/plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native

@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "6November current bank delivery on correctedPR111df2c344 integrates CSVc1c822d (including53c996e) and line-serializationedf6d6e. Combined163distinct portable cases pass64.91s;12actual PostgreSQL cases pass5.33s with0skips on dedicated schema163;51docs controls pass11.67s. FullRuff/format981files and Mypy447appfiles pass. Current121table/163revision tree collects6646backend cases, not a full-suite pass. Current447app-file composition differs from the frozen reading matrix in2bankservices (bank_statement.py/reconciliation.py) plus TENexpense-listGETordering. Source-slice133portable+3PG and57portable+9PG cohorts overlap27portable; do not add them as unique coverage. NativeCI registration is included; fresh hostedCI remains pending. Receipt:/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json. RN03/RN06 remain partial; RN07–RN09 durable intent/reason/versioned history and BANK-LEGACY-NONFINITE-READ remain open. No production-data repair, main/PR merge, deployment or complete-backlog claim. Previous dated composite qualification retained verbatim: PR105–PR110 pass all13 required contexts at separate frozen heads. Current163 composite includes reading facts/per-page selection, SIXTH repairs and expense navigation; 6528 backend cases collect. 73 focused/15 native authority/cache/40 boxed runtime/658 broader portable cases and28 graph/generic(3SQLite-only skips/all12native executed) pass in their documented overlapping source scopes. Current447app-file composition differs from the frozen reading matrix only in the tested expense-list ordering. TEN actual browser/API/PG158 navigation proves201mine/101team and unchanged13tables. The actual combined447-file browser/native-worker/PG163 reading proof passes with one bounded observation/two ordered pages/original checksum and foreign opacity. Fresh composite CI remains pending; no main/PR merge/deploy or complete-backlog claim. Initialf1cc51f PR111 CI passed1237 first-attempt browsers/13visuals but strictRLS registry coverage failed. The missingTENANT_TABLES declaration is corrected without changing other migrationAST/DDL or guard assertions;25 targetedRLS/schema cases pass. Fresh fullCI remains required for the corrected delivery.",
+  "qualification": "6November optional164 composition at cecb2fd includes product1e17168/fullgraphcbee/correctedPR111df2c344/datedBank5550c5f. Revision164c0d2e4f6a8b1 follows163, retaining oldsingleFK physicalnames/SETNULL; four immediate tenantguards use PostgreSQLtargetedSETNULL(optionalIDonly), SQLiteNOACTION alongside retainedsingleaction, with2parentpairindexes and no orgzero/null/historyrewrite. Source-reviewed637distinctapplicable componentpasses include fullgraph28pass/3explicitSQLite-onlyskips(all12nativeexecuted); overlapping parentpostcomposition37ordinaryRLS+fourBankmodules pass24.47s, not an additional distincttotal. Current7094backendcases collect (notfullsuitepass); fullRuff/format993files andMypy448appfilespass. Current164revisions/121tables/134services/69models/50backendroute-modules/69pages/10CIjobs. All21ownercommithashesmatch;1450source/test/config/generatedinputs frozenatcecb2fd;OpenAPI/ERD matchBank555byte-for-byte. All51docs/generated/CI-discoverychecks pass12.55s with0failures/errors/skips; exactordinary/adminCIregistration splitvalidated,existingpaths/filters preserved. Freshdelivered-sourcehostedCIpending. All9originaldatedDB010candidates repaired159–164; five currentcalendar/customer/inbound/correctedinvoice links and mutable-session/membershipsemantics remain separate source-only reviewcandidates. Inventory214IDs/protectedfields/provenance and allotherrows/statuses preserved. Dated Bank555 and prior qualification follows unchanged; it doesnotautomatically qualify optional164. 6November follow-up: phase3c9e63db and legacyf847e3d are merged at fee10422eacdd79a2858b58321af4bbaa1cd96cf after initialPR112ebf0a84. Publicparse finite/currentNumeric(14,2) amount+balance and knownDecimalException→existing422 beforewrites; validvalues/sign/currency/rounding/_num unchanged. BankLineOut amountDecimal|null+amount_status(valid|invalid), balanceDecimal|null+balance_status(valid|invalid|unprovided); unavailable is notzero. Suggestions/Confirm refuse invalidbank/cash-target money with existing409 detail+code(bank_line_amount_invalid|reconciliation_target_amount_invalid); reads/refusals change no storedfacts. UI explicitunavailable/manualreview, noMatch/Suggest onbadamount; Ignore/Restore existingcommands. Sourcephase3receipt195distinct cases=37newportable+11newnative+3incumbentnative+144incumbentportable; legacysource68portable(19new+49incumbent)+11native+8mock-data-browser(5new+3currency). Sourcecohorts overlap; mockbrowser is not livebrowser/API proof. All9legacy/3phase3hashes match aftermerge. Mergedfee1042 combined230portable(91.81s),34actualPostgreSQL(22.52s),51docs/generated/CI-discovery(14.60s) pass with0failures/errors/skips. FullRuff/format986files,Mypy448appfiles,frontendfullLint/buildpass;4assetbundle442.5kBraw/129.8gzip passes460/135budgets. Collection6724 isnotfullsuitepass;134servicemodules,425OpenAPIpaths,onlyBankLineOutdelta,noERD/model/migrationchanges. Reused8source-scopedmockbrowser cases apply to matchingmergedfrontendhashes, notlivebrowser/APIproof. Freshnew-headhostedCIpending. Finalreceipt:/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/FINAL-RECEIPT.json. BANK-LEGACY-NONFINITE-READ isPARTIAL-LOCAL-CHECKS-CI-PENDING: safebankread/action/UI delivered; historicalremediation/sourceverification open, noamountrewrite/productiondata claim. Separate actualExpenseTransactionNaN candidateGET500 remainsunfixed/unqualified bybankrepair. RN07–09 durableintent/reason/version/history remainopen. Dated initial-delivery qualification follows; it does not qualify the follow-up head. 6November current bank delivery on correctedPR111df2c344 integrates CSVc1c822d (including53c996e) and line-serializationedf6d6e. Combined163distinct portable cases pass64.91s;12actual PostgreSQL cases pass5.33s with0skips on dedicated schema163;51docs controls pass11.67s. FullRuff/format981files and Mypy447appfiles pass. Current121table/163revision tree collects6646backend cases, not a full-suite pass. Current447app-file composition differs from the frozen reading matrix in2bankservices (bank_statement.py/reconciliation.py) plus TENexpense-listGETordering. Source-slice133portable+3PG and57portable+9PG cohorts overlap27portable; do not add them as unique coverage. NativeCI registration is included; fresh hostedCI remains pending. Receipt:/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json. RN03/RN06 remain partial; RN07–RN09 durable intent/reason/versioned history and BANK-LEGACY-NONFINITE-READ remain open. No production-data repair, main/PR merge, deployment or complete-backlog claim. Previous dated composite qualification retained verbatim: PR105–PR110 pass all13 required contexts at separate frozen heads. Current163 composite includes reading facts/per-page selection, SIXTH repairs and expense navigation; 6528 backend cases collect. 73 focused/15 native authority/cache/40 boxed runtime/658 broader portable cases and28 graph/generic(3SQLite-only skips/all12native executed) pass in their documented overlapping source scopes. Current447app-file composition differs from the frozen reading matrix only in the tested expense-list ordering. TEN actual browser/API/PG158 navigation proves201mine/101team and unchanged13tables. The actual combined447-file browser/native-worker/PG163 reading proof passes with one bounded observation/two ordered pages/original checksum and foreign opacity. Fresh composite CI remains pending; no main/PR merge/deploy or complete-backlog claim. Initialf1cc51f PR111 CI passed1237 first-attempt browsers/13visuals but strictRLS registry coverage failed. The missingTENANT_TABLES declaration is corrected without changing other migrationAST/DDL or guard assertions;25 targetedRLS/schema cases pass. Fresh fullCI remains required for the corrected delivery.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1015,7 +1015,7 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Independently refreshed older9Oct/current-source contract. Current delivery integrates c1c822d (including53c996e) on correctedPR111df2c344: skipped CSV date/no-nonzero rows have exact totals/at most20 safe details; nonfinite and unrepresentable selected Numeric(14,2) amounts return422 before import writes, retaining rounded valid edges and finite debit precedence. Source-bound133portable+3PG checks pass. Combined163distinct portable+12actualPG cases pass locally, with27portable overlap between source slices; fresh hostedCI remains pending. Bank account/control attribution, durable import history/readback and broader format acceptance remain open. BANK-LEGACY-NONFINITE-READ separately retains historical stored-NaN read/recovery; no production-data repair or bank-balance verification claim.",
+      "next": "Phase3 c9e63db and legacy-read f847e3d merged at fee1042 after initial PR112ebf0a84: shared supported-format public parse amount/balance validates finite/current Numeric(14,2) representability and known DecimalException maps to existing422 before writes, with valid values/sign/currency/rounding/_num unchanged. Source-scoped195distinct passes (37newportable+11newnative+3incumbentnative+144incumbentportable); mergedfee1042 combined230portable+34native+51docs/generated/CI-discovery pass, all0failures/errors/skips; freshnew-headhostedCI pending. Dated initial-delivery note: Independently refreshed older9Oct/current-source contract. Current delivery integrates c1c822d (including53c996e) on correctedPR111df2c344: skipped CSV date/no-nonzero rows have exact totals/at most20 safe details; nonfinite and unrepresentable selected Numeric(14,2) amounts return422 before import writes, retaining rounded valid edges and finite debit precedence. Source-bound133portable+3PG checks pass. Combined163distinct portable+12actualPG cases pass locally, with27portable overlap between source slices; fresh hostedCI remains pending. Bank account/control attribution, durable import history/readback and broader format acceptance remain open. BANK-LEGACY-NONFINITE-READ separately retains historical stored-NaN read/recovery; no production-data repair or bank-balance verification claim.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
@@ -1024,7 +1024,52 @@
         "plan": "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md",
         "integration_base": "df2c344",
         "scope": "Current combined delivery locally qualified:163distinct portable+12actual PostgreSQL cases pass; source-slice receipts overlap. Fresh hosted CI remains pending; remaining RN03/RN06–RN09 contracts stay open.",
-        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json"
+        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json",
+        "phase3_followup": {
+          "source": "c9e63dbfb889f75460a10e7eb53dcf48c6c0bbea",
+          "local_merge": "b3d967f",
+          "initial_delivery": "ebf0a84 (PR112)",
+          "evidence": "/workspace/artifacts/backlog-bank-nonfinite-2026-11-06/phase3/TEST-RECEIPT.json",
+          "receipt_sha256": "578dd6cbb586a38f1846071551838c02f48e7332e1e95e9bf7b1d5ed827ab960",
+          "qualification": "195 distinct source-scoped passes:37newportable+11newnative+3incumbentnative+144incumbentportable. New combined-head and hostedCI qualification pending.",
+          "current_combined_source": "fee10422eacdd79a2858b58321af4bbaa1cd96cf"
+        },
+        "combined_followup": {
+          "source": "fee10422eacdd79a2858b58321af4bbaa1cd96cf",
+          "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/FINAL-RECEIPT.json",
+          "portable": {
+            "passed": 230,
+            "seconds": 91.81
+          },
+          "native": {
+            "passed": 34,
+            "seconds": 22.52
+          },
+          "docs_generated_CI_discovery": {
+            "passed": 51,
+            "seconds": 14.6
+          },
+          "failures_errors_skips": 0,
+          "Ruff_format_files": 986,
+          "Mypy_app_files": 448,
+          "frontend": "full lint/build pass;8 source-scoped mocked-data browser cases reused against matching frontend hashes, no live browser/API journey",
+          "backend_collection": 6724,
+          "service_modules": 134,
+          "OpenAPI_paths": 425,
+          "schema_boundary": "OnlyBankLineOutdelta;noERD/model/migrationchange",
+          "hosted_CI": "freshnew-headpending",
+          "remaining": "historicalremediation/sourceverificationopen;nostoredfactnormalization;RN07–09unchanged",
+          "bundle": {
+            "raw_kB": 442.5,
+            "gzip_kB": 129.8,
+            "assets": 4,
+            "budgets_kB": [
+              460,
+              135
+            ],
+            "status": "pass"
+          }
+        }
       }
     },
     {
@@ -1788,7 +1833,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "Five original dated mandatory tenant pairs through162 are included and PR110 passes all13 contexts. Four dated optional links are an isolated164 follow-up with231portable/81native catalogue controls before migration qualification, not complete/included here. Additional current customer/inbound candidates and mutable-session semantics remain individually open.163history has its own same-tenant mandatory owner FKs; no SETNULL/org/history policy is weakened.",
+      "next": "Nine dated DB-010 candidates are repaired through revisions 159–164. The four optional 164 guards retain existing single-column SET NULL behavior and add immediate tenant-safe PostgreSQL targeted SET NULL / SQLite NO ACTION pairs without changing organization IDs or history. Final composition 13b7392 includes Bank 964b26b and the bounded PDF/backend CI corrections; all 21 optional-owner and 3 graph hashes still match. Component 637-case and graph 28-pass/3-explicit-SQLite-skip receipts retain their original scope. The composed 37-check cohort passes in 21.56s (36 database cases and 1 registry control), plus 51 docs checks; Ruff/format 994 and Mypy 448 pass. Current 7102 cases collect, not a full-suite execution. Fresh hosted CI remains required. Next review the five separate source candidates and mutable-session/global-user/membership semantics; do not apply a naive session/user organization pair or claim all relationships complete. No production migration, source repair, main merge or deployment.",
       "dependencies": [],
       "qualification": {
         "product_source": "bd8f970",
@@ -1798,7 +1843,92 @@
         "graph_generic_skips": "3 explicit SQLite-only cases; all12 native graph cases run",
         "native_composition": 98,
         "integrated_ci": "pending",
-        "evidence": "/workspace/artifacts/backlog-seventh-wave-2026-11-05/db010-next/"
+        "evidence": "/workspace/artifacts/backlog-seventh-wave-2026-11-05/db010-next/",
+        "optional164": {
+          "plan": "docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md",
+          "product_source": "1e171680fa6d933e26e705eb1eb6c4eae256e6fd",
+          "composition_source": "cecb2fd0dcaecd95d2d08553bd02af1d244bab64",
+          "migration_head": "c0d2e4f6a8b1",
+          "parent": "b9c1e3f5a7d0",
+          "component_distinct_applicable_passed": 637,
+          "component_evidence": "/workspace/artifacts/backlog-eleventh-wave-2026-11-05/optional-parent/QUALIFIED-CASE-INVENTORY.json",
+          "fullgraph_evidence": "/workspace/artifacts/backlog-eleventh-wave-2026-11-06/fullgraph164/FINAL-RECEIPT.json",
+          "graph_passed": 28,
+          "graph_skips": "3explicitSQLite-only;all12nativeexecuted",
+          "postcomposition_native": {
+            "passed": 37,
+            "seconds": 24.47,
+            "scope": "parent-qualified ordinaryRLS+fourBankmodules; overlapscomponentreceipts, noadditionaldistincttotal"
+          },
+          "historical_preservation": "20direct161/162cases pinned162+18currentDML/RLS/cascade/lockcases;all38bodies/decorators preserved,no filters/assertionwaivers",
+          "current_residuals": [
+            "calendar_oauth_attempts.session_id",
+            "customer_contacts.customer_id",
+            "inbound_invoices.invoice_id",
+            "issued_invoices.corrected_invoice_id",
+            "issued_invoices.customer_id"
+          ],
+          "residual_scope": "Source-only modelreviewcandidates, not newnativevulnerabilityclaims; Session.user_id/mutablesessionorg/globaluser/membership contract needs separatereview, no naivepair assumed.",
+          "current_metadata_checks": {
+            "backend_collection": 7094,
+            "Ruff_format_files": 993,
+            "Mypy_app_files": 448,
+            "tables": 121,
+            "revisions": 164,
+            "services": 134,
+            "models": 69,
+            "frontend_pages": 69,
+            "CI_jobs": 10,
+            "owner_commit_hashes_match": 21,
+            "frozen_source_test_config_generated_inputs": 1450,
+            "generated_OpenAPI_ERD": "byte-identicaltoBank555",
+            "docs_generated_CI": {
+              "passed": 51,
+              "seconds": 12.55,
+              "failures_errors_skips": 0
+            },
+            "collection_boundary": "notafullsuitepass",
+            "backend_route_modules": 50
+          },
+          "hosted_CI": "freshdelivered-sourcepending",
+          "prior_qualification_scope": "Other qualification fields retained as earlier datedsourceevidence; notcurrent164counts.",
+          "CI_registration": {
+            "admin_additions": [
+              "tests/test_partner_webhook_parent_migration_pg.py",
+              "tests/test_optional_parent_migration_pg.py",
+              "tests/test_optional_parent_tenant_pg.py"
+            ],
+            "ordinary_additions": [
+              "tests/test_optional_parent_metadata_pg.py"
+            ],
+            "portable": "tests/test_optional_parent_migration.py remainsfullbackendonly;noduplication",
+            "preservation": "existingpaths/filters preserved;notahostedCIpass"
+          },
+          "final_composition": {
+            "source": "13b7392",
+            "bank_parent": "964b26beb843701599dff4fd1d30673c9ea83933",
+            "reading_parent": "81a39dec24ba15853119fcaf9e14a38b5346b9d6",
+            "owner21_graph3_hashes_match": true,
+            "backend_collection": 7102,
+            "Ruff_format_files": 994,
+            "Mypy_app_files": 448,
+            "RLS_bank_cohort": {
+              "passed": 37,
+              "database_cases": 36,
+              "registry_assertions": 1,
+              "seconds": 21.56,
+              "failures_errors_skips": 0
+            },
+            "docs_generated_CI": {
+              "passed": 51,
+              "seconds": 13.12,
+              "failures_errors_skips": 0
+            },
+            "evidence": "/workspace/artifacts/backlog-eleventh-wave-2026-11-06/final-composition/FINAL-RECEIPT.json",
+            "hosted_CI": "pending; current sources need fresh run",
+            "prior_metadata_scope": "Earlier current_metadata_checks retained as dated796dfe/cecb evidence, not final composition counts."
+          }
+        }
       }
     },
     {
@@ -3077,7 +3207,7 @@
     },
     {
       "id": "BANK-LEGACY-NONFINITE-READ",
-      "status": "READY",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "NEW-SOURCE-BACKED",
       "title": "Historical stored nonfinite bank-line read and recovery contract",
       "sources": [
@@ -3086,7 +3216,7 @@
         "backend/app/services/reconciliation.py",
         "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md"
       ],
-      "next": "Future CSV guards do not repair historical stored NaN or its read failure. Define bounded read-only discovery and an explicit source/evidence-preserving read/recovery contract before any authorized historical repair. Frozen53c996e actual30-case synthetic baseline proves split debit/credit NaN POST201 with committed bank row then GET500; no tested POST500 committed a line. Owned synthetic fixtures were removed after raw receipts; no production-data existence or completed historical repair is asserted. Do not coerce NaN to zero or treat PostgreSQL amount=amount as a finite check.",
+      "next": "Safe bankread/action/UI portion delivered locally at fee1042 with legacyf847e3d: BankLineOut amountDecimal|null+valid|invalid status and balanceDecimal|null+valid|invalid|unprovided status preserve validmoney; unavailable isnotzero. Suggestions/Confirm refuse badbank/cash-target money with existing409 detail+code bank_line_amount_invalid or reconciliation_target_amount_invalid; reads/refusals change nostoredfacts. UI marksunavailable/manualreview withnoMatch/Suggest; Ignore/Restore existingcommands. Historicalremediation/sourceverification remainsopen; noamountrewrite/productiondata claim. SeparateactualExpenseTransactionNaN GET /expenses/{report}/items/{item}/match-candidates500 isnotfixed/qualified bybankrepair. Frozen53c996e CSV30case and nonCSV16actualAPI syntheticdiagnoses remain sourcebound: quietNaN POST201 committedbankrow thenGET500; noobservedPOST500 committedrow. Preserve evidence before authorizedrepair; do notcoerceNaNtozero oruse PostgreSQLamount=amount asfinitecheck. Mergedfee1042 combined230portable+34native+51docs/generated/CI-discovery pass, all0failures/errors/skips; freshnew-headhostedCIpending.",
       "dependencies": [
         "Reviewed historical source/evidence and recovery contract; no production data inferred from synthetic baseline"
       ],
@@ -3101,7 +3231,60 @@
         "evidence": "/workspace/artifacts/backlog-bank-nonfinite-2026-11-06/baseline53c996e/TEST-RECEIPT.json",
         "source": "53c996e43eb3c2e55753bdc1bfc627b50d992abe",
         "scope": "Diagnosis only: actual ASGI/PostgreSQL,30 owned synthetic cases, historical schema162/a8b0d2f4c6e9/non-super/non-bypass role labels retained. Not current-schema, production-data or recovery qualification.",
-        "receipt_sha256": "cf4b6c431aad92bbc6c8f48d243eb98987de1bb02653c2ba5c35e4eab6febc1e"
+        "receipt_sha256": "cf4b6c431aad92bbc6c8f48d243eb98987de1bb02653c2ba5c35e4eab6febc1e",
+        "legacy_read_followup": {
+          "source": "f847e3dc09ae095c549784dc435dbed39d3b52d4",
+          "combined_source": "fee10422eacdd79a2858b58321af4bbaa1cd96cf",
+          "evidence": "/workspace/artifacts/backlog-fourteenth-wave-2026-11-06/legacy-bank-read/receipt.json",
+          "receipt_sha256": "9715812caee9c580bede2d76e8faf44895ec09d11d7ed2d225c4720a855894a5",
+          "scope": "Source-scoped68portable(19new+49incumbent),11native,8mock-data-browser(5new+3currency); sourcehashes unchanged aftermerge. No livebrowser/API journey or historicalrepair qualification. Combinedqualification isrecordedseparately below; freshnew-headhostedCIpending."
+        },
+        "noncsv_baseline": {
+          "evidence": "/workspace/artifacts/backlog-bank-nonfinite-2026-11-06/noncsv53c996e/TEST-RECEIPT.json",
+          "receipt_sha256": "79608ae9a309bcd591ec47ad3eed05ee7bb1b425bd19084a6d117150c59af6c2",
+          "scope": "16 actualAPI CAMT/MT940 cases at frozen53c996e; CAMTquietNaN POST201 committedline thenGET500, no observedPOST500+committedrows; PDFpuretextonly. Diagnosis, not repair."
+        },
+        "separate_remaining_expense_issue": {
+          "evidence": "/workspace/artifacts/backlog-fourteenth-wave-2026-11-06/legacy-bank-read/separate-expense-candidate.json",
+          "receipt_sha256": "045d5f2872c0ad56e58ba281093388f8fedc866568516ee2cf1848057cdc6e2c",
+          "scope": "ActuallegacyExpenseTransactionNaN candidateGET500 observation only; not fixed/qualified or counted in bank acceptance."
+        },
+        "combined_followup": {
+          "source": "fee10422eacdd79a2858b58321af4bbaa1cd96cf",
+          "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/FINAL-RECEIPT.json",
+          "portable": {
+            "passed": 230,
+            "seconds": 91.81
+          },
+          "native": {
+            "passed": 34,
+            "seconds": 22.52
+          },
+          "docs_generated_CI_discovery": {
+            "passed": 51,
+            "seconds": 14.6
+          },
+          "failures_errors_skips": 0,
+          "Ruff_format_files": 986,
+          "Mypy_app_files": 448,
+          "frontend": "full lint/build pass;8 source-scoped mocked-data browser cases reused against matching frontend hashes, no live browser/API journey",
+          "backend_collection": 6724,
+          "service_modules": 134,
+          "OpenAPI_paths": 425,
+          "schema_boundary": "OnlyBankLineOutdelta;noERD/model/migrationchange",
+          "hosted_CI": "freshnew-headpending",
+          "remaining": "historicalremediation/sourceverificationopen;nostoredfactnormalization;RN07–09unchanged",
+          "bundle": {
+            "raw_kB": 442.5,
+            "gzip_kB": 129.8,
+            "assets": 4,
+            "budgets_kB": [
+              460,
+              135
+            ],
+            "status": "pass"
+          }
+        }
       }
     }
   ],
