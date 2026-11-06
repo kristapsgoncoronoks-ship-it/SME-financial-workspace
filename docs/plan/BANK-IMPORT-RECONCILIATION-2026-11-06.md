@@ -56,6 +56,25 @@ and ERD remain unchanged. There are 134 service modules.
 
 ## Combined local qualification
 
+### Projects navigation correction from the initial CI run
+
+The initial `ebf0a84` browser run failed after navigation from project photos
+to Projects. Its mock returned a paginated object for the PnL summary endpoint,
+whose actual contract is an array. The corrected fixture supplies the array and
+waits for the loaded destination before the original checks. Independently,
+the valid destination overflowed to 725px at a 390px viewport with a 32px root
+font. Wrapping its local tabs/filter and adding a labelled, keyboard-scrollable
+table region keeps every column available and the document at 390px.
+
+Qualified source `3685125a36e55433191c2ebbe20460d8e7d20e04` passes all 64
+photo, project PnL, context and reflow browser cases without retries, plus lint,
+build and bundle checks. The two merged file hashes match that source receipt.
+Original photo assertions, geometry thresholds, timeouts and visual baselines
+are unchanged. This local mocked-browser evidence does not establish the exact
+cause of the 686px width in CI's error state or qualify a fresh hosted run.
+[Sealed receipt](/workspace/artifacts/backlog-project-photos-2026-11-06/TEST-RECEIPT.json),
+SHA256 `9648235c990160183bc8dfe0b1c862beaa136fc7a52691d9beabd4cc017b9655`.
+
 At merged source `fee1042`, the combined bank cohorts pass **230 portable
 cases (91.81s)** and **34 actual PostgreSQL cases (22.52s)**. The **51
 docs/generated/CI-discovery controls pass (14.60s)**. All three cohorts have
