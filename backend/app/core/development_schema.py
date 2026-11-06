@@ -13,6 +13,7 @@ from sqlalchemy.engine import Dialect
 from app.core.migration_schema import (
     POSTGRES_COLUMN_SET_NULL,
     project_optional_parent_metadata,
+    validate_customer_contact_metadata,
     validate_optional_parent_metadata,
 )
 
@@ -59,6 +60,7 @@ def development_metadata(metadata: MetaData, dialect: Dialect) -> MetaData:
         source_keys[table, name] = key
 
     validate_optional_parent_metadata(metadata)
+    validate_customer_contact_metadata(metadata)
     # Table.to_metadata can normalize inconsistent element options. Validate the
     # originals above first, rather than trusting a normalized clone.
     projected = MetaData(schema=metadata.schema, naming_convention=metadata.naming_convention)

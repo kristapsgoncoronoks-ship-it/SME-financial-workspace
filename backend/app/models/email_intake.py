@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -28,6 +37,11 @@ class InboundInvoice(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __tablename__ = "inbound_invoices"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "invoice_id"],
+            ["invoices.org_id", "invoices.id"],
+            name="fk_inbound_invoices_invoice_tenant",
+        ),
         Index("ix_inbound_invoices_org_message", "org_id", "message_id"),
         Index("uq_inbound_invoices_org_id", "org_id", "id", unique=True),
     )

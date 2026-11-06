@@ -208,7 +208,7 @@ def test_native_cli_and_programmatic_checks_preserve_every_row_and_catalog(
     assert database(postgres_contract_url, snapshot) == before_database
 
 
-def test_comparison_copy_only_changes_eight_actions_and_one_name_without_writes(
+def test_comparison_copy_only_changes_eleven_actions_and_three_names_without_writes(
     postgres_contract_url,
 ):
     original = metadata_signature(Base.metadata)
@@ -252,6 +252,14 @@ def test_comparison_copy_only_changes_eight_actions_and_one_name_without_writes(
             "source_document_id",
             "documents",
         ),
+        ("inbound_invoices", "fk_inbound_invoices_invoice_tenant", "invoice_id", "invoices"),
+        ("issued_invoices", "fk_issued_invoices_customer_tenant", "customer_id", "customers"),
+        (
+            "issued_invoices",
+            "fk_issued_invoices_corrected_tenant",
+            "corrected_invoice_id",
+            "issued_invoices",
+        ),
     ):
         key = (name, ("org_id", column), (parent + ".org_id", parent + ".id"))
         columns, targets, ondelete, elements = expected[table]["fks"][key]
@@ -265,6 +273,15 @@ def test_comparison_copy_only_changes_eight_actions_and_one_name_without_writes(
     old_name = (None, ("partner_id",), ("partners.id",))
     canonical = ("fk_issued_partner", ("partner_id",), ("partners.id",))
     expected["issued_invoices"]["fks"][canonical] = expected["issued_invoices"]["fks"].pop(old_name)
+    for column, parent, name in (
+        ("customer_id", "customers", "fk_issued_invoices_customer"),
+        ("corrected_invoice_id", "issued_invoices", "fk_issued_corrected"),
+    ):
+        old_name = (None, (column,), (parent + ".id",))
+        canonical = (name, (column,), (parent + ".id",))
+        expected["issued_invoices"]["fks"][canonical] = expected["issued_invoices"]["fks"].pop(
+            old_name
+        )
     assert copied == expected
     assert metadata_signature(Base.metadata) == original
 

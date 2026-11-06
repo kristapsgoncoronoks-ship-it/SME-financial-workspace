@@ -13,6 +13,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     String,
@@ -84,14 +85,20 @@ class CustomerContact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """An additional named contact for a customer (AP clerk, buyer, etc.)."""
 
     __tablename__ = "customer_contacts"
-    __table_args__ = (Index("ix_customer_contacts_org_customer", "org_id", "customer_id"),)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["org_id", "customer_id"],
+            ["customers.org_id", "customers.id"],
+            name="fk_customer_contacts_customer",
+            ondelete="CASCADE",
+        ),
+        Index("ix_customer_contacts_org_customer", "org_id", "customer_id"),
+    )
 
     org_id: Mapped[str] = mapped_column(
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    customer_id: Mapped[str] = mapped_column(
-        GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    customer_id: Mapped[str] = mapped_column(GUID(), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
