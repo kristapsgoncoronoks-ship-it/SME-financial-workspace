@@ -1,5 +1,12 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current Explore follow-up: [Bounded tables and download scope](EXPLORE-BOUNDED-VIEWS-2026-11-06.md).
+Table exposes every returned group, and JSON/CSV/XLSX/PDF state their bounded
+scope. Component evidence and new revision-165 native/static/frontend checks
+remain separate; fresh hosted CI is pending. Complete filtered exports,
+immutable snapshots, tie order and currency semantics remain open. The existing
+BE-018/PERF-010/FE-016 progress changes without adding a ledger identity.
+
 Current expense-money follow-up: [Historical unavailable transaction amounts](EXPENSE-TRANSACTION-MONEY-2026-11-06.md).
 Expense reads, candidate search and consumption now retain unavailable amounts
 safely, with typed refusals before writes and immutable raw command receipts.

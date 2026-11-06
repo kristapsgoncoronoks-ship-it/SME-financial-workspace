@@ -1,5 +1,24 @@
 # TODO — Task Board
 
+**Current Explore bounded views — 6 November:** [Table navigation and explicit download scope](docs/plan/EXPLORE-BOUNDED-VIEWS-2026-11-06.md)
+composes qualified `58a3d075` with Expense parent `e0e00882` at `e6bcbbe`.
+Table renders every returned group through local 100-row pages; JSON and
+CSV/XLSX/PDF disclose the selected bounded group cut. The existing 100 default
+and 1,000 maximum remain; fetching one extra group establishes truncation.
+Downloads rerun current filtered data and retain the accepted `REPORT_READ`
+contract. Complete filtered exports, immutable snapshots, equal-value tie order
+and currency semantics remain separate. Source-bound 29 portable and nine
+mocked-browser controls are reused; new restricted PostgreSQL proof passes
+one case at revision 165 (3.31s, nine real requests, unchanged 14-table hashes
+per tenant). Full Ruff/format (1,009 files), Mypy (452 app files), frontend
+lint/build and the 460/135 kB gate pass at 442.8/129.9 kB. The current tree
+collects 7,274 backend cases; OpenAPI retains 429 paths with a typed Explore
+response and ERD is parent-identical. All 51 docs/generated/CI-discovery
+controls pass against this metadata; fresh hosted CI remains pending.
+Collection and overlapping source evidence are not a full-suite or combined
+unique-case result. All 215 ledger identities/provenance remain; only existing
+BE-018/PERF-010/FE-016 progress changes. Earlier qualifications keep their scope.
+
 **Current expense transaction money — 6 November:** [Unavailable historical amounts and safe consumption](docs/plan/EXPENSE-TRANSACTION-MONEY-2026-11-06.md)
 composes expense `9d9b5c6` and registration `ceccf36` with reviewed parent 165
 `3d06b9e` (PR114) at `68cd768`. Invalid amounts stay visible as null plus status;

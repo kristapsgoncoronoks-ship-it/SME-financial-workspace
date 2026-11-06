@@ -11809,6 +11809,109 @@
         "title": "ExpiringDocumentOut",
         "type": "object"
       },
+      "ExploreDimensionOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "temporal": {
+            "title": "Temporal",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "temporal"
+        ],
+        "title": "ExploreDimensionOut",
+        "type": "object"
+      },
+      "ExploreMeasureOut": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "money",
+              "number",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "unit"
+        ],
+        "title": "ExploreMeasureOut",
+        "type": "object"
+      },
+      "ExploreResultOut": {
+        "properties": {
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/ExploreDimensionOut"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "measure": {
+            "$ref": "#/components/schemas/ExploreMeasureOut"
+          },
+          "returned_rows": {
+            "title": "Returned Rows",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "scope": {
+            "const": "bounded_groups",
+            "title": "Scope",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "measure",
+          "dimensions",
+          "rows",
+          "scope",
+          "limit",
+          "returned_rows",
+          "truncated"
+        ],
+        "title": "ExploreResultOut",
+        "type": "object"
+      },
       "ExtractionResult": {
         "description": "Poll response for an async upload capture. `draft` is populated once\n`status == \"parsed\"`; `error` carries the reason when `status == \"failed\"`.",
         "properties": {
@@ -30669,7 +30772,7 @@
     },
     "/api/v1/analytics/explore": {
       "get": {
-        "description": "Self-service pivot: pick a measure + up to two dimensions + filters.",
+        "description": "Bounded current-data pivot, also serialized as CSV/XLSX/PDF.\n\n`truncated` means more groups match the filters. Downloads rerun the query;\nthey are not a frozen snapshot or an unbounded complete filtered export.\nAll formats disclose the effective scope through X-Explore-* headers.",
         "operationId": "get_explore_api_v1_analytics_explore_get",
         "parameters": [
           {
@@ -30848,7 +30951,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreResultOut"
+                }
               }
             },
             "description": "Successful Response"
