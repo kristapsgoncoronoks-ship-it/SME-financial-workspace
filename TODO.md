@@ -1,5 +1,14 @@
 # TODO — Task Board
 
+**Current bank CSV/reconciliation delivery — 6 November:** [Import guards and current-line serialization](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combine safe skipped-row accounting, HTTP 422 numeric refusal before writes and
+current-state action locks on corrected PR111. RN03/RN06 remain partial;
+RN07–RN09 intent/reason/versioned history and historical nonfinite read/recovery
+remain open. The ledger now preserves 197 original rows plus 17 findings (214).
+Combined 163 portable/12 native and 51 docs controls pass locally; 6,646 backend
+cases collect. Source-slice receipts overlap; fresh hosted CI remains pending.
+No production-data repair, deployment or complete-backlog claim.
+
 **Current163 reading facts:** [Per-page selection and fenced publication](docs/plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native
 authority/cache,40 boxed runtime and658 broader portable controls pass; those
