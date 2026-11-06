@@ -444,6 +444,11 @@ function MissingReceipt({ onDeclare }: { onDeclare: (v: string) => void }) {
 }
 
 // Reconcile a draft item against a bank/card statement line.
+function candidateAmount(row: ExpenseTransaction): string | null {
+  if (row.amount_status !== undefined && row.amount_status !== "valid") return null;
+  return typeof row.amount === "string" && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(row.amount) && Number.isFinite(Number(row.amount)) ? row.amount : null;
+}
+
 function BankMatch({ reportId, item, onMatch }:
   { reportId: string; item: ExpenseReportDetail["items"][number]; onMatch: (txnId: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -459,11 +464,12 @@ function BankMatch({ reportId, item, onMatch }:
       {candidates.isLoading && <span className="text-xs text-text-secondary">Searching…</span>}
       {candidates.isError && <span role="alert" className="text-xs text-rose-600">Couldn’t search the statement lines.</span>}
       {candidates.data?.length === 0 && <span className="text-xs text-amber-600">No matching statement line.</span>}
-      {candidates.data?.map((t) => (
-        <button key={t.id} className="block w-full rounded-sm border border-slate-200 px-2 py-1 text-left text-xs hover:bg-slate-50" onClick={() => onMatch(t.id)}>
-          {shortDate(t.txn_date)} · {t.merchant || t.description} · {money(t.amount, t.currency)}
+      {candidates.data?.map((t) => {
+        const amount = candidateAmount(t);
+        return <button key={t.id} disabled={amount === null} className="block w-full rounded-sm border border-slate-200 px-2 py-1 text-left text-xs hover:bg-slate-50 disabled:cursor-not-allowed" onClick={() => { if (amount !== null) onMatch(t.id); }}>
+          {shortDate(t.txn_date)} · {t.merchant || t.description} · {amount === null ? `${t.currency} · Amount unavailable. Review the original statement.` : money(amount, t.currency)}
         </button>
-      ))}
+      })}
       <button className="text-xs text-text-secondary hover:underline" onClick={() => setOpen(false)}>cancel</button>
     </div>
   );

@@ -39,6 +39,7 @@ from app.models.membership import Membership
 from app.schemas.expense import ExpenseReportCreate, ExpenseTransactionOut
 from app.services import audit, bank_statement, costing, expenses, modules
 from app.services import bin as bin_svc
+from app.services.expense_transaction_amounts import require_amount
 from app.services.issued_commands import fingerprint
 
 PARSER_VERSION = "statement-r010-v1"
@@ -254,7 +255,7 @@ async def available(
 
 def transaction_reference(row: ExpenseTransaction) -> str:
     who = row.merchant or row.description[:60]
-    return f"{row.txn_date.isoformat()} · {who} · {row.currency} {expenses.q(row.amount)}"
+    return f"{row.txn_date.isoformat()} · {who} · {row.currency} {expenses.q(require_amount(row))}"
 
 
 def require_report_currency(row: ExpenseTransaction, report_currency: str) -> None:
@@ -278,17 +279,18 @@ async def item_from_transaction(
     vat: Decimal = Decimal("0"),
 ) -> ExpenseItem:
     require_report_currency(row, report_currency)
-    if vat > row.amount:
+    amount = require_amount(row)
+    if vat > amount:
         raise ValidationError("VAT cannot exceed the expense amount")
     item = ExpenseItem(
         spend_date=row.txn_date,
         category=category,
         description=row.description[:300],
         merchant=row.merchant,
-        amount=expenses.q(row.amount),
+        amount=expenses.q(amount),
         vat_amount=expenses.q(vat),
         currency=row.currency,
-        original_amount=expenses.q(row.amount),
+        original_amount=expenses.q(amount),
         payment_method="company_card" if row.source in ("bank_statement", "card") else "personal",
         bank_reference=transaction_reference(row),
     )
@@ -341,6 +343,8 @@ async def create_report(
             "Selected-transaction reports accept one currency. Use separate reports.",
             code="expense_currency_mismatch",
         )
+    for row in rows:
+        require_amount(row)
     items = await expenses.build_items(db, body.items, body.currency)
     txn_items = [await item_from_transaction(db, row, body.currency) for row in rows]
     items += txn_items

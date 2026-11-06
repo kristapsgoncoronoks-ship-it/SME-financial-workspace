@@ -272,7 +272,8 @@ export interface ExpenseTransaction {
   txn_date: string;
   description: string;
   merchant: string | null;
-  amount: string;
+  amount: string | null;
+  amount_status?: "valid" | "invalid";
   currency: string;
   direction: string;
   source: string;
