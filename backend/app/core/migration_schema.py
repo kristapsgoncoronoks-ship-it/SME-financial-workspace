@@ -1,6 +1,6 @@
 """Exact PostgreSQL comparison metadata for retained deletion contracts.
 
-The original four allocation pairs use portable SET NULL; four optional-parent
+The original four allocation pairs use portable SET NULL; optional-parent
 pairs use portable NO ACTION plus retained single-column SET NULL. PostgreSQL
 targets only each nullable link, preserving the tenant key. Validate the exact
 contracts and build a comparison copy; every other schema attribute remains
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import ForeignKeyConstraint, MetaData, Table, inspect, text
+from sqlalchemy import ForeignKeyConstraint, MetaData, Table, UniqueConstraint, inspect, text
 from sqlalchemy.engine import Connection, Dialect
 
 # These exact names and columns are the committed DB-017/018 migration policy.
@@ -32,6 +32,7 @@ class OptionalParentLink:
     pair_name: str
     single_name: str
     parent_index: str
+    target_kind: str = "index"
 
 
 OPTIONAL_PARENT_LINKS = (
@@ -67,6 +68,33 @@ OPTIONAL_PARENT_LINKS = (
         "vendor_change_requests_source_document_id_fkey",
         "uq_documents_org_id",
     ),
+    OptionalParentLink(
+        "inbound_invoices",
+        "invoice_id",
+        "invoices",
+        "fk_inbound_invoices_invoice_tenant",
+        "inbound_invoices_invoice_id_fkey",
+        "uq_invoices_org_id",
+        target_kind="unique_constraint",
+    ),
+    OptionalParentLink(
+        "issued_invoices",
+        "customer_id",
+        "customers",
+        "fk_issued_invoices_customer_tenant",
+        "fk_issued_invoices_customer",
+        "uq_customers_org_id",
+        target_kind="unique_constraint",
+    ),
+    OptionalParentLink(
+        "issued_invoices",
+        "corrected_invoice_id",
+        "issued_invoices",
+        "fk_issued_invoices_corrected_tenant",
+        "fk_issued_corrected",
+        "uq_issued_invoices_org_id",
+        target_kind="unique_constraint",
+    ),
 )
 
 
@@ -89,11 +117,49 @@ def _source_policy(constraint: ForeignKeyConstraint, action: str | None) -> bool
         "use_alter": False,
         "link_to_name": False,
     }
-    return all(
+    return not constraint.dialect_kwargs and all(
         getattr(obj, option) == value
         for obj in (constraint, *constraint.elements)
         for option, value in expected.items()
     )
+
+
+def _optional_target(parent: Table, spec: OptionalParentLink) -> bool:
+    """Validate the declared target kind without accepting a lookalike object."""
+    indexes = [index for index in parent.indexes if index.name == spec.parent_index]
+    constraints = [
+        constraint
+        for constraint in parent.constraints
+        if isinstance(constraint, UniqueConstraint) and constraint.name == spec.parent_index
+    ]
+    columns = (parent.c.org_id, parent.c.id)
+
+    def exact_columns(actual) -> bool:
+        return len(actual) == 2 and all(
+            found is expected for found, expected in zip(actual, columns, strict=True)
+        )
+
+    if spec.target_kind == "index":
+        return (
+            len(indexes) == 1
+            and not constraints
+            and indexes[0].table is parent
+            and indexes[0].unique is True
+            and exact_columns(tuple(indexes[0].columns))
+            and exact_columns(tuple(indexes[0].expressions))
+            and not indexes[0].dialect_kwargs
+        )
+    if spec.target_kind == "unique_constraint":
+        return (
+            len(constraints) == 1
+            and not indexes
+            and constraints[0].table is parent
+            and exact_columns(tuple(constraints[0].columns))
+            and constraints[0].deferrable is None
+            and constraints[0].initially is None
+            and not constraints[0].dialect_kwargs
+        )
+    return False
 
 
 def validate_optional_parent_metadata(metadata: MetaData) -> None:
@@ -112,10 +178,9 @@ def validate_optional_parent_metadata(metadata: MetaData) -> None:
                 for fk in table.foreign_key_constraints
                 if tuple(fk.column_keys) == (spec.column,)
             ]
-            indexes = [index for index in parent.indexes if index.name == spec.parent_index]
             prefix = f"{parent.schema}." if parent.schema else ""
             valid = (
-                len(pairs) == len(singles) == len(indexes) == 1
+                len(pairs) == len(singles) == 1
                 and pairs[0] in table.constraints
                 and singles[0] in table.constraints
                 and pairs[0].name == spec.pair_name
@@ -138,9 +203,9 @@ def validate_optional_parent_metadata(metadata: MetaData) -> None:
                 and not parent.c.org_id.nullable
                 and not parent.c.id.nullable
                 and parent.c.id.primary_key
-                and indexes[0].unique
-                and tuple(column.name for column in indexes[0].columns) == ("org_id", "id")
-                and not indexes[0].dialect_kwargs
+                and len(parent.primary_key.columns) == 1
+                and next(iter(parent.primary_key.columns)) is parent.c.id
+                and _optional_target(parent, spec)
                 and _source_policy(pairs[0], None)
                 and _source_policy(singles[0], "SET NULL")
             )
@@ -148,6 +213,126 @@ def validate_optional_parent_metadata(metadata: MetaData) -> None:
             raise _optional_error(spec) from None
         if not valid:
             raise _optional_error(spec)
+
+
+def _contact_error() -> RuntimeError:
+    return RuntimeError(
+        "[DB-PG-RESIDUAL-01] customer_contacts.fk_customer_contacts_customer contract changed"
+    )
+
+
+def validate_customer_contact_metadata(metadata: MetaData) -> None:
+    """Pin the new mandatory pair when present; keep partial scratch metadata supported."""
+    key = f"{metadata.schema}.customer_contacts" if metadata.schema else "customer_contacts"
+    if key not in metadata.tables:
+        return
+    try:
+        table, parent = metadata.tables[key], metadata_table(metadata, "customers")
+        pairs = [
+            fk
+            for fk in table.foreign_key_constraints
+            if fk.name == "fk_customer_contacts_customer"
+            or set(fk.column_keys) == {"org_id", "customer_id"}
+        ]
+        singles = [
+            fk for fk in table.foreign_key_constraints if tuple(fk.column_keys) == ("customer_id",)
+        ]
+        targets = [
+            constraint
+            for constraint in parent.constraints
+            if isinstance(constraint, UniqueConstraint) and constraint.name == "uq_customers_org_id"
+        ]
+        prefix = f"{parent.schema}." if parent.schema else ""
+        valid = (
+            len(pairs) == len(targets) == 1
+            and not singles
+            and pairs[0] in table.constraints
+            and pairs[0].name == "fk_customer_contacts_customer"
+            and tuple(pairs[0].column_keys) == ("org_id", "customer_id")
+            and tuple(element.target_fullname for element in pairs[0].elements)
+            == (f"{prefix}customers.org_id", f"{prefix}customers.id")
+            and all(
+                element.parent is table.c[local] and element.column is parent.c[target]
+                for element, local, target in zip(
+                    pairs[0].elements, ("org_id", "customer_id"), ("org_id", "id"), strict=True
+                )
+            )
+            and not table.c.org_id.nullable
+            and not table.c.customer_id.nullable
+            and not parent.c.org_id.nullable
+            and not parent.c.id.nullable
+            and parent.c.id.primary_key
+            and len(parent.primary_key.columns) == 1
+            and next(iter(parent.primary_key.columns)) is parent.c.id
+            and targets[0].table is parent
+            and len(targets[0].columns) == 2
+            and all(
+                actual is expected
+                for actual, expected in zip(
+                    targets[0].columns, (parent.c.org_id, parent.c.id), strict=True
+                )
+            )
+            and targets[0].deferrable is None
+            and targets[0].initially is None
+            and not targets[0].dialect_kwargs
+            and _source_policy(pairs[0], "CASCADE")
+        )
+    except (KeyError, AttributeError):
+        raise _contact_error() from None
+    if not valid:
+        raise _contact_error()
+
+
+def validate_installed_customer_contact(connection: Connection, metadata: MetaData) -> None:
+    """Read validation flags that ordinary FK reflection does not expose."""
+    key = f"{metadata.schema}.customer_contacts" if metadata.schema else "customer_contacts"
+    if key not in metadata.tables:
+        return
+    schema = metadata.schema or inspect(connection).default_schema_name
+    if schema is None:
+        raise _contact_error()
+    quote = connection.dialect.identifier_preparer
+    child = f"{quote.quote_schema(schema)}.{quote.quote('customer_contacts')}"
+    parent = f"{quote.quote_schema(schema)}.{quote.quote('customers')}"
+    keys = list(
+        connection.execute(
+            text("""
+            SELECT c.conname,c.confrelid=to_regclass(:parent) AS correct_parent,
+                c.confdeltype::text AS delete_action,c.confupdtype::text AS update_action,
+                c.confmatchtype::text AS match_type,c.convalidated,c.condeferrable,c.condeferred,
+                c.confdelsetcols::int[] AS set_attnums,
+                ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY n(num,pos)
+                    JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=n.num ORDER BY n.pos) AS local_columns,
+                ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY n(num,pos)
+                    JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=n.num ORDER BY n.pos) AS target_columns
+            FROM pg_constraint c WHERE c.conrelid=to_regclass(:child) AND c.contype='f'
+            """),
+            {"child": child, "parent": parent},
+        ).mappings()
+    )
+    pairs = [
+        row
+        for row in keys
+        if row["conname"] == "fk_customer_contacts_customer"
+        or set(row["local_columns"]) == {"org_id", "customer_id"}
+    ]
+    if len(pairs) != 1 or any(row["local_columns"] == ["customer_id"] for row in keys):
+        raise _contact_error()
+    pair = pairs[0]
+    if not (
+        pair["conname"] == "fk_customer_contacts_customer"
+        and pair["correct_parent"]
+        and pair["local_columns"] == ["org_id", "customer_id"]
+        and pair["target_columns"] == ["org_id", "id"]
+        and pair["delete_action"] == "c"
+        and pair["update_action"] == "a"
+        and pair["match_type"] == "s"
+        and pair["convalidated"]
+        and not pair["condeferrable"]
+        and not pair["condeferred"]
+        and pair["set_attnums"] is None
+    ):
+        raise _contact_error()
 
 
 def project_optional_parent_metadata(metadata: MetaData, dialect: Dialect) -> None:
@@ -159,7 +344,7 @@ def project_optional_parent_metadata(metadata: MetaData, dialect: Dialect) -> No
         for element in pair.elements:
             element.ondelete = pair.ondelete
         if spec.table == "issued_invoices":
-            # Migration18312 already uses this physical name. Explicitly align
+            # The historical issuing migrations use explicit physical names. Align
             # the development/comparison clone, without renaming Base/SQLite.
             single = next(
                 fk
@@ -238,11 +423,26 @@ def validate_installed_optional_parents(connection: Connection, metadata: MetaDa
         indexes = list(
             connection.execute(
                 text("""
-            SELECT i.indisunique,i.indisvalid,i.indisready,i.indimmediate,i.indnkeyatts,i.indnatts,
+            SELECT i.indisunique,i.indisvalid,i.indisready,i.indimmediate,i.indnkeyatts,i.indnatts,i.indnullsnotdistinct,
                 i.indpred IS NULL AS unfiltered,i.indexprs IS NULL AS ordinary,
+                owner.conname AS target_constraint_name,owner.contype::text AS target_constraint_type,
+                owner.convalidated AS target_validated,owner.condeferrable AS target_deferrable,
+                owner.condeferred AS target_deferred,
+                (SELECT a.attnotnull FROM pg_attribute a WHERE a.attrelid=i.indrelid
+                    AND a.attname='org_id' AND NOT a.attisdropped) AS parent_org_not_null,
+                (SELECT a.attnotnull FROM pg_attribute a WHERE a.attrelid=i.indrelid
+                    AND a.attname='id' AND NOT a.attisdropped) AS parent_id_not_null,
+                ARRAY(SELECT a.attname::text FROM pg_constraint pk
+                    CROSS JOIN LATERAL unnest(pk.conkey) WITH ORDINALITY n(num,pos)
+                    JOIN pg_attribute a ON a.attrelid=pk.conrelid AND a.attnum=n.num
+                    WHERE pk.conrelid=i.indrelid AND pk.contype='p' ORDER BY n.pos) AS parent_primary_key,
+                ARRAY(SELECT a.attname::text FROM unnest(owner.conkey) WITH ORDINALITY n(num,pos)
+                    JOIN pg_attribute a ON a.attrelid=owner.conrelid AND a.attnum=n.num ORDER BY n.pos) AS constraint_columns,
                 ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY n(num,pos)
                     JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=n.num ORDER BY n.pos) AS columns
             FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
+            LEFT JOIN pg_constraint owner ON owner.conindid=i.indexrelid
+                AND owner.conrelid=i.indrelid AND owner.contype IN ('p','u')
             WHERE i.indrelid=to_regclass(:parent) AND c.relname=:name
         """),
                 {"parent": parent, "name": spec.parent_index},
@@ -256,7 +456,22 @@ def validate_installed_optional_parents(connection: Connection, metadata: MetaDa
             and indexes[0]["indnkeyatts"] == indexes[0]["indnatts"] == 2
             and indexes[0]["unfiltered"]
             and indexes[0]["ordinary"]
+            and not indexes[0]["indnullsnotdistinct"]
+            and indexes[0]["parent_org_not_null"]
+            and indexes[0]["parent_id_not_null"]
+            and indexes[0]["parent_primary_key"] == ["id"]
             and indexes[0]["columns"] == ["org_id", "id"]
+            and (
+                spec.target_kind == "index"
+                and indexes[0]["target_constraint_name"] is None
+                or spec.target_kind == "unique_constraint"
+                and indexes[0]["target_constraint_name"] == spec.parent_index
+                and indexes[0]["target_constraint_type"] == "u"
+                and indexes[0]["target_validated"]
+                and not indexes[0]["target_deferrable"]
+                and not indexes[0]["target_deferred"]
+                and indexes[0]["constraint_columns"] == ["org_id", "id"]
+            )
         ):
             raise _optional_error(spec)
 
@@ -287,7 +502,9 @@ def postgresql_comparison_metadata(connection: Connection, metadata: MetaData) -
     # Validate the original objects before cloning: Table.to_metadata can
     # normalize inconsistent ForeignKey element options from their constraint.
     validate_optional_parent_metadata(metadata)
+    validate_customer_contact_metadata(metadata)
     validate_installed_optional_parents(connection, metadata)
+    validate_installed_customer_contact(connection, metadata)
     comparison = MetaData(schema=metadata.schema, naming_convention=metadata.naming_convention)
     for model_table in metadata.sorted_tables:
         model_table.to_metadata(comparison)

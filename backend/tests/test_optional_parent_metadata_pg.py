@@ -48,6 +48,29 @@ LINKS = (
         "vendor_change_requests_source_document_id_fkey",
     ),
 )
+RESIDUAL_LINKS = (
+    (
+        "inbound_invoices",
+        "invoice_id",
+        "invoices",
+        "fk_inbound_invoices_invoice_tenant",
+        "inbound_invoices_invoice_id_fkey",
+    ),
+    (
+        "issued_invoices",
+        "customer_id",
+        "customers",
+        "fk_issued_invoices_customer_tenant",
+        "fk_issued_invoices_customer",
+    ),
+    (
+        "issued_invoices",
+        "corrected_invoice_id",
+        "issued_invoices",
+        "fk_issued_invoices_corrected_tenant",
+        "fk_issued_corrected",
+    ),
+)
 VARIANTS = (
     "pair_no_action",
     "pair_generic_set_null",
@@ -130,6 +153,41 @@ async def catalog_schema(request):
                             + ")"
                         )
                     )
+                for parent in ("customers", "invoices"):
+                    target = f'"{schema}".{parent}'
+                    await connection.execute(
+                        text(
+                            f"CREATE TABLE {target}(org_id integer NOT NULL,id integer PRIMARY KEY,"
+                            f"CONSTRAINT uq_{parent}_org_id UNIQUE(org_id,id))"
+                        )
+                    )
+                await connection.execute(
+                    text(
+                        f'ALTER TABLE "{schema}".issued_invoices ADD CONSTRAINT '
+                        "uq_issued_invoices_org_id UNIQUE(org_id,id)"
+                    )
+                )
+                for child, column, parent, pair, single in RESIDUAL_LINKS:
+                    table, target = f'"{schema}".{child}', f'"{schema}".{parent}'
+                    if child == "inbound_invoices":
+                        await connection.execute(
+                            text(
+                                f"CREATE TABLE {table}(id integer PRIMARY KEY,"
+                                f"org_id integer NOT NULL,{column} integer)"
+                            )
+                        )
+                    else:
+                        await connection.execute(
+                            text(f"ALTER TABLE {table} ADD COLUMN {column} integer")
+                        )
+                    clauses = [
+                        f"CONSTRAINT {pair} FOREIGN KEY(org_id,{column}) REFERENCES {target}(org_id,id) ON DELETE SET NULL ({column})",
+                        f"CONSTRAINT {single} FOREIGN KEY({column}) REFERENCES {target}(id) ON DELETE SET NULL",
+                    ]
+                    if not pair_first:
+                        clauses.reverse()
+                    for clause in clauses:
+                        await connection.execute(text(f"ALTER TABLE {table} ADD {clause}"))
                 yield connection, MetaData(schema=schema), schema
             finally:
                 await transaction.rollback()
@@ -170,7 +228,7 @@ async def test_expected_pair_index_must_itself_be_immediate(catalog_schema):
     assert sum(not immediate for _, immediate in indexes) == 1
     # All four fully validated pair FKs exist. The changed expected index is
     # not their support index: a different immediate pair index supports them.
-    keys = list(
+    all_keys = list(
         (
             await connection.execute(
                 text(
@@ -180,6 +238,15 @@ async def test_expected_pair_index_must_itself_be_immediate(catalog_schema):
             )
         ).all()
     )
+    old_names = {pair for _child, _column, _parent, pair, _single in LINKS}
+    new_names = {pair for _child, _column, _parent, pair, _single in RESIDUAL_LINKS}
+    assert (
+        len(all_keys) == 7
+        and {name for name, _valid, _immediate in all_keys} == old_names | new_names
+    )
+    new_keys = [key for key in all_keys if key[0] in new_names]
+    assert len(new_keys) == 3 and all(valid and immediate for _, valid, immediate in new_keys)
+    keys = [key for key in all_keys if key[0] in old_names]
     assert len(keys) == 4 and all(valid and immediate for _, valid, immediate in keys)
     with pytest.raises(RuntimeError, match="DB-PG-OPTIONAL-01"):
         await connection.run_sync(validate_installed_optional_parents, metadata)
