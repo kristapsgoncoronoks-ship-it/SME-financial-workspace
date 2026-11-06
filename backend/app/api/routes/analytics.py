@@ -13,6 +13,7 @@ from app.schemas.analytics import (
     ByCategoryOut,
     ByStatusOut,
     DimensionBreakdown,
+    ExploreResultOut,
     SpendOverTimeOut,
     SummaryOut,
     TopVendorsOut,
@@ -321,10 +322,11 @@ async def get_explore_fields(current: CurrentUser):
     return explore.catalog()
 
 
-@router.get("/explore")
+@router.get("/explore", response_model=ExploreResultOut)
 async def get_explore(
     current: CurrentUser,
     db: DbSession,
+    response: Response,
     measure: str = Query(default="net"),
     dim: list[str] = Query(default_factory=list, description="up to 2 dimensions"),
     start: date | None = None,
@@ -338,7 +340,12 @@ async def get_explore(
     limit: int = Query(default=100, ge=1, le=1000),
     format: str = Query(default="json", pattern="^(json|csv|xlsx|pdf)$"),
 ):
-    """Self-service pivot: pick a measure + up to two dimensions + filters."""
+    """Bounded current-data pivot, also serialized as CSV/XLSX/PDF.
+
+    `truncated` means more groups match the filters. Downloads rerun the query;
+    they are not a frozen snapshot or an unbounded complete filtered export.
+    All formats disclose the effective scope through X-Explore-* headers.
+    """
     q = explore.ExploreQuery(
         measure=measure,
         dimensions=dim,
@@ -357,22 +364,39 @@ async def get_explore(
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc))
 
+    scope_headers = {
+        "X-Explore-Scope": result["scope"],
+        "X-Explore-Limit": str(result["limit"]),
+        "X-Explore-Returned-Rows": str(result["returned_rows"]),
+        "X-Explore-Truncated": str(result["truncated"]).lower(),
+    }
+    response.headers.update(scope_headers)
+    filename = f"explore-up-to-{result['limit']}-groups"
     if format == "csv":
         return Response(
             content=explore.to_csv(result),
             media_type="text/csv",
-            headers={"Content-Disposition": 'attachment; filename="explore.csv"'},
+            headers={
+                **scope_headers,
+                "Content-Disposition": content_disposition(f"{filename}.csv"),
+            },
         )
     if format == "xlsx":
         return Response(
             content=await run_in_threadpool(report_writers.to_xlsx, result),  # PERF-007
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": content_disposition("explore.xlsx")},
+            headers={
+                **scope_headers,
+                "Content-Disposition": content_disposition(f"{filename}.xlsx"),
+            },
         )
     if format == "pdf":
         return Response(
             content=await run_in_threadpool(report_writers.to_pdf, result),  # PERF-007
             media_type="application/pdf",
-            headers={"Content-Disposition": content_disposition("explore.pdf")},
+            headers={
+                **scope_headers,
+                "Content-Disposition": content_disposition(f"{filename}.pdf"),
+            },
         )
     return result

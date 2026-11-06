@@ -1,8 +1,31 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel
+
+
+class ExploreMeasureOut(BaseModel):
+    key: str
+    label: str
+    unit: Literal["money", "number", "count"]
+
+
+class ExploreDimensionOut(BaseModel):
+    key: str
+    label: str
+    temporal: bool
+
+
+class ExploreResultOut(BaseModel):
+    measure: ExploreMeasureOut
+    dimensions: list[ExploreDimensionOut]
+    rows: list[dict[str, str]]
+    scope: Literal["bounded_groups"]
+    limit: int
+    returned_rows: int
+    truncated: bool
 
 
 class SummaryOut(BaseModel):

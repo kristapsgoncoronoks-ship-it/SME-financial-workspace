@@ -1078,6 +1078,10 @@ export interface ExploreResult {
   measure: { key: string; label: string; unit: "money" | "number" | "count" };
   dimensions: { key: string; label: string; temporal: boolean }[];
   rows: Record<string, string>[];
+  scope: "bounded_groups";
+  limit: number;
+  returned_rows: number;
+  truncated: boolean;
 }
 
 export interface SupplierBenchmark {

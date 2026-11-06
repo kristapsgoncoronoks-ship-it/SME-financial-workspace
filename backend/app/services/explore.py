@@ -218,11 +218,15 @@ async def run(db: AsyncSession, org_id: str, q: ExploreQuery) -> dict:
     else:
         stmt = stmt.order_by(value_col.desc())
 
-    stmt = stmt.limit(max(1, min(q.limit, 1000)))
+    limit = max(1, min(q.limit, 1000))
+    # One extra grouped row answers only whether this bounded cut omitted
+    # groups. No count-all query or unbounded materialization is needed.
+    stmt = stmt.limit(limit + 1)
     rows = (await db.execute(stmt)).all()
+    truncated = len(rows) > limit
 
     out_rows = []
-    for r in rows:
+    for r in rows[:limit]:
         rec = {}
         for i, spec in enumerate(dim_specs):
             val = r[i]
@@ -236,6 +240,10 @@ async def run(db: AsyncSession, org_id: str, q: ExploreQuery) -> dict:
         "measure": {"key": measure.key, "label": measure.label, "unit": measure.unit},
         "dimensions": [{"key": s.key, "label": s.label, "temporal": s.temporal} for s in dim_specs],
         "rows": out_rows,
+        "scope": "bounded_groups",
+        "limit": limit,
+        "returned_rows": len(out_rows),
+        "truncated": truncated,
     }
 
 
