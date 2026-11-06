@@ -1,5 +1,15 @@
 # Engineering backlog
 
+**Current bank CSV/reconciliation delivery — 6 November:** [Import guards and current-line serialization](plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+combine safe skipped-row accounting, HTTP 422 numeric refusal before writes and
+current-state action locks on corrected PR111. RN03/RN06 remain partial;
+RN07–RN09 durable intent/reason/versioned history and historical nonfinite
+read/recovery remain open. The ledger preserves 197 original rows plus 17
+findings (214). Combined 163 portable/12 native and 51 docs controls pass locally;
+6,646 backend cases collect. Source-slice receipts overlap; fresh hosted CI
+remains pending. No production-data
+repair, deployment or complete-backlog claim.
+
 **Current163 reading facts:** [Per-page selection and fenced publication](plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native
 authority/cache,40 boxed runtime and658 broader portable controls pass; those
@@ -47,7 +57,7 @@ and owner/provider/operations dependencies remain explicit.
 ## Active backlog completion — 5 November 2026
 
 [Current implementation and dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)
-and the [197-row baseline plus 16 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
+and the [197-row baseline plus 17 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
 are the current entry points. PR1059efcd1c and PR10637b826b passed all13 required
 actual PR contexts. [The current OCR/workflow wave](plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
 has local/native/connected qualification and needs fresh hosted CI. The current

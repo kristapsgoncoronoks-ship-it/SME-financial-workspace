@@ -17,7 +17,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.models.bank_import import BankLine
+from app.models.bank_import import BankLine, BankStatement
 from app.services import reconciliation
 
 
@@ -104,9 +104,10 @@ async def test_confirming_a_foreign_line_is_refused(db_session):
     """Confirm takes a caller-supplied target id and is reachable without ever
     asking for a suggestion, so filtering the suggestion list alone would be
     decoration."""
+    line = await _persist_line(db_session, "USD")
     with pytest.raises(reconciliation.ReconError) as e:
         await reconciliation.confirm_match(
-            db_session, "org", _line(currency="USD"), "receipt", "some-receipt-id"
+            db_session, line.org_id, line, "receipt", "some-receipt-id"
         )
     assert "USD" in str(e.value)
 
@@ -114,8 +115,25 @@ async def test_confirming_a_foreign_line_is_refused(db_session):
 @pytest.mark.asyncio
 async def test_the_refusal_names_the_currency_and_what_to_do(db_session):
     """An error a user cannot act on sends them to support."""
+    line = await _persist_line(db_session, "GBP")
     with pytest.raises(reconciliation.ReconError) as e:
-        await reconciliation.confirm_match(db_session, "org", _line(currency="GBP"), "receipt", "x")
+        await reconciliation.confirm_match(db_session, line.org_id, line, "receipt", "x")
     msg = str(e.value)
     assert "GBP" in msg and "EUR" in msg
     assert "separately" in msg or "convert" in msg
+
+
+async def _persist_line(db, currency):
+    """Mutating service calls now inspect the real locked line, not a detached stub."""
+    from app.models.organization import Organization
+
+    org = Organization(name="Synthetic foreign-currency bank line")
+    db.add(org)
+    await db.flush()
+    statement = BankStatement(org_id=org.id, filename="synthetic.csv", sha256="a" * 64)
+    db.add(statement)
+    await db.flush()
+    line = _line(org_id=org.id, statement_id=statement.id, currency=currency)
+    db.add(line)
+    await db.commit()
+    return line

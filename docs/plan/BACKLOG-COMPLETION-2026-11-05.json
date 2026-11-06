@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "PR105–PR110 pass all13 required contexts at separate frozen heads. Current163 composite includes reading facts/per-page selection, SIXTH repairs and expense navigation; 6528 backend cases collect. 73 focused/15 native authority/cache/40 boxed runtime/658 broader portable cases and28 graph/generic(3SQLite-only skips/all12native executed) pass in their documented overlapping source scopes. Current447app-file composition differs from the frozen reading matrix only in the tested expense-list ordering. TEN actual browser/API/PG158 navigation proves201mine/101team and unchanged13tables. The actual combined447-file browser/native-worker/PG163 reading proof passes with one bounded observation/two ordered pages/original checksum and foreign opacity. Fresh composite CI remains pending; no main/PR merge/deploy or complete-backlog claim. Initialf1cc51f PR111 CI passed1237 first-attempt browsers/13visuals but strictRLS registry coverage failed. The missingTENANT_TABLES declaration is corrected without changing other migrationAST/DDL or guard assertions;25 targetedRLS/schema cases pass. Fresh fullCI remains required for the corrected delivery.",
+  "qualification": "6November current bank delivery on correctedPR111df2c344 integrates CSVc1c822d (including53c996e) and line-serializationedf6d6e. Combined163distinct portable cases pass64.91s;12actual PostgreSQL cases pass5.33s with0skips on dedicated schema163;51docs controls pass11.67s. FullRuff/format981files and Mypy447appfiles pass. Current121table/163revision tree collects6646backend cases, not a full-suite pass. Current447app-file composition differs from the frozen reading matrix in2bankservices (bank_statement.py/reconciliation.py) plus TENexpense-listGETordering. Source-slice133portable+3PG and57portable+9PG cohorts overlap27portable; do not add them as unique coverage. NativeCI registration is included; fresh hostedCI remains pending. Receipt:/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json. RN03/RN06 remain partial; RN07–RN09 durable intent/reason/versioned history and BANK-LEGACY-NONFINITE-READ remain open. No production-data repair, main/PR merge, deployment or complete-backlog claim. Previous dated composite qualification retained verbatim: PR105–PR110 pass all13 required contexts at separate frozen heads. Current163 composite includes reading facts/per-page selection, SIXTH repairs and expense navigation; 6528 backend cases collect. 73 focused/15 native authority/cache/40 boxed runtime/658 broader portable cases and28 graph/generic(3SQLite-only skips/all12native executed) pass in their documented overlapping source scopes. Current447app-file composition differs from the frozen reading matrix only in the tested expense-list ordering. TEN actual browser/API/PG158 navigation proves201mine/101team and unchanged13tables. The actual combined447-file browser/native-worker/PG163 reading proof passes with one bounded observation/two ordered pages/original checksum and foreign opacity. Fresh composite CI remains pending; no main/PR merge/deploy or complete-backlog claim. Initialf1cc51f PR111 CI passed1237 first-attempt browsers/13visuals but strictRLS registry coverage failed. The missingTENANT_TABLES declaration is corrected without changing other migrationAST/DDL or guard assertions;25 targetedRLS/schema cases pass. Fresh fullCI remains required for the corrected delivery.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -1007,7 +1007,7 @@
     },
     {
       "id": "RN03",
-      "status": "ACTIVE-ISOLATED-FOLLOWUP",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN03",
       "sources": [
@@ -1015,15 +1015,21 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Older9Oct prompt plus current-source contract recovered independently. Isolated53c996e reports skipped CSV date/no-nonzero-amount rows with20 safe details/exact totals;62focused cases pass, no raw fields or changed transactions. It is not merged into this composite yet. Bank account/control attribution, durable import history/readback and broader supported-format acceptance remain separate; no bank-balance verification claim.",
+      "next": "Independently refreshed older9Oct/current-source contract. Current delivery integrates c1c822d (including53c996e) on correctedPR111df2c344: skipped CSV date/no-nonzero rows have exact totals/at most20 safe details; nonfinite and unrepresentable selected Numeric(14,2) amounts return422 before import writes, retaining rounded valid edges and finite debit precedence. Source-bound133portable+3PG checks pass. Combined163distinct portable+12actualPG cases pass locally, with27portable overlap between source slices; fresh hostedCI remains pending. Bank account/control attribution, durable import history/readback and broader format acceptance remain open. BANK-LEGACY-NONFINITE-READ separately retains historical stored-NaN read/recovery; no production-data repair or bank-balance verification claim.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
-      ]
+      ],
+      "delivery": {
+        "plan": "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md",
+        "integration_base": "df2c344",
+        "scope": "Current combined delivery locally qualified:163distinct portable+12actual PostgreSQL cases pass; source-slice receipts overlap. Fresh hosted CI remains pending; remaining RN03/RN06–RN09 contracts stay open.",
+        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json"
+      }
     },
     {
       "id": "RN06",
-      "status": "ACTIVE-ISOLATED-FOLLOWUP",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN06",
       "sources": [
@@ -1031,15 +1037,21 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Current contract independently refreshed. Isolatededf6d6e fixes actual same-line overwrite/confirm-ignore races with fresh bank-line then existing target locks/state guards and UUID-equivalent replay;66portable/native checks pass, including globaltarget control. It is not merged here. Stale command intent/version, audit/history and unknown-currency account attribution remain separate.",
+      "next": "Independently refreshed current contract. Current delivery integrates edf6d6e on correctedPR111df2c344: fresh tenant-scoped bank-line lock then existing target locks/state guards serialize current Match/Ignore/Unmatch actions and preserve validated no-write UUID-equivalent replay. Its66-case source-bound portable/native receipt overlaps CSV evidence. Combined163distinct portable+12actualPG cases pass locally, with27portable overlap between source slices; fresh hostedCI remains pending. Durable stale-command intent/version, audit/history and unknown-currency account attribution remain open; row locking alone does not close RN07–RN09.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
-      ]
+      ],
+      "delivery": {
+        "plan": "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md",
+        "integration_base": "df2c344",
+        "scope": "Current combined delivery locally qualified:163distinct portable+12actual PostgreSQL cases pass; source-slice receipts overlap. Fresh hosted CI remains pending; remaining RN03/RN06–RN09 contracts stay open.",
+        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json"
+      }
     },
     {
       "id": "RN07",
-      "status": "READY",
+      "status": "PARTIAL-OPEN",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN07",
       "sources": [
@@ -1047,15 +1059,21 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Older9Oct prompt/current code independently refreshed: ignoring a bank line lacks an explanation/history record. A separately reviewed reason/audit/command/version contract remains to implement. IsolatedRN06 fixes only fresh-state race refusal; it does not complete reason/history or bank verification.",
+      "next": "OPEN reason/history contract, independently refreshed from older9Oct/current code: Ignore still lacks an explanation/history record. Integrated RN06 current-state serialization refuses conflicting state; it adds no durable reason/audit/command/version contract and does not establish bank verification. Implement the separately reviewed remaining contract.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
-      ]
+      ],
+      "delivery": {
+        "plan": "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md",
+        "integration_base": "df2c344",
+        "scope": "Current combined delivery locally qualified:163distinct portable+12actual PostgreSQL cases pass; source-slice receipts overlap. Fresh hosted CI remains pending; remaining RN03/RN06–RN09 contracts stay open.",
+        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json"
+      }
     },
     {
       "id": "RN08",
-      "status": "READY",
+      "status": "PARTIAL-OPEN",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN08",
       "sources": [
@@ -1063,15 +1081,21 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Older9Oct/current contract independently refreshed: Undo match currently deletes the current association without an expected version, so a delayed request can clear a newer association. Design an actual durable version/receipt and current-client recovery/history contract; simple row locks or timestamp/state fingerprints do not solve delayed intent/ABA. RN06 serializes current state only.",
+      "next": "OPEN durable intent/version/history contract, independently refreshed from older9Oct/current code: Undo match still lacks expected-version intent, so a delayed request can clear a newer association. Integrated RN06 serializes current state only; row locks or timestamp/state fingerprints do not solve delayed intent/ABA. Design a durable version/receipt plus current-client stale-conflict readback/recovery and history.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
-      ]
+      ],
+      "delivery": {
+        "plan": "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md",
+        "integration_base": "df2c344",
+        "scope": "Current combined delivery locally qualified:163distinct portable+12actual PostgreSQL cases pass; source-slice receipts overlap. Fresh hosted CI remains pending; remaining RN03/RN06–RN09 contracts stay open.",
+        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json"
+      }
     },
     {
       "id": "RN09",
-      "status": "READY",
+      "status": "PARTIAL-OPEN",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN09",
       "sources": [
@@ -1079,11 +1103,17 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Older9Oct/current contract independently refreshed: Restore shares unmatch without distinct intent/history or expected-version recovery. Retain the visible existing restoration while designing replay-safe versioned reason/history and stale-conflict readback. RN06 serialization does not complete this contract.",
+      "next": "OPEN distinct Restore intent/history/version contract, independently refreshed from older9Oct/current code. Restore still shares unmatch without distinct durable intent/history or expected-version recovery. Retain visible restoration while designing replay-safe versioned reason/history and stale-conflict readback. Integrated RN06 serializes current state only; a later valid Restore may change current state.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
-      ]
+      ],
+      "delivery": {
+        "plan": "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md",
+        "integration_base": "df2c344",
+        "scope": "Current combined delivery locally qualified:163distinct portable+12actual PostgreSQL cases pass; source-slice receipts overlap. Fresh hosted CI remains pending; remaining RN03/RN06–RN09 contracts stay open.",
+        "evidence": "/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json"
+      }
     },
     {
       "id": "ACC01",
@@ -3044,6 +3074,44 @@
       ],
       "next": "Compatible/page materializes100 default/200maximum stable rows, exact current filtered total and fulltenant kindchoices; legacyarray retained.21focusedbackend controls include actualnon-superuserPG and27browser cases cover pages/GETrecovery/URL/history/320px/2xtext.203row mock before/after payload52259→25686bytes and DOM203→100; no realdevice/capacityclaim. Fresh finalsource CI and connected browser/APIreadback remain required.",
       "dependencies": []
+    },
+    {
+      "id": "BANK-LEGACY-NONFINITE-READ",
+      "status": "READY",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Historical stored nonfinite bank-line read and recovery contract",
+      "sources": [
+        "backend/app/schemas/reconciliation.py:9",
+        "backend/app/api/routes/reconciliation.py",
+        "backend/app/services/reconciliation.py",
+        "docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md"
+      ],
+      "next": "Future CSV guards do not repair historical stored NaN or its read failure. Define bounded read-only discovery and an explicit source/evidence-preserving read/recovery contract before any authorized historical repair. Frozen53c996e actual30-case synthetic baseline proves split debit/credit NaN POST201 with committed bank row then GET500; no tested POST500 committed a line. Owned synthetic fixtures were removed after raw receipts; no production-data existence or completed historical repair is asserted. Do not coerce NaN to zero or treat PostgreSQL amount=amount as a finite check.",
+      "dependencies": [
+        "Reviewed historical source/evidence and recovery contract; no production data inferred from synthetic baseline"
+      ],
+      "denominator_provenance": {
+        "prior_rows_preserved": 213,
+        "original_rows": 197,
+        "prior_appended_findings": 16,
+        "appended_finding_ordinal": 17,
+        "current_rows": 214
+      },
+      "qualification": {
+        "evidence": "/workspace/artifacts/backlog-bank-nonfinite-2026-11-06/baseline53c996e/TEST-RECEIPT.json",
+        "source": "53c996e43eb3c2e55753bdc1bfc627b50d992abe",
+        "scope": "Diagnosis only: actual ASGI/PostgreSQL,30 owned synthetic cases, historical schema162/a8b0d2f4c6e9/non-super/non-bypass role labels retained. Not current-schema, production-data or recovery qualification.",
+        "receipt_sha256": "cf4b6c431aad92bbc6c8f48d243eb98987de1bb02653c2ba5c35e4eab6febc1e"
+      }
     }
-  ]
+  ],
+  "inventory_provenance": {
+    "original_rows": 197,
+    "prior_rows_preserved": 213,
+    "prior_appended_findings": 16,
+    "new_appended_finding": "BANK-LEGACY-NONFINITE-READ",
+    "appended_findings": 17,
+    "current_rows": 214,
+    "preservation": "All prior213 rows retain their IDs, order, titles, sources and original inventory_status. Original baseline and differently sized-item denominator provenance remain; no completion percentage is inferred."
+  }
 }
