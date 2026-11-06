@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, DecimalException
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -24,12 +24,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import money
+from app.core.errors import ConflictError
 from app.models.bank_import import BankLine, BankStatement
 from app.models.expense import ReimbursementBatch
 from app.models.payment import Payment
 from app.models.payment_run import PaymentRun
 from app.models.receipt import Receipt
 from app.services.bank_statement import StatementResult
+from app.services.reconciliation_amounts import bank_decimal, finite_decimal
 
 _TOL = Decimal("0.02")  # cents of slack on an amount match
 _ZERO = Decimal("0")
@@ -38,6 +40,29 @@ KINDS = ("receipt", "reimbursement", "payment_run", "issued_payment")
 
 class ReconError(Exception):
     """Business-rule violation (duplicate import, bad match target, tolerance)."""
+
+
+def _line_amount(line: BankLine) -> Decimal:
+    amount = bank_decimal(line.amount)
+    if amount is None:
+        raise ConflictError(
+            "The stored bank amount is unavailable. Check the original statement with your accountant before matching.",
+            code="bank_line_amount_invalid",
+        )
+    return amount
+
+
+def _target_amount(value: object, *, absolute: bool = False) -> Decimal:
+    amount = finite_decimal(value)
+    try:
+        if amount is not None:
+            return money.q2(amount.copy_abs() if absolute else amount)
+    except DecimalException:
+        pass
+    raise ConflictError(
+        "The selected cash record has an unavailable amount. Check that record with your accountant before matching.",
+        code="reconciliation_target_amount_invalid",
+    )
 
 
 @dataclass
@@ -219,9 +244,10 @@ async def suggest_matches(
     list the user might accept anyway. Suggesting one would mean offering a
     500.00 USD credit as settlement for a 500.00 EUR receivable.
     """
+    signed = _line_amount(line)
     if foreign_currency_of(line) is not None:
         return []
-    magnitude = money.q2(abs(Decimal(line.amount)))
+    magnitude = money.q2(abs(signed))
     desc = (line.description or "").lower()
     out: list[Candidate] = []
 
@@ -236,12 +262,15 @@ async def suggest_matches(
     # the cash tables.
     low, high = magnitude - _TOL, magnitude + _TOL
 
-    if Decimal(line.amount) >= _ZERO:  # credit → receipts + direct issued payments
+    if signed >= _ZERO:  # credit → receipts + direct issued payments
         taken_r = await _matched_targets(db, org_id, "receipt")
         for r in await db.scalars(
             select(Receipt).where(Receipt.org_id == org_id, Receipt.amount.between(low, high))
         ):
-            if r.id in taken_r or abs(money.q2(Decimal(r.amount)) - magnitude) > _TOL:
+            if r.id in taken_r:
+                continue
+            amount = _target_amount(r.amount)
+            if abs(amount - magnitude) > _TOL:
                 continue
             ref_hit = bool(r.reference and r.reference.lower() in desc)
             days_off = abs((r.received_on - line.line_date).days)
@@ -249,7 +278,7 @@ async def suggest_matches(
                 Candidate(
                     "receipt",
                     r.id,
-                    money.q2(Decimal(r.amount)),
+                    amount,
                     r.received_on,
                     r.reference,
                     days_off,
@@ -267,7 +296,10 @@ async def suggest_matches(
                 Payment.amount.between(low, high),
             )
         ):
-            if p.id in taken_p or abs(money.q2(Decimal(p.amount)) - magnitude) > _TOL:
+            if p.id in taken_p:
+                continue
+            amount = _target_amount(p.amount)
+            if abs(amount - magnitude) > _TOL:
                 continue
             ref_hit = bool(p.reference and p.reference.lower() in desc)
             days_off = abs((p.paid_on - line.line_date).days)
@@ -275,7 +307,7 @@ async def suggest_matches(
                 Candidate(
                     "issued_payment",
                     p.id,
-                    money.q2(Decimal(p.amount)),
+                    amount,
                     p.paid_on,
                     p.reference,
                     days_off,
@@ -291,7 +323,10 @@ async def suggest_matches(
                 ReimbursementBatch.total_eur.between(low, high),
             )
         ):
-            if b.id in taken_r or abs(money.q2(Decimal(b.total_eur)) - magnitude) > _TOL:
+            if b.id in taken_r:
+                continue
+            amount = _target_amount(b.total_eur)
+            if abs(amount - magnitude) > _TOL:
                 continue
             ref_hit = bool(b.reference and b.reference.lower() in desc)
             when = b.paid_at.date() if b.paid_at else line.line_date
@@ -300,7 +335,7 @@ async def suggest_matches(
                 Candidate(
                     "reimbursement",
                     b.id,
-                    money.q2(Decimal(b.total_eur)),
+                    amount,
                     when,
                     b.reference,
                     days_off,
@@ -315,7 +350,10 @@ async def suggest_matches(
                 PaymentRun.total_eur.between(low, high),
             )
         ):
-            if run.id in taken_p or abs(money.q2(Decimal(run.total_eur)) - magnitude) > _TOL:
+            if run.id in taken_p:
+                continue
+            amount = _target_amount(run.total_eur)
+            if abs(amount - magnitude) > _TOL:
                 continue
             ref_hit = bool(run.reference and run.reference.lower() in desc)
             when = run.paid_at.date() if run.paid_at else line.line_date
@@ -324,7 +362,7 @@ async def suggest_matches(
                 Candidate(
                     "payment_run",
                     run.id,
-                    money.q2(Decimal(run.total_eur)),
+                    amount,
                     when,
                     run.reference,
                     days_off,
@@ -374,7 +412,7 @@ async def confirm_match(
             f"this line is in {foreign} and cannot be reconciled against "
             f"{_BASE_CURRENCY} records; convert or record it separately"
         )
-    signed = Decimal(line.amount)
+    signed = _line_amount(line)
     magnitude = money.q2(abs(signed))
 
     if kind == "receipt":
@@ -387,7 +425,7 @@ async def confirm_match(
         )
         if target is None:
             raise ReconError("receipt not found")
-        tgt_amount = money.q2(Decimal(target.amount))
+        tgt_amount = _target_amount(target.amount)
     elif kind == "issued_payment":
         if signed < _ZERO:
             raise ReconError("a debit line cannot match an issued-invoice payment (money in)")
@@ -402,7 +440,7 @@ async def confirm_match(
         )
         if target is None:
             raise ReconError("issued-invoice payment not found")
-        tgt_amount = money.q2(abs(Decimal(target.amount)))
+        tgt_amount = _target_amount(target.amount, absolute=True)
     elif kind == "reimbursement":
         if signed > _ZERO:
             raise ReconError("a credit line cannot match a reimbursement payout (money paid)")
@@ -415,7 +453,7 @@ async def confirm_match(
             raise ReconError("reimbursement batch not found")
         if target.status != "paid":
             raise ReconError("only a paid payout batch can be reconciled")
-        tgt_amount = money.q2(Decimal(target.total_eur))
+        tgt_amount = _target_amount(target.total_eur)
     else:  # payment_run
         if signed > _ZERO:
             raise ReconError("a credit line cannot match a supplier payment run (money paid)")
@@ -428,7 +466,7 @@ async def confirm_match(
             raise ReconError("payment run not found")
         if target.status != "paid":
             raise ReconError("only a paid payment run can be reconciled")
-        tgt_amount = money.q2(Decimal(target.total_eur))
+        tgt_amount = _target_amount(target.total_eur)
 
     if abs(tgt_amount - magnitude) > _TOL:
         raise ReconError(f"amount mismatch: bank line {magnitude} vs target {tgt_amount}")
