@@ -39,7 +39,8 @@ PARTNER_DOCUMENTS = "f7a9c1e3b5d8"
 WEBHOOK_DELIVERIES = "a8b0d2f4c6e9"
 READING_OBSERVATIONS = "b9c1e3f5a7d0"
 OPTIONAL_PARENTS = "c0d2e4f6a8b1"
-EXPECTED_HEAD = OPTIONAL_PARENTS
+RECONCILIATION_COMMANDS = "d1e3f5a7c9b2"
+EXPECTED_HEAD = RECONCILIATION_COMMANDS
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -802,6 +803,61 @@ def _reading_marker_schema(expected, head, marker, backend):
         ]
 
 
+def _reconciliation_marker_schema(head, marker, backend):
+    """Validate165 completely before projecting its exact additive164 shape.
+
+    Full table fixtures retain physical FK names, checks, defaults and indexes.
+    Only those verified objects are removed; unrelated drift remains visible.
+    """
+    table = "reconciliation_commands"
+    fixture = Path(__file__).parent / "fixtures" / f"reconciliation_command_schema_{backend}.json"
+    contract = json.loads(fixture.read_text())
+    assert head[table] == contract["table"]
+    assert table not in marker
+    projected = deepcopy(head)
+    del projected[table]
+    for kind, name in (
+        ("columns", "version"),
+        ("indexes", "uq_bank_lines_org_id"),
+        ("check_constraints", "ck_bank_lines_version"),
+    ):
+        entries = contract["bank_lines"][kind]
+        assert len(entries) == 1
+        identity = (lambda row: row[0]) if kind == "columns" else (lambda row: row["name"])
+        assert identity(entries[0]) == name
+        assert [row for row in head["bank_lines"][kind] if identity(row) == name] == entries
+        assert all(identity(row) != name for row in marker["bank_lines"][kind])
+        projected["bank_lines"][kind].remove(entries[0])
+    if backend == "postgresql":
+        assert contract["rls"] == [[table, True, True]]
+        for key, expected in (("_rls", contract["rls"]), ("_policies", contract["policies"])):
+            assert [row for row in head[key] if row[0] == table] == expected
+            assert all(row[0] != table for row in marker[key])
+            projected[key] = [row for row in projected[key] if row[0] != table]
+    return projected
+
+
+def _reconciliation_native_contract(connection):
+    assert (
+        connection.scalar(
+            text(
+                "SELECT indisunique AND indisvalid AND indisready AND indimmediate "
+                "AND indpred IS NULL AND indexprs IS NULL AND indnkeyatts=2 AND indnatts=2 "
+                "FROM pg_index WHERE indexrelid='uq_bank_lines_org_id'::regclass "
+                "AND indrelid='bank_lines'::regclass"
+            )
+        )
+        is True
+    )
+    assert connection.execute(
+        text(
+            "SELECT convalidated,condeferrable,condeferred,confdeltype::text,confupdtype::text "
+            "FROM pg_constraint WHERE conrelid='reconciliation_commands'::regclass "
+            "AND conname='fk_reconciliation_commands_line'"
+        )
+    ).one() == (True, False, False, "c", "a")
+
+
 def _optional_parent_marker_schema(head, marker, backend):
     """Validate exactly164's dual guards, then project an explicit163 head.
 
@@ -980,7 +1036,8 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert EXPECTED_HEAD == OPTIONAL_PARENTS
+    assert EXPECTED_HEAD == RECONCILIATION_COMMANDS
+    assert graph.get_revision(RECONCILIATION_COMMANDS).down_revision == OPTIONAL_PARENTS
     assert graph.get_revision(OPTIONAL_PARENTS).down_revision == READING_OBSERVATIONS
     assert graph.get_revision(READING_OBSERVATIONS).down_revision == WEBHOOK_DELIVERIES
     assert graph.get_heads() == [EXPECTED_HEAD]
@@ -995,7 +1052,7 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 164
+    assert len(revisions) == 165
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -1049,6 +1106,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         assert not index["unique"]
         if connection.dialect.name == "postgresql":
             _optional_parent_native_contract(connection)
+            _reconciliation_native_contract(connection)
             assert connection.scalar(
                 text(
                     "SELECT indisvalid AND indisready FROM pg_index WHERE indexrelid="
@@ -1070,13 +1128,16 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     # Later additive heads introduce an empty planning receipt table, the
     # unused nullable job token, two unknown image-preparation fields, and
     # report/partner/webhook-parent constraints, empty reading facts and four
-    # optional-parent guards. Populated reading-facts downgrade refusal remains
+    # optional-parent guards and unused bank-line command/version objects.
+    # Populated reading-facts downgrade refusal remains
     # independently qualified; this marker roundtrip creates no such evidence.
     # Compare only these exact deltas, then test
     # ambiguity AT the merge.
     # Separate tests guard destructive removal of populated evidence.
     def unused_reading_contract(connection):
         assert connection.scalar(text("SELECT count(*) FROM capture_reading_observations")) == 0
+        assert connection.scalar(text("SELECT count(*) FROM reconciliation_commands")) == 0
+        assert connection.scalar(text("SELECT count(*) FROM bank_lines WHERE version <> 1")) == 0
         for owner in ("extraction_runs", "inbound_invoices"):
             assert (
                 connection.scalar(
@@ -1091,9 +1152,13 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     assert set(head_schema) - set(schema_before) == {
         "planning_commands",
         "capture_reading_observations",
+        "reconciliation_commands",
     }
-    projected_163_head = _optional_parent_marker_schema(
+    projected_164_head = _reconciliation_marker_schema(
         head_schema, schema_before, make_url(migration_url).get_backend_name()
+    )
+    projected_163_head = _optional_parent_marker_schema(
+        projected_164_head, schema_before, make_url(migration_url).get_backend_name()
     )
     expected_marker_schema = deepcopy(projected_163_head)
     _reading_marker_schema(
@@ -1143,7 +1208,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         for key in ("_rls", "_policies"):
             expected_marker_schema[key] = [
                 row
-                for row in head_schema[key]
+                for row in projected_164_head[key]
                 if row[0] not in ("planning_commands", "capture_reading_observations")
             ]
     assert expected_marker_schema == schema_before

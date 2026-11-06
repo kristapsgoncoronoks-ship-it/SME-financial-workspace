@@ -1,4 +1,9 @@
-"""Native current-line serialization; no expected-version/history claim."""
+"""Incumbent native line/target schedules now use explicit reviewed commands.
+
+The old unversioned erasure/no-op policy is superseded: stale Unmatch/Restore
+loses after a later winner. Actual cash, source, PID/lock and no-write controls
+remain; full HTTP Session/role checks live in test_reconciliation_commands_pg.
+"""
 
 import asyncio
 import json
@@ -14,11 +19,20 @@ from sqlalchemy import delete, event, select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core import tenant
+from app.core.errors import AppError
+from app.core.identity import principal
 from app.models import Base
+from app.models.audit import AuditEvent
 from app.models.bank_import import BankLine, BankStatement
+from app.models.membership import Membership
+from app.models.module import OrgModule
 from app.models.organization import Organization
 from app.models.receipt import Receipt
+from app.models.reconciliation_command import ReconciliationCommand
+from app.models.user import User, UserRole
+from app.schemas.reconciliation_commands import CommandIntent
 from app.services import reconciliation as recon
+from app.services import reconciliation_commands as commands
 
 PG_URL = os.environ.get("RLS_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not PG_URL, reason="requires migrated non-superuser PostgreSQL")
@@ -39,7 +53,13 @@ LEDGER_TABLES = (
 @pytest_asyncio.fixture
 async def native_lines():
     engine = create_async_engine(PG_URL, pool_size=4, max_overflow=0)
-    factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+    actor_ids = [str(uuid4()), str(uuid4())]
+    factory = async_sessionmaker(
+        engine,
+        expire_on_commit=False,
+        autoflush=False,
+        info={"actor_ids": actor_ids, "actor_id": actor_ids[0]},
+    )
     org_id, statement_id = str(uuid4()), str(uuid4())
     line_ids = [str(uuid4()) for _ in range(2)]
     # Ensure the native UUID spelling control always has a letter to uppercase.
@@ -51,6 +71,27 @@ async def native_lines():
                 text("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user")
             )
             db.add(Organization(id=org_id, name="Synthetic native current bank line"))
+            await db.flush()
+            db.add_all(
+                User(
+                    id=actor_id,
+                    org_id=org_id,
+                    email=f"native-reviewed-{actor_id}@example.com",
+                    name="Synthetic command actor",
+                    hashed_password="not-a-login",
+                    role=UserRole.accountant,
+                    email_verified=True,
+                )
+                for actor_id in actor_ids
+            )
+            await db.flush()
+            db.add_all(
+                Membership(
+                    org_id=org_id, user_id=actor_id, role=UserRole.accountant, status="active"
+                )
+                for actor_id in actor_ids
+            )
+            db.add(OrgModule(org_id=org_id, key="issuing", enabled=True))
             await db.flush()
             db.add(
                 BankStatement(
@@ -88,6 +129,10 @@ async def native_lines():
         yield engine, factory, org_id, line_ids, receipt_ids
     finally:
         async with factory() as db:
+            await db.execute(
+                delete(ReconciliationCommand).where(ReconciliationCommand.org_id == org_id)
+            )
+            await db.execute(delete(AuditEvent).where(AuditEvent.org_id == org_id))
             await db.execute(delete(Organization).where(Organization.id == org_id))
             await db.commit()
         tenant.reset_current_org(scope)
@@ -127,19 +172,59 @@ async def line_state(factory, org_id, line_id):
         return dict(row)
 
 
-async def action(db, org_id, line, operation, target_id):
+def assert_ledger(before, after, committed):
+    assert {key: value for key, value in before.items() if key != "audit_events"} == {
+        key: value for key, value in after.items() if key != "audit_events"
+    }
+    old = {row["id"]: row for row in before["audit_events"]}
+    current = {row["id"]: row for row in after["audit_events"]}
+    assert all(current.get(key) == value for key, value in old.items())
+    appended = [value for key, value in current.items() if key not in old]
+    assert len(appended) == committed and all(
+        row["action"] == "reconciliation.command_committed" for row in appended
+    )
+
+
+async def action(db, org_id, line, operation, target_id, *, key=None, intent_override=None):
+    line_id = line.id
+    operation = "match" if operation == "confirm" else operation
+    body = intent_override or CommandIntent.model_validate(
+        {
+            "operation": operation,
+            "expected_version": line.version,
+            "expected": {
+                "status": "matched"
+                if operation == "unmatch"
+                else "ignored"
+                if operation == "restore"
+                else "unmatched",
+                "matched_kind": line.matched_kind if operation == "unmatch" else None,
+                "matched_id": line.matched_id if operation == "unmatch" else None,
+            },
+            "target": {"kind": "receipt", "id": target_id} if operation == "match" else None,
+            "reason": "Reviewed synthetic fee" if operation == "ignore" else None,
+        }
+    )
+    actor_id = db.info["actor_id"]
+
+    async def refresh():
+        assert not (db.new or db.dirty or db.deleted)
+        db.expire_all()
+        user = await db.get(User, actor_id)
+        member = await db.scalar(
+            select(Membership)
+            .where(Membership.org_id == org_id, Membership.user_id == actor_id)
+            .execution_options(populate_existing=True)
+        )
+        return principal(user, member)
+
     try:
-        if operation == "confirm":
-            await recon.confirm_match(db, org_id, line, "receipt", target_id)
-        elif operation == "ignore":
-            await recon.set_ignored(db, org_id, line)
-        else:
-            assert operation == "unmatch"
-            await recon.unmatch(db, org_id, line)
-        return {"result": "accepted"}
-    except recon.ReconError as error:
+        current = await refresh()
+        outcome = await commands.execute(db, current, line_id, key or uuid4().hex, body, refresh)
+        return {"result": "accepted", "receipt": outcome.model_dump(mode="json")}
+    except AppError as error:
         await db.rollback()
-        return {"result": "refused", "detail": str(error)}
+        return {"result": "refused", "detail": str(error), "code": error.code}
 
 
 @pytest.mark.asyncio
@@ -155,7 +240,7 @@ async def test_native_sequential_line_requires_explicit_restore(native_lines, fi
     after = await line_state(factory, org_id, line_ids[0])
     assert result["result"] == "refused", {"second": result, "before": before, "after": after}
     assert after == before
-    assert await ledger(factory, org_id) == before_ledger
+    assert_ledger(before_ledger, await ledger(factory, org_id), 1)
 
 
 @pytest.mark.asyncio
@@ -167,7 +252,9 @@ async def test_native_existing_uuid_spelling_replays_without_writing(native_line
     assert requested_id != receipt_ids[0]
     async with factory() as db:
         line = await recon.get_line(db, org_id, line_ids[0])
-        assert (await action(db, org_id, line, "confirm", requested_id))["result"] == "accepted"
+        assert (await action(db, org_id, line, "confirm", requested_id, key="uuid-key"))[
+            "result"
+        ] == "accepted"
     before = await line_state(factory, org_id, line_ids[0])
     assert before["matched_id"] == receipt_ids[0]
     writes = []
@@ -180,19 +267,38 @@ async def test_native_existing_uuid_spelling_replays_without_writing(native_line
     try:
         async with factory() as db:
             line = await recon.get_line(db, org_id, line_ids[0])
-            result = await action(db, org_id, line, "confirm", requested_id)
+            result = await action(
+                db,
+                org_id,
+                line,
+                "confirm",
+                requested_id,
+                key="uuid-key",
+                intent_override=CommandIntent.model_validate(
+                    {
+                        "operation": "match",
+                        "expected_version": 1,
+                        "expected": {"status": "unmatched"},
+                        "target": {"kind": "receipt", "id": receipt_ids[0]},
+                    }
+                ),
+            )
     finally:
         event.remove(engine.sync_engine, "before_cursor_execute", observe)
     assert result["result"] == "accepted", result
     assert writes == []
     assert await line_state(factory, org_id, line_ids[0]) == before
-    assert await ledger(factory, org_id) == before_ledger
+    assert_ledger(before_ledger, await ledger(factory, org_id), 1)
 
 
 async def blocked_by(engine, blocked, blocker, relation):
     async with engine.connect() as observer:
         async with asyncio.timeout(5):
             while True:
+                # pg_blocking_pids is live, but pg_stat_activity can retain a
+                # transaction snapshot from an earlier admission query. Observe
+                # both from the current statistics snapshot on every poll.
+                await observer.execute(text("SELECT pg_stat_clear_snapshot()"))
                 row = (
                     (
                         await observer.execute(
@@ -228,9 +334,39 @@ async def test_native_two_sessions_preserve_winner_and_target_guard(
     native_lines, monkeypatch, first, second, same_target
 ):
     engine, factory, org_id, line_ids, receipt_ids = native_lines
+    stale_intent = None
+    if second == "unmatch":
+        async with factory() as seed:
+            old = await recon.get_line(seed, org_id, line_ids[0])
+            old.status = "matched" if first == "confirm" else "ignored"
+            old.matched_kind = "receipt" if first == "confirm" else None
+            old.matched_id = receipt_ids[1] if first == "confirm" else None
+            await seed.commit()
+            stale_intent = CommandIntent.model_validate(
+                {
+                    "operation": "unmatch" if first == "confirm" else "restore",
+                    "expected_version": 1,
+                    "expected": {
+                        "status": old.status,
+                        "matched_kind": old.matched_kind,
+                        "matched_id": old.matched_id,
+                    },
+                }
+            )
+            assert (
+                await action(
+                    seed,
+                    org_id,
+                    old,
+                    stale_intent.operation,
+                    receipt_ids[1],
+                    intent_override=stale_intent,
+                )
+            )["result"] == "accepted"
     before_ledger = await ledger(factory, org_id)
     first_flushed, release = asyncio.Event(), asyncio.Event()
     async with factory() as db1, factory() as db2:
+        db2.info["actor_id"] = db2.info["actor_ids"][1]
         line1 = await recon.get_line(db1, org_id, line_ids[0])
         line2 = await recon.get_line(db2, org_id, line_ids[1] if same_target else line_ids[0])
         assert line1.status == line2.status == "unmatched"
@@ -253,7 +389,12 @@ async def test_native_two_sessions_preserve_winner_and_target_guard(
                 await first_flushed.wait()
             task2 = asyncio.create_task(
                 action(
-                    db2, org_id, line2, second, receipt_ids[0] if same_target else receipt_ids[1]
+                    db2,
+                    org_id,
+                    line2,
+                    second,
+                    receipt_ids[0] if same_target else receipt_ids[1],
+                    intent_override=stale_intent,
                 )
             )
             waiting = await blocked_by(
@@ -287,15 +428,14 @@ async def test_native_two_sessions_preserve_winner_and_target_guard(
             json.dumps(evidence, indent=2, default=str) + "\n"
         )
     assert winner["result"] == "accepted"
-    # Unmatch/Restore serializes against the current state; it does not identify
-    # the client's old intent (the API has no expected-version field).
-    assert loser["result"] == ("accepted" if second == "unmatch" else "refused"), evidence
-    expected_status = (
-        "unmatched" if second == "unmatch" else ("matched" if first == "confirm" else "ignored")
-    )
+    # The losing reviewed intent must never erase a newer association/disposition.
+    assert loser["result"] == "refused", evidence
+    if not same_target:
+        assert loser["code"] == "reconciliation_line_stale", evidence
+    expected_status = "matched" if first == "confirm" else "ignored"
     assert state["status"] == expected_status
     assert state["matched_id"] == (receipt_ids[0] if expected_status == "matched" else None)
     if same_target:
         other = await line_state(factory, org_id, line_ids[1])
         assert other["status"] == "unmatched" and other["matched_id"] is None
-    assert await ledger(factory, org_id) == before_ledger
+    assert_ledger(before_ledger, await ledger(factory, org_id), 1)

@@ -2169,6 +2169,32 @@
         "title": "AssignmentWriteOut",
         "type": "object"
       },
+      "Association": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "receipt",
+              "reimbursement",
+              "payment_run",
+              "issued_payment"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "Association",
+        "type": "object"
+      },
       "AuditEventOut": {
         "properties": {
           "action": {
@@ -2509,10 +2535,17 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
           "id",
+          "version",
           "statement_id",
           "line_date",
           "description",
@@ -6164,6 +6197,176 @@
         "title": "CombinedBenchmark",
         "type": "object"
       },
+      "CommandIntent": {
+        "additionalProperties": false,
+        "properties": {
+          "expected": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "expected_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation": {
+            "enum": [
+              "match",
+              "ignore",
+              "unmatch",
+              "restore"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Association"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "expected_version",
+          "expected"
+        ],
+        "title": "CommandIntent",
+        "type": "object"
+      },
+      "CommandReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_user_id": {
+            "format": "uuid",
+            "title": "Actor User Id",
+            "type": "string"
+          },
+          "after": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "after_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "After Version",
+            "type": "integer"
+          },
+          "before": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "before_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Before Version",
+            "type": "integer"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_key": {
+            "title": "Command Key",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "line": {
+            "$ref": "#/components/schemas/FrozenLine"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "match",
+              "ignore",
+              "unmatch",
+              "restore"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          },
+          "payload_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "result_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Result Hash",
+            "type": "string"
+          },
+          "status": {
+            "const": "committed",
+            "default": "committed",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_key",
+          "org_id",
+          "actor_user_id",
+          "line_id",
+          "operation",
+          "payload_hash",
+          "before_version",
+          "after_version",
+          "before",
+          "after",
+          "line",
+          "reason",
+          "recorded_at",
+          "result_hash"
+        ],
+        "title": "CommandReceipt",
+        "type": "object"
+      },
       "CommentIn": {
         "properties": {
           "body": {
@@ -7032,6 +7235,127 @@
           "name"
         ],
         "title": "CurrencyCreate",
+        "type": "object"
+      },
+      "CurrentLine": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "amount_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Amount Status",
+            "type": "string"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance"
+          },
+          "balance_status": {
+            "enum": [
+              "valid",
+              "invalid",
+              "unprovided"
+            ],
+            "title": "Balance Status",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "line_date": {
+            "format": "date",
+            "title": "Line Date",
+            "type": "string"
+          },
+          "matched_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Id"
+          },
+          "matched_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Kind"
+          },
+          "statement_id": {
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "statement_id",
+          "line_date",
+          "description",
+          "amount",
+          "amount_status",
+          "direction",
+          "balance_status",
+          "status"
+        ],
+        "title": "CurrentLine",
         "type": "object"
       },
       "CustomerContactIn": {
@@ -11312,7 +11636,22 @@
       "ExpenseTransactionOut": {
         "properties": {
           "amount": {
-            "title": "Amount",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "amount_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Amount Status",
             "type": "string"
           },
           "currency": {
@@ -11389,6 +11728,7 @@
           "description",
           "merchant",
           "amount",
+          "amount_status",
           "currency",
           "direction",
           "source",
@@ -12288,6 +12628,73 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "FrozenLine": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matched_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Id"
+          },
+          "matched_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "receipt",
+                  "reimbursement",
+                  "payment_run",
+                  "issued_payment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Kind"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "unmatched",
+              "matched",
+              "ignored"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "statement_id",
+          "version"
+        ],
+        "title": "FrozenLine",
+        "type": "object"
+      },
       "FuelCardNetworkListOut": {
         "description": "What the intake screen can name as supported \u2014 read from the live parser\nregistry, so a network cannot appear here without a parser that actually\nhandles it, and a newly registered parser needs no second edit to show up.",
         "properties": {
@@ -12784,6 +13191,107 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistoryEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_user_id": {
+            "format": "uuid",
+            "title": "Actor User Id",
+            "type": "string"
+          },
+          "after": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "after_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "After Version",
+            "type": "integer"
+          },
+          "before": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "before_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Before Version",
+            "type": "integer"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "match",
+              "ignore",
+              "unmatch",
+              "restore"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "actor_user_id",
+          "operation",
+          "before_version",
+          "after_version",
+          "before",
+          "after",
+          "reason",
+          "recorded_at"
+        ],
+        "title": "HistoryEvent",
+        "type": "object"
+      },
+      "HistoryPage": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "next_before_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Version"
+          }
+        },
+        "required": [
+          "events",
+          "next_before_version"
+        ],
+        "title": "HistoryPage",
         "type": "object"
       },
       "HoldCreate": {
@@ -17654,6 +18162,54 @@
         "title": "LineItemOut",
         "type": "object"
       },
+      "LineState": {
+        "additionalProperties": false,
+        "properties": {
+          "matched_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Id"
+          },
+          "matched_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "receipt",
+                  "reimbursement",
+                  "payment_run",
+                  "issued_payment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Kind"
+          },
+          "status": {
+            "enum": [
+              "unmatched",
+              "matched",
+              "ignored"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LineState",
+        "type": "object"
+      },
       "LinesUpdate": {
         "properties": {
           "lines": {
@@ -17813,25 +18369,6 @@
           "score"
         ],
         "title": "MatchCandidateOut",
-        "type": "object"
-      },
-      "MatchRequest": {
-        "properties": {
-          "kind": {
-            "pattern": "^(receipt|reimbursement|payment_run|issued_payment)$",
-            "title": "Kind",
-            "type": "string"
-          },
-          "target_id": {
-            "title": "Target Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "target_id"
-        ],
-        "title": "MatchRequest",
         "type": "object"
       },
       "MatchTransaction": {
@@ -47783,6 +48320,54 @@
         ]
       }
     },
+    "/api/v1/reconciliation/lines/{line_id}": {
+      "get": {
+        "operationId": "get_current_line_api_v1_reconciliation_lines__line_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentLine"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Current Line",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
     "/api/v1/reconciliation/lines/{line_id}/candidates": {
       "get": {
         "operationId": "match_candidates_api_v1_reconciliation_lines__line_id__candidates_get",
@@ -47834,8 +48419,218 @@
         ]
       }
     },
+    "/api/v1/reconciliation/lines/{line_id}/commands": {
+      "post": {
+        "operationId": "command_api_v1_reconciliation_lines__line_id__commands_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandIntent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Command",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/v1/reconciliation/lines/{line_id}/commands/{key}": {
+      "get": {
+        "operationId": "own_command_api_v1_reconciliation_lines__line_id__commands__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Own Command",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/v1/reconciliation/lines/{line_id}/history": {
+      "get": {
+        "operationId": "line_history_api_v1_reconciliation_lines__line_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Line History",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
     "/api/v1/reconciliation/lines/{line_id}/ignore": {
       "post": {
+        "deprecated": true,
         "operationId": "ignore_line_api_v1_reconciliation_lines__line_id__ignore_post",
         "parameters": [
           {
@@ -47852,9 +48647,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankLineOut"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -47868,6 +48661,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "description": "Use a versioned command with an Idempotency-Key."
           }
         },
         "security": [
@@ -47883,6 +48679,7 @@
     },
     "/api/v1/reconciliation/lines/{line_id}/match": {
       "delete": {
+        "deprecated": true,
         "operationId": "unmatch_line_api_v1_reconciliation_lines__line_id__match_delete",
         "parameters": [
           {
@@ -47899,9 +48696,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankLineOut"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -47915,6 +48710,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "description": "Use a versioned command with an Idempotency-Key."
           }
         },
         "security": [
@@ -47928,6 +48726,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "match_line_api_v1_reconciliation_lines__line_id__match_post",
         "parameters": [
           {
@@ -47940,23 +48739,11 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MatchRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankLineOut"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -47970,6 +48757,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "description": "Use a versioned command with an Idempotency-Key."
           }
         },
         "security": [

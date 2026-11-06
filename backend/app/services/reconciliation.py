@@ -17,7 +17,6 @@ import hashlib
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, DecimalException
-from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -374,35 +373,16 @@ async def suggest_matches(
     return out[:limit]
 
 
-async def confirm_match(
+async def validate_match(
     db: AsyncSession, org_id: str, line: BankLine, kind: str, target_id: str
-) -> BankLine:
-    """Reconcile a bank line to a receipt (credit) or a paid reimbursement payout
-    (debit). Validates direction, that the target exists in this org, that the
-    amounts agree within tolerance, and that the target is not already reconciled to
-    another line (1:1). Commits.
+) -> None:
+    """Lock/refresh the cash target and check existing money, currency and 1:1 rules.
 
-    Lock and refresh the current bank line before inspecting it, then lock the
-    target. This serializes competing actions on one line as well as confirms of
-    one target onto different lines. A repeated exact association still validates
-    the target but does not write the line again. No client-version check is implied.
+    The versioned command boundary owns admission, mutation, audit and commit.
+    This helper never changes the line or any financial target.
     """
-    line = await _locked_line(db, org_id, line)
     if kind not in KINDS:
         raise ReconError("unknown match kind")
-    if line.status == "ignored":
-        raise ReconError("restore the ignored line before matching it")
-    same_target = line.matched_id == target_id
-    if line.status == "matched" and not same_target:
-        # PostgreSQL accepts UUID spellings such as uppercase but reads their
-        # canonical identity back; target lookup below still validates the input.
-        try:
-            same_target = UUID(line.matched_id or "") == UUID(target_id)
-        except ValueError:
-            pass
-    replay = line.status == "matched" and line.matched_kind == kind and same_target
-    if line.status != "unmatched" and not replay:
-        raise ReconError("unmatch the line before matching it to another item")
     # Checked here as well as in `suggest_matches`, because confirm takes a
     # caller-supplied target id and is reachable without ever asking for a
     # suggestion. A gate that only filters the suggestion list is decoration.
@@ -422,6 +402,7 @@ async def confirm_match(
             select(Receipt)
             .where(Receipt.org_id == org_id, Receipt.id == target_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if target is None:
             raise ReconError("receipt not found")
@@ -437,6 +418,7 @@ async def confirm_match(
                 Payment.receipt_id.is_(None),
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if target is None:
             raise ReconError("issued-invoice payment not found")
@@ -448,6 +430,7 @@ async def confirm_match(
             select(ReimbursementBatch)
             .where(ReimbursementBatch.org_id == org_id, ReimbursementBatch.id == target_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if target is None:
             raise ReconError("reimbursement batch not found")
@@ -461,6 +444,7 @@ async def confirm_match(
             select(PaymentRun)
             .where(PaymentRun.org_id == org_id, PaymentRun.id == target_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if target is None:
             raise ReconError("payment run not found")
@@ -483,52 +467,17 @@ async def confirm_match(
     if other:
         raise ReconError("that item is already reconciled to another bank line")
 
-    if replay:
-        await db.commit()
-        return line
-    line.status = "matched"
-    line.matched_kind = kind
-    line.matched_id = target_id
-    await db.commit()
-    return line
 
+async def confirm_match(*_args, **_kwargs):
+    """Unversioned writers must migrate to the reviewed command boundary."""
+    from app.core.errors import AppError
 
-async def _locked_line(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
-    current = await db.scalar(
-        select(BankLine)
-        .where(BankLine.org_id == org_id, BankLine.id == line.id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
+    raise AppError(
+        "Review the current bank line and submit a versioned command.",
+        status=428,
+        code="reconciliation_command_preconditions_required",
     )
-    if current is None:
-        raise ReconError("bank line not found")
-    return current
 
 
-async def unmatch(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
-    """Return a matched/ignored line to the unmatched pool. Commits."""
-    line = await _locked_line(db, org_id, line)
-    if line.status == "unmatched":
-        await db.commit()
-        return line
-    line.status = "unmatched"
-    line.matched_kind = None
-    line.matched_id = None
-    await db.commit()
-    return line
-
-
-async def set_ignored(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
-    """Mark a line as intentionally unreconcilable (bank fees, interest). A matched
-    line must be unmatched first. Commits."""
-    line = await _locked_line(db, org_id, line)
-    if line.status == "matched":
-        raise ReconError("unmatch the line before ignoring it")
-    if line.status == "ignored":
-        await db.commit()
-        return line
-    line.status = "ignored"
-    line.matched_kind = None
-    line.matched_id = None
-    await db.commit()
-    return line
+unmatch = confirm_match
+set_ignored = confirm_match

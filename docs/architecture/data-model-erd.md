@@ -16,7 +16,7 @@
 > model), [diagram-matrix](./diagram-matrix.md) (what we diagram and
 > why).
 
-_121 tables across 10 domains._
+_122 tables across 10 domains._
 
 ## Transport VAT recovery (23 tables)
 
@@ -257,7 +257,7 @@ erDiagram
   users ||--o{ sessions : "user_id"
 ```
 
-## Platform & compliance (21 tables)
+## Platform & compliance (22 tables)
 
 ```mermaid
 erDiagram
@@ -293,6 +293,8 @@ erDiagram
   }
   processed_stripe_events {
   }
+  reconciliation_commands {
+  }
   retention_policies {
   }
   usage_counters {
@@ -307,4 +309,6 @@ Cross-domain foreign keys:
 - `invoice_attachments.invoice_id` → `invoices` (Received invoices (AP) & capture)
 - `invoice_comments.invoice_id` → `invoices` (Received invoices (AP) & capture)
 - `planning_commands.actor_user_id` → `users` (Identity & tenancy)
+- `reconciliation_commands.actor_user_id` → `users` (Identity & tenancy)
+- `reconciliation_commands.line_id` → `bank_lines` (Payments & settlement)
 

@@ -1,5 +1,6 @@
 """Existing PostgreSQL NaN facts stay intact while reads and refusals stay usable."""
 
+import json
 from contextlib import contextmanager
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -17,6 +18,7 @@ from app.models.organization import Organization
 from app.models.payment import Payment
 from app.models.payment_run import PaymentRun
 from app.models.receipt import Receipt
+from tests.reconciliation_command_client import transition
 from tests.test_bank_csv_row_accounting_pg import PG_URL
 from tests.test_bank_csv_row_accounting_pg import bank_csv_pg as bank_csv_pg
 
@@ -24,6 +26,7 @@ pytestmark = pytest.mark.skipif(not PG_URL, reason="requires migrated non-superu
 TABLES = (
     "bank_statements",
     "bank_lines",
+    "reconciliation_commands",
     "receipts",
     "payments",
     "reimbursement_batches",
@@ -39,6 +42,22 @@ TABLES = (
 )
 LINE_DETAIL = "The stored bank amount is unavailable. Check the original statement with your accountant before matching."
 TARGET_DETAIL = "The selected cash record has an unavailable amount. Check that record with your accountant before matching."
+
+
+def assert_command_delta(before, after, count):
+    """Only the source line and required append-only receipt/audit change."""
+    changed = {"bank_lines", "reconciliation_commands", "audit_events"}
+    assert {k: v for k, v in after.items() if k not in changed} == {
+        k: v for k, v in before.items() if k not in changed
+    }
+    for name in ("reconciliation_commands", "audit_events"):
+        old = {row["id"]: row for row in json.loads(before[name])}
+        new = {row["id"]: row for row in json.loads(after[name])}
+        assert all(new.get(key) == row for key, row in old.items())
+        added = [row for key, row in new.items() if key not in old]
+        assert len(added) == count
+        if name == "audit_events":
+            assert all(row["action"] == "reconciliation.command_committed" for row in added)
 
 
 @pytest_asyncio.fixture
@@ -238,7 +257,9 @@ async def test_native_invalid_line_returns_typed_recoverable_refusal_without_wri
         lambda: (
             client.get(url)
             if action == "candidates"
-            else client.post(url, json={"kind": "receipt", "target_id": ids["receipt"]})
+            else transition(
+                client, ids["invalid"], "match", target={"kind": "receipt", "id": ids["receipt"]}
+            )
         ),
     )
     assert response.status_code == 409, response.text
@@ -253,9 +274,7 @@ async def test_native_invalid_cash_target_is_refused_without_financial_or_line_w
     response = await no_change(
         factory,
         org,
-        lambda: client.post(
-            f"/api/v1/reconciliation/lines/{line}/match", json={"kind": kind, "target_id": target}
-        ),
+        lambda: transition(client, line, "match", target={"kind": kind, "id": target}),
     )
     assert response.status_code == 409, response.text
     assert response.json() == {
@@ -282,16 +301,13 @@ async def test_native_valid_amount_with_invalid_balance_keeps_candidates_and_mat
     )
     assert foreign.status_code == 200 and foreign.json() == []
     before = await facts(factory, org)
-    matched = await client.post(
-        f"/api/v1/reconciliation/lines/{ids['balance']}/match",
-        json={"kind": "receipt", "target_id": ids["receipt"]},
+    matched = await transition(
+        client, ids["balance"], "match", target={"kind": "receipt", "id": ids["receipt"]}
     )
     assert matched.status_code == 200, matched.text
     assert matched.json()["status"] == "matched" and matched.json()["balance_status"] == "invalid"
     after = await facts(factory, org)
-    assert {k: v for k, v in after.items() if k != "bank_lines"} == {
-        k: v for k, v in before.items() if k != "bank_lines"
-    }
+    assert_command_delta(before, after, 1)
 
 
 async def test_native_invalid_amount_can_be_ignored_and_restored_without_rewriting_raw_money(
@@ -299,15 +315,13 @@ async def test_native_invalid_amount_can_be_ignored_and_restored_without_rewriti
 ):
     client, factory, org, sid, ids = legacy
     before = await facts(factory, org)
-    ignored = await client.post(f"/api/v1/reconciliation/lines/{ids['invalid']}/ignore")
+    ignored = await transition(client, ids["invalid"], "ignore")
     assert ignored.status_code == 200 and ignored.json()["status"] == "ignored", ignored.text
     assert ignored.json()["amount"] is None and ignored.json()["amount_status"] == "invalid"
-    restored = await client.delete(f"/api/v1/reconciliation/lines/{ids['invalid']}/match")
+    restored = await transition(client, ids["invalid"], "restore")
     assert restored.status_code == 200 and restored.json()["status"] == "unmatched", restored.text
     after = await facts(factory, org)
-    assert {k: v for k, v in after.items() if k != "bank_lines"} == {
-        k: v for k, v in before.items() if k != "bank_lines"
-    }
+    assert_command_delta(before, after, 2)
     async with factory() as db:
         raw = (
             await db.execute(
@@ -408,9 +422,8 @@ async def test_native_foreign_legacy_rows_remain_opaque_on_every_read_or_match(l
         response = await no_change(
             factory,
             org,
-            lambda: client.post(
-                f"/api/v1/reconciliation/lines/{line}/match",
-                json={"kind": "receipt", "target_id": ids["receipt"]},
+            lambda: transition(
+                client, line, "match", target={"kind": "receipt", "id": ids["receipt"]}
             ),
         )
         assert response.status_code == 404, response.text
