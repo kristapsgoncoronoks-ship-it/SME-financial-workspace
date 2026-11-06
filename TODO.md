@@ -1,6 +1,26 @@
 # TODO — Task Board
 
-**Current recorded reading inspection — 6 November:** [Full-document facts and bounded history](docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md)
+**Current transport parser availability — 6 November:** [Owned offload and explicit busy recovery](docs/plan/TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md)
+Transport estimates and statement ingestion now await only their pure parser
+in the existing thread pool, with one process-local slot held through physical
+completion and cancellation. Busy 503 responses offer explicit retry. Estimates
+store/write no domain facts; busy statement uploads retain the exact original
+but register no transactions or catalog/audit facts from that attempt.
+
+Frozen component `404b1c3` composes with Facts `6ed908d` at `c6d78d5` with all
+five source/test hashes unchanged. Its 312 portable cases (including 11 focused)
+and actual TCP/Python 3.12/PostgreSQL 164 comparison remain dated component
+proof, not new revision-165 performance or fleet capacity. Loop/health delays
+improved with exactly equal responses; postparse EUR aggregation remains open.
+The composition collects 7,301 cases, with Ruff/format 1,010, Mypy 452 and
+frontend lint/build passing; bundle 442.8/129.9 kB stays within 460/135 kB.
+OpenAPI 433 paths and the 122-table ERD are Facts-identical. All 51 docs/generated/CI-discovery controls pass (15.52s), as do 11 focused
+adapter compatibility cases (3.30s) on this parent. These overlap component
+evidence; fresh delivered-source hosted CI remains pending. All 215 ledger identities remain, with only ARCH-006 partial progress.
+Other inline renderers, DB-021 timeout and ARCH-010 audit-lock studies remain
+unqualified. No financial rule, job, provider, production migration or deployment.
+
+**Preceding recorded reading inspection — 6 November (source-scoped):** [Full-document facts and bounded history](docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md)
 adds read-only upload/email details with four GETs, canonical current authority
 and explicit historical source/attempt labels. Requested versus observed
 settings, unresolved defaults, installed packs and target DPI remain distinct
@@ -9,7 +29,7 @@ no raw text, reader/profile/default or accuracy claim is added. Component42
 portable/63 mocked-browser evidence stays source-bound; new composed165 proof
 passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
 RLS and unchanged source/business facts. Two separate native input controls
-refuse malformed UUID paths safely. The tree collects7290 cases, not a full-suite
+refuse malformed UUID paths safely. That composition collects 7,290 cases, not a full-suite
 pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
 paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
 states remain; fresh delivered-source CI, customer corpus and human acceptance

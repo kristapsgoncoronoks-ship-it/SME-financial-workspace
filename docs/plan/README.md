@@ -1,6 +1,12 @@
 # Execution hub — how to run Plan A or Plan B
 
-**Current recorded reading inspection — 6 November:** [Full-document facts and bounded history](OCR-FACTS-INSPECTION-2026-11-06.md)
+Current transport availability: [One owned parser and explicit busy recovery](TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md).
+The Facts composition preserves all five component hashes and keeps request-owned
+FX, review, audit and writes. ARCH-006 remains partial; residual postparse and
+other renderer work, DB-021 and ARCH-010 remain open. Component/164 measurements
+and final composition checks are kept separate; fresh hosted CI is required.
+
+**Preceding recorded reading inspection — 6 November (source-scoped):** [Full-document facts and bounded history](OCR-FACTS-INSPECTION-2026-11-06.md)
 adds read-only upload/email details with four GETs, canonical current authority
 and explicit historical source/attempt labels. Requested versus observed
 settings, unresolved defaults, installed packs and target DPI remain distinct
@@ -9,7 +15,7 @@ no raw text, reader/profile/default or accuracy claim is added. Component42
 portable/63 mocked-browser evidence stays source-bound; new composed165 proof
 passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
 RLS and unchanged source/business facts. Two separate native input controls
-refuse malformed UUID paths safely. The tree collects7290 cases, not a full-suite
+refuse malformed UUID paths safely. That composition collects 7,290 cases, not a full-suite
 pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
 paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
 states remain; fresh delivered-source CI, customer corpus and human acceptance
