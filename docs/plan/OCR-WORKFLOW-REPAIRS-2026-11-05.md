@@ -6,6 +6,33 @@ predecessors remain evidence. This third wave needs its own delivered-source
 qualification. Main is unchanged; no merge, deployment, external settings or
 production migration is performed.
 
+## Integrated follow-ups and current source
+
+The current expense-navigation branch builds on the integrated sixth/eighth-wave
+source. It includes explicit OCR column-role/default-provenance repairs, shared
+native-image admission, recurring-create acknowledgements, fresh capture-review
+epochs and bounded document registry pages. The third-wave measurements below
+retain their original source context and are not reissued as current full-tree
+qualification. [Expense report navigation](EXPENSE-REPORT-PAGINATION-2026-11-05.md)
+adds 81 browser/18 portable/two PostgreSQL checks; the integrated tree collects
+6,273 backend cases with 158 revisions,120 tables and head `c3f5a7b9d1e4`.
+
+Shared image admission was added after a retained actual two-worker receipt OOM.
+The corrected source-overlay control at 768 MiB/one CPU returns 200 and recoverable
+503 BUSY from distinct workers, followed by explicit retry 200 and next-small 200,
+with zero OOM events. A private stable-inode lease remains held by surviving
+native helper/engine processes. This qualifies the named image fixture and local
+namespace only; PDF/crop/other-kind/fleet/shared-disk concurrency and broader
+resource acceptance remain open. The original failed and repaired receipts are
+retained under `backlog-sixth-wave-2026-11-05/receipt-concurrency/`.
+
+The parser's synthetic role/precision controls do not replace the absent original
+customer fixture. Capture retry now retires the previous review epoch before
+reloading, preserving the source/identity boundary. None of these earlier scoped
+passes qualifies the newly delivered complete source without fresh hosted CI.
+Native overlay runtime is Python 3.14.8 and host portable/API runtime is
+Python 3.12.14; see the existing provenance erratum.
+
 ## Implemented behavior
 
 | Area | Result and scoped local evidence |
@@ -23,8 +50,8 @@ production migration is performed.
 | Deployment templates | [All32 candidates](KUBERNETES-TEMPLATE-REVIEW-2026-11-05.md) remain individually classified:18 repaired,14 raw findings retained. Native role/read-only/group-volume and migration fixtures pass; no real cluster or deployment acceptance is claimed. |
 
 Counts describe named suites and can overlap. They are not summed into an
-application-wide result. The integrated tree collects6,185 backend cases,
-with158 revisions,120 tables and one head `c3f5a7b9d1e4`. Full Ruff/format and
+application-wide result. The original third-wave tree collected6,185 backend cases,
+with 158 revisions,120 tables and one head `c3f5a7b9d1e4`. Full Ruff/format and
 Mypy pass; frontend types/lint/build and115 generated-contract/discovery/upload
 controls pass locally. Fresh full CI remains required.
 
@@ -40,7 +67,7 @@ changes and no new dependency are introduced.
 
 Twenty-two source-bound native profiles run against the immutable existing
 runtime with the final source overlay. Both invoice and receipt processors cover
-ordinary,12million,40million, noisy40million and80million-pixel inputs at768MiB
+ordinary,12million,40million, noisy40million and80million-pixel inputs at 768 MiB
 and1GiB/one CPU. Actual timeout and repeated cancellation controls verify process
 and scratch cleanup plus subsequent small-input continuity. All record zero
 OOMs; the highest observed cgroup peak is427.7MiB. These measurements do not
@@ -63,7 +90,7 @@ public email-image journey.
 
 Backend qualification includes92 portable,68 native publication, four retention
 migration and51 compatibility controls. Actual receipt UI uses host Python3.12;
-the separate source-overlay matrix uses the immutable Python3.14.8 runtime
+the separate source-overlay matrix uses the immutable Python 3.14.8 runtime
 ([provenance correction](RUNTIME-PROVENANCE-ERRATUM-2026-11-05.md)). First harness
 setup failures and intermediate prototype measurements are retained separately.
 
@@ -77,12 +104,13 @@ SQLite/native migration cases, nine historical planning/lease cases and the four
 preparation-retention controls pass. Current model parity is checked at the
 current head; historical lease behavior is still tested explicitly at revision157.
 
-Per-pod simultaneous receipt processing, shared temporary-space/inode admission,
-fleet sizing, PDF worst cases, unknown-admission historical reads and the real
-customer invoice corpus remain open. The original two-spurious-row OCR fixture
-is absent; independently reproduced parser defects are tracked separately in a
-follow-up branch. Six remaining dated tenant-link candidates also remain separate
-from the locally qualified159/160 follow-ups, which are not included in this tree.
+The original wave left simultaneous receipt processing and parser defects for
+follow-up; the bounded shared image slot and explicit role/provenance repairs
+are now included as described above. Fleet sizing, PDF/crop/other-kind/shared-disk
+concurrency, unknown-admission historical reads and the real customer invoice
+corpus remain open. The original two-spurious-row OCR fixture is absent. Six
+remaining dated tenant-link candidates remain individually assessed, and the
+locally qualified159/160 follow-ups are not included in this 158-revision tree.
 
 The owner decisions for RB04/RB05/EX21, live credentials/provider acceptance,
 history classification, legal/accountant review and deployed restore evidence

@@ -11509,6 +11509,16 @@
             ],
             "title": "Percent"
           },
+          "reading_observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingObservationSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reading_preparation": {
             "anyOf": [
               {
@@ -11580,6 +11590,16 @@
               }
             ],
             "title": "Note"
+          },
+          "reading_observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingObservationSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "reading_preparation": {
             "anyOf": [
@@ -13063,6 +13083,16 @@
               }
             ],
             "title": "Method"
+          },
+          "reading_observation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingObservationSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "reading_preparation": {
             "anyOf": [
@@ -21012,6 +21042,230 @@
           "missing"
         ],
         "title": "ReadinessOut",
+        "type": "object"
+      },
+      "ReadingObservationHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReadingObservationSummary"
+            },
+            "maxItems": 20,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "has_more"
+        ],
+        "title": "ReadingObservationHistory",
+        "type": "object"
+      },
+      "ReadingObservationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pdf",
+                  "image"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adapter"
+          },
+          "attempt_seq": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Seq"
+          },
+          "facts_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Facts Sha256",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unsupported_format",
+                  "malformed_document",
+                  "unreadable_scan",
+                  "image_processing_limit",
+                  "image_reading_busy",
+                  "capture_unavailable",
+                  "stored_file_missing",
+                  "stored_file_too_large",
+                  "stored_file_changed",
+                  "security_rejected",
+                  "processing_timeout",
+                  "internal_error",
+                  "unknown_failure"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "failure"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "page_status_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "maximum": 9.223372036854776e+18,
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                "propertyNames": {
+                  "enum": [
+                    "native",
+                    "ocr_complete",
+                    "timed_out",
+                    "failed",
+                    "outcome_unknown",
+                    "not_attempted"
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Status Counts"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "profile_state": {
+            "default": "unknown",
+            "enum": [
+              "available",
+              "unknown",
+              "not_applicable"
+            ],
+            "title": "Profile State",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "requested_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Profile Id"
+          },
+          "source_failure_seq": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Failure Seq"
+          },
+          "source_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Sha256"
+          }
+        },
+        "required": [
+          "id",
+          "outcome",
+          "published_at",
+          "facts_sha256"
+        ],
+        "title": "ReadingObservationSummary",
         "type": "object"
       },
       "RebateAllocationOut": {
@@ -34681,6 +34935,70 @@
         ]
       }
     },
+    "/api/v1/email/inbox/{inbound_id}/reading-observations": {
+      "get": {
+        "operationId": "inbound_reading_history_api_v1_email_inbox__inbound_id__reading_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "inbound_id",
+            "required": true,
+            "schema": {
+              "title": "Inbound Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingObservationHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inbound Reading History",
+        "tags": [
+          "email intake"
+        ]
+      }
+    },
     "/api/v1/email/settings": {
       "get": {
         "operationId": "get_settings_api_v1_email_settings_get",
@@ -37939,6 +38257,70 @@
           }
         ],
         "summary": "Capture Page Document",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/captures/{run_id}/reading-observations": {
+      "get": {
+        "operationId": "capture_reading_history_api_v1_invoices_captures__run_id__reading_observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingObservationHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capture Reading History",
         "tags": [
           "invoices"
         ]

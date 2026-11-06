@@ -415,7 +415,7 @@ async def list_reports(
     rows = await db.scalars(
         select(ExpenseReport)
         .where(*filters)
-        .order_by(ExpenseReport.created_at.desc())
+        .order_by(ExpenseReport.created_at.desc(), ExpenseReport.id.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )

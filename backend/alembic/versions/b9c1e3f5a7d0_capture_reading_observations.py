@@ -24,6 +24,7 @@ branch_labels = None
 depends_on = None
 
 TABLE = "capture_reading_observations"
+TENANT_TABLES = (TABLE,)
 OWNERS = ("extraction_runs", "inbound_invoices")
 INBOUND_INDEX = "uq_inbound_invoices_org_id"
 SUMMARY_COLUMN = "reading_observation_json"

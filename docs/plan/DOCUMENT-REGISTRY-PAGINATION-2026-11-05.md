@@ -47,10 +47,12 @@ Other list endpoints, selection and export contracts remain separate work.
   rows.390px document width is390px. This establishes bounded payload/rendering
   for that fixture, not latency, Core Web Vitals or production capacity.
 - Frontend types/lint/build pass; first-load bundle is442.5kB raw/129.8kB gzip
-  within existing460/135 budgets. OpenAPI and native-test discovery are updated.
+  within existing 460/135 budgets. OpenAPI and native-test discovery are updated.
   No dependency, model, migration, retention or financial command changes.
 
-The branch has158 revisions and6,198 collected backend cases. Fresh full
+The registry slice was measured on158 revisions and6,198 collected backend
+cases. The integrated [expense navigation follow-up](EXPENSE-REPORT-PAGINATION-2026-11-05.md)
+now collects 6,273 cases while retaining158 revisions. Fresh full
 delivered-source CI and combined actual browser/API/PostgreSQL readback remain
 required. No main/PR merge, production migration, deployment, external settings
 or complete-backlog/release claim is made.

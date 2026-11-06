@@ -1,14 +1,14 @@
 {
   "date": "2026-11-05",
   "baseline": "47baca2bc45d7772f54f3bb51ee832408bd4459d",
-  "scope": "Named current engineering backlog, current TODO entry point, Decisions1\u201333, linked findings register/OCR/reimbursement/planning/current design reports, historical development/reference/audit carry-forwards. This is an actionable source inventory, not runtime acceptance or a claim that all product vision is built.",
+  "scope": "Named current engineering backlog, current TODO entry point, Decisions1–33, linked findings register/OCR/reimbursement/planning/current design reports, historical development/reference/audit carry-forwards. This is an actionable source inventory, not runtime acceptance or a claim that all product vision is built.",
   "limits": [
-    "Original large uploaded83-semantic-action register is not checked into repository and prior referenced workspace artifacts are absent; retained EX/RN/ACC01 actions require original contract refresh.",
+    "Latest29October83-action source register and prior intake artifacts remain unavailable. An older9October1735-line/424261-byte upload was found with exactSHA5fa192cbd5af8ae2f1d93d315325bd68145f316d2908580745c7e75a38028df1. RN03/RN06–09 contracts are independently refreshed against current code, without claiming recovery of newer prompts. EX11–16/ACC01 still need their original or independently reconstructed contracts.",
     "Inventory source line references belong to assigned baseline; parallel implementation may move lines.",
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "PR105/106/107/108 and correctedPR109254dd9e each passed all13 actualPR contexts. OriginalPR1099a47 failure/cancellation and earlier browser retries remain preserved. This162-revision/6330-case branch adds mandatory partner-document/webhook tenant pairs;118 focused,28 broad graph/generic and98 composed native controls pass. Fresh delivered-source CI is required; no main/PR merge, deploy, historical cleanup or complete-backlog claim.",
+  "qualification": "PR105–PR110 pass all13 required contexts at separate frozen heads. Current163 composite includes reading facts/per-page selection, SIXTH repairs and expense navigation; 6528 backend cases collect. 73 focused/15 native authority/cache/40 boxed runtime/658 broader portable cases and28 graph/generic(3SQLite-only skips/all12native executed) pass in their documented overlapping source scopes. Current447app-file composition differs from the frozen reading matrix only in the tested expense-list ordering. TEN actual browser/API/PG158 navigation proves201mine/101team and unchanged13tables. The actual combined447-file browser/native-worker/PG163 reading proof passes with one bounded observation/two ordered pages/original checksum and foreign opacity. Fresh composite CI remains pending; no main/PR merge/deploy or complete-backlog claim. Initialf1cc51f PR111 CI passed1237 first-attempt browsers/13visuals but strictRLS registry coverage failed. The missingTENANT_TABLES declaration is corrected without changing other migrationAST/DDL or guard assertions;25 targetedRLS/schema cases pass. Fresh fullCI remains required for the corrected delivery.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -78,7 +78,7 @@
         "backend/app/services/reimbursement.py",
         "backend/app/models/expense.py"
       ],
-      "next": "Shared actor/org/key cancellation receipt; typed POST+legacy DELETE, optional reason, versions, membership\u2192batch\u2192ordered reports\u2192audit locks; frozen released IDs/child bumps; strict rollback; GET-only recovery and alias permission guards. No new event or migration implied.",
+      "next": "Shared actor/org/key cancellation receipt; typed POST+legacy DELETE, optional reason, versions, membership→batch→ordered reports→audit locks; frozen released IDs/child bumps; strict rollback; GET-only recovery and alias permission guards. No new event or migration implied.",
       "dependencies": [
         "Existing export/paid refusal and EXPENSE_APPROVE policy"
       ],
@@ -267,9 +267,10 @@
       "sources": [
         "docs/reviews/FINDINGS-REGISTER-2026-10-17.md:339",
         "backend/app/services/capture_region.py:194",
-        "backend/app/api/routes/invoices.py:830"
+        "backend/app/api/routes/invoices.py:830",
+        "frontend/e2e/capture-review-epoch.spec.ts"
       ],
-      "next": "Current fingerprint includes attempt_seq and validates supplied token; omission is required only after region apply, deliberately optional for legacy captures. Verify current-client coverage and remaining older-completed-attempt paths before repair; preserve staged legacy compatibility explicitly.",
+      "next": "Current fingerprint includes attempt_seq and validates supplied token; omission is required only after region apply and remains deliberately optional for legacy captures. Integrated sixth-wave CaptureReview repair retires old review epochs after successful retry and loads the fresh generation under actor/org/source fences. Preserve staged legacy compatibility; broader optional-token/older-completed-attempt paths remain individually assessed rather than closed by the UI epoch fix.",
       "dependencies": [
         "OCR-CONFIRM-01 already implements region-aware boundary"
       ]
@@ -284,10 +285,15 @@
         "docs/BACKLOG.md:875",
         "inventory/stored-read-calls.json"
       ],
-      "next": "Verified remaining reads, owned exports, PDF scratch and supervised image decoding implemented.22 native source-overlay profiles include full40/80M queued uploads, timeout/cancellation, peak427.7MiB/OOM0. Per-pod concurrent receipt/API admission, shared temp/inodes/fleet, PDF worst cases, unknown historical-size reads and customer corpus remain open; new concurrency investigation is isolated from qualified source.",
+      "next": "Earlier22 native image source-overlay profiles remain source-specific. Integrated sixth-wave repair adds a nonblocking stable private inode shared by image_ocr.read callers, inherited through helper/Tesseract ownership. Retained actual2-worker OOM is followed by same768MiB/1CPU distinct-worker200/BUSY503, explicit retry200 and next-small200 with OOM0;77 portable controls pass. Busy is a recoverable capacity outcome with manual retry, not a file defect or successful OCR. No byte/pixel/AS/CPU/time budget increase. PDF/crop/other-kind/fleet/shared-disk concurrency, wider temp/inode sizing, unknown historical reads and customer corpus remain open; no blanket pod/fleet capacity closure.",
       "dependencies": [
         "Per-purpose metadata/authorization/integrity contract"
-      ]
+      ],
+      "qualification": {
+        "source_commit": "e80a836",
+        "evidence": "/workspace/artifacts/backlog-sixth-wave-2026-11-05/receipt-concurrency/repair-receipt.json",
+        "scope": "Exact immutable Python3.14.8 runtime plus source overlay and declared synthetic image/auth/module fixtures; host portable Python3.12.14. Not a rebuilt final-image or production throughput qualification."
+      }
     },
     {
       "id": "CAP-STORAGE",
@@ -767,7 +773,7 @@
     },
     {
       "id": "OCR-PROFILE",
-      "status": "READY-PARTIAL-POLICY",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-PARTIAL-POLICY",
       "title": "Worker inventory and immutable attempt profiles",
       "sources": [
@@ -775,7 +781,7 @@
         "backend/app/services/pdf_ocr.py",
         "backend/app/models/extraction_run.py"
       ],
-      "next": "Worker language/engine inventory and stale/unavailable states can be built. Persist approved profile and requested/effective immutable settings; unsupported fail explicitly, no arbitrary CLI/path/URL/browser prompt. New languages/model distribution require reviewed artifact/terms/quality.",
+      "next": "Committed163 persists actual requested default and observed effective local facts, bounded128KiB; legacy missing requests/settings remain unknown. The supervised installation-only CLI reads no document and claims no fleet.73focused/40nativebox profiles/15native authority cases pass with source scopes preserved. Operator per-page/profile UI and bounded full-facts detail reads, live fleet and new-language/artifact/corpus acceptance remain separate.",
       "dependencies": [
         "Approved available profile vocabulary",
         "Actual worker evidence"
@@ -783,21 +789,21 @@
     },
     {
       "id": "OCR-PAGES",
-      "status": "READY",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
       "inventory_status": "READY",
       "title": "Per-page mixed-document decisions/evidence",
       "sources": [
         "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:82",
         "backend/app/services/pdf_ocr.py"
       ],
-      "next": "Replace global heuristic with bounded page decisions; distinguish native/OCR/skipped/timeout/failure and source/derivative identity; keep source checksum/signature. Native evidence before highlights.",
+      "next": "Committed per-page native/short-pageOCR selection preserves source order, bounded text/geometry/hash facts and failure without partial drafts.40native profiles at768MiB/1GiB include mixed/native/scanned/blank/51page refusal and truthful timeout/native-exit causes. Configured target DPI is distinct from actual bounded render_scale. No retained raw page text, highlights or customer-corpus accuracy claim; real combined browser/native-worker/PG163 publication passes; fresh composite CI remains pending.",
       "dependencies": [
         "OCR-PROFILE immutable settings"
       ]
     },
     {
       "id": "OCR-RETRY",
-      "status": "PARTIAL-READY",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "PARTIAL-READY",
       "title": "Whole-document/page attempt comparison",
       "sources": [
@@ -805,7 +811,7 @@
         "backend/app/services/extraction.py",
         "backend/app/services/capture_region.py"
       ],
-      "next": "Durable ordinary retry fencing and selected-region read/apply already exist. Remaining page/whole-document history/comparison must preserve old results/manual corrections and deliberately apply candidates; no repeated attempts/legal invoices after loss.",
+      "next": "20-record cursor summary history and canonical current owner/source/generation/failure guards now persist accepted readings under fresh immutable job-claim then owner locks; stale workers/progress cannot publish. Whole retry retires current-client review epochs while keeping manual/region review workflows. Full old/new reading-text comparison and deliberate candidate application are not implemented; published hashes cannot reconstruct old text.",
       "dependencies": [
         "OCR-PROFILE",
         "OCR-PAGES",
@@ -1001,7 +1007,7 @@
     },
     {
       "id": "RN03",
-      "status": "NEEDS-CONTRACT-REFRESH",
+      "status": "ACTIVE-ISOLATED-FOLLOWUP",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN03",
       "sources": [
@@ -1009,7 +1015,7 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "next": "Older9Oct prompt plus current-source contract recovered independently. Isolated53c996e reports skipped CSV date/no-nonzero-amount rows with20 safe details/exact totals;62focused cases pass, no raw fields or changed transactions. It is not merged into this composite yet. Bank account/control attribution, durable import history/readback and broader supported-format acceptance remain separate; no bank-balance verification claim.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
@@ -1017,7 +1023,7 @@
     },
     {
       "id": "RN06",
-      "status": "NEEDS-CONTRACT-REFRESH",
+      "status": "ACTIVE-ISOLATED-FOLLOWUP",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN06",
       "sources": [
@@ -1025,7 +1031,7 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "next": "Current contract independently refreshed. Isolatededf6d6e fixes actual same-line overwrite/confirm-ignore races with fresh bank-line then existing target locks/state guards and UUID-equivalent replay;66portable/native checks pass, including globaltarget control. It is not merged here. Stale command intent/version, audit/history and unknown-currency account attribution remain separate.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
@@ -1033,7 +1039,7 @@
     },
     {
       "id": "RN07",
-      "status": "NEEDS-CONTRACT-REFRESH",
+      "status": "READY",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN07",
       "sources": [
@@ -1041,7 +1047,7 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "next": "Older9Oct prompt/current code independently refreshed: ignoring a bank line lacks an explanation/history record. A separately reviewed reason/audit/command/version contract remains to implement. IsolatedRN06 fixes only fresh-state race refusal; it does not complete reason/history or bank verification.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
@@ -1049,7 +1055,7 @@
     },
     {
       "id": "RN08",
-      "status": "NEEDS-CONTRACT-REFRESH",
+      "status": "READY",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN08",
       "sources": [
@@ -1057,7 +1063,7 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "next": "Older9Oct/current contract independently refreshed: Undo match currently deletes the current association without an expected version, so a delayed request can clear a newer association. Design an actual durable version/receipt and current-client recovery/history contract; simple row locks or timestamp/state fingerprints do not solve delayed intent/ABA. RN06 serializes current state only.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
@@ -1065,7 +1071,7 @@
     },
     {
       "id": "RN09",
-      "status": "NEEDS-CONTRACT-REFRESH",
+      "status": "READY",
       "inventory_status": "NEEDS-CONTRACT-REFRESH",
       "title": "Retained finance action RN09",
       "sources": [
@@ -1073,7 +1079,7 @@
         "docs/plan/REIMBURSEMENT-RELIABILITY-2026-10-27.md:173",
         "docs/reviews/DAILY-REPORT-RECONCILIATION-2026-10-29.md:10"
       ],
-      "next": "Retained source register names this action but original large uploaded register/prompts are outside checkout and unavailable in artifacts here. Refresh actual action contract/source before claiming implementation gap or completion. EX16 approved/queued eligible selector itself was fixed in EX18; do not repeat that older finding.",
+      "next": "Older9Oct/current contract independently refreshed: Restore shares unmatch without distinct intent/history or expected-version recovery. Retain the visible existing restoration while designing replay-safe versioned reason/history and stale-conflict readback. RN06 serialization does not complete this contract.",
       "dependencies": [
         "Shared receipt/cycle boundary",
         "Original action prompt or independently reconstructed reviewable source contract"
@@ -1213,7 +1219,7 @@
       "sources": [
         "docs/DECISIONS-NEEDED.md:460"
       ],
-      "next": "Plan tier/add-on/rate/payout and fee-invoice business choices only those still outstanding; 15%/\u20ac50 default already decided",
+      "next": "Plan tier/add-on/rate/payout and fee-invoice business choices only those still outstanding; 15%/€50 default already decided",
       "dependencies": []
     },
     {
@@ -1709,15 +1715,27 @@
     },
     {
       "id": "BE-018",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Nonbreaking API envelope harmonization",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Inventory actual consumers, document old/new list+error contracts and migrate incrementally without blanket breaking change.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "DB-005",
@@ -1733,14 +1751,14 @@
     },
     {
       "id": "DB-010",
-      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Remaining composite parent links",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "This tree includes five repaired dated mandatory links through162. Partner-document/webhook CASCADE pairs pass118 focused,28 full graph/generic and98 composed current/historical native controls. Four dated optional links need separately reviewed dual-dialect guards; additional current candidates remain outside datednine. No SETNULL action/org/history weakening.",
+      "next": "Five original dated mandatory tenant pairs through162 are included and PR110 passes all13 contexts. Four dated optional links are an isolated164 follow-up with231portable/81native catalogue controls before migration qualification, not complete/included here. Additional current customer/inbound candidates and mutable-session semantics remain individually open.163history has its own same-tenant mandatory owner FKs; no SETNULL/org/history policy is weakened.",
       "dependencies": [],
       "qualification": {
         "product_source": "bd8f970",
@@ -1815,27 +1833,51 @@
     },
     {
       "id": "PERF-010",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Bound remaining bare list endpoints",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Inventory current endpoints/consumers, bound top meaningful routes without silent truncation or losing explicit totals.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "PERF-014",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Unbounded list rendering",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Coordinate server bounds/pagination with large-set selection/query scope and visible partial/error state.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "PERF-015",
@@ -1892,9 +1934,10 @@
       "title": "Mutation success communication",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "frontend/e2e/recurring-create-outcome.spec.ts"
       ],
-      "next": "Draft-copy failure\u2192verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure.56-case UI union passes. Separately reproduced recurring-create missing acknowledgement is being repaired in isolated sixth checkout, not this source.",
+      "next": "Draft-copy failure→verified201 acknowledgement and latest-list GET recovery are scoped to actor/org/session and survive ordinary paging/GET failure. Original56-case UI union remains source-specific. Integrated sixth-wave recurring-create repair retains a verified201 parent outcome through close/reopen, ordinary row lifecycle and failed scoped GET invalidation, with pending through awaited readback and explicit GET-only recovery. Late actor/org/session/incarnation results are fenced; existing POST payload and run/toggle/remove commands are unchanged. This is bounded workflow-outcome progress, not blanket action-feedback or delivered-source CI closure.",
       "dependencies": []
     },
     {
@@ -1935,15 +1978,27 @@
     },
     {
       "id": "FE-016",
-      "status": "READY-INVESTIGATE-LOW",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Client list bounds",
       "sources": [
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
-        "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
+        "docs/plan/DEVELOPMENT-PLAN-2026-08.md",
+        "docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md"
       ],
-      "next": "Alias UI half of PERF014/PERF010; preserve list/filter/export selection semantics.",
-      "dependencies": []
+      "next": "Issued/AP histories and Documentregistry navigation are repaired in bounded slices. Expenses now uses independent100-row own/approval pages with the existing envelope/filters, stable created_atDESC+idASC ties and actor/org/session identity.81browser (27new+54incumbent),18portable (7new+11incumbent) and2actualPG checks pass. Failure-first manual-create count201-vs202/no-list-GET regression is retained; corrected read-only prefix invalidation refetches active page and provides GET-only recovery without repeating the original scoped POST. Other list/selection/filter/export consumers, including Explore grouped-export completeness, remain individually assessed; preserve compatible legacy arrays and no blanket pagination closure. Fresh delivered-source CI required.",
+      "dependencies": [],
+      "qualification": {
+        "source_base": "a28828e4ca40d01dee1de987e78a026d49ef9d73",
+        "browser": "81 passed;27 pagination+54 incumbents;declared routed synthetic API",
+        "portable_api": "18 passed;7 new+11 incumbents",
+        "native_postgresql": "2 passed;actual restricted app role and FastAPI ASGI;unchanged13-table snapshots",
+        "manual_readback_failure": "Two original red cases retained with traces/screenshots and exact wire records; final81-case union includes corrected cases.",
+        "current_collection": 6273,
+        "alembic_revisions": 158,
+        "evidence": "/workspace/artifacts/backlog-tenth-wave-2026-11-05/expense-pagination/receipt.json",
+        "remaining": "Other complete-population,selection,filter and export contracts;fresh delivered-source CI."
+      }
     },
     {
       "id": "REBATE-MERGE-PREVIEW",
@@ -2268,7 +2323,7 @@
     },
     {
       "id": "OCR-PARSER-GAPS",
-      "status": "ACTIVE-ISOLATED-FOLLOWUP",
+      "status": "PARTIAL-LOCAL-CHECKS-CI-PENDING",
       "inventory_status": "READY-INVESTIGATE-LOW",
       "title": "Integer amount and mixed net/tax/gross extraction gaps",
       "sources": [
@@ -2276,11 +2331,16 @@
         "backend/app/services/pdf_ocr.py",
         "backend/app/services/parser.py"
       ],
-      "next": "Sixth checkout independently reproduces integer-row omissions, explicit Net/VAT/Gross cell-role swaps, supplier-label errors and invented default provenance. A bounded header-aware parser/provenance repair is underway with no shared MONEY_RE/tax-policy/model/provider change. Missing original/customer corpus stays separate.",
+      "next": "Integrated bounded header-aware parser/provenance repair preserves explicit Net/VAT/Gross roles, selected integer rows, unambiguous supplier labels and honest default provenance without changing shared MONEY_RE/number normalization, model, engine or provider policy.43 focused and143 overlapping nearby controls pass; positive synthetic PDF/PNG role/precision source-overlay fixtures have no missing/extra/wrong cells. Retained3-row native PNG still misses a Tesseract VAT cell and refuses incomplete row with manual-review warning; pre-table extra-reference row and unheaded integer totals remain open. Original OCR-TABLE-01/customer corpus is absent; no customer accuracy or full parser closure.",
       "dependencies": [
         "OCR-ACCEPT for actual customer claim",
         "OCR-PAGES for page identity"
-      ]
+      ],
+      "qualification": {
+        "source_commit": "e1909ce",
+        "evidence": "/workspace/artifacts/backlog-sixth-wave-2026-11-05/ocr-parser/qualification.json",
+        "scope": "Source-bound synthetic role/precision evidence; overlapping test counts are not summed and retained negative native fixture is not rewritten."
+      }
     },
     {
       "id": "PROD-005",
@@ -2436,7 +2496,7 @@
       "sources": [
         "docs/BACKLOG.md:282"
       ],
-      "next": "Failed81/88\u201390 logs triaged; current stack inherits repairs. No blanket reimplementation of older audit failures; supported paired dependency updates still need own qualification.",
+      "next": "Failed81/88–90 logs triaged; current stack inherits repairs. No blanket reimplementation of older audit failures; supported paired dependency updates still need own qualification.",
       "dependencies": []
     },
     {
@@ -2584,7 +2644,7 @@
       "sources": [
         "inventory/ui-source.md"
       ],
-      "next": "Already implemented foundations; CTX02A/B/C, IMP11\u201315, shared shell/body remaining scope active.",
+      "next": "Already implemented foundations; CTX02A/B/C, IMP11–15, shared shell/body remaining scope active.",
       "dependencies": []
     },
     {
@@ -2800,7 +2860,7 @@
       "sources": [
         "backend/app/api/routes/expenses.py"
       ],
-      "next": "Fresh locked membership authority now governs decision/reassignment, preserving designated-approver policy and membership\u2192report ordering.27 native PostgreSQL+85 portable tests pass.",
+      "next": "Fresh locked membership authority now governs decision/reassignment, preserving designated-approver policy and membership→report ordering.27 native PostgreSQL+85 portable tests pass.",
       "dependencies": [],
       "qualification": {
         "source": "37b826b7eb108ca702d0eadcce7a657a363246b5",
@@ -2970,6 +3030,19 @@
         "docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md"
       ],
       "next": "Typed observed201 acknowledgement survives row paging/list failure and clears old error; distinct copy ID remains internal, visible buyer/source outcome plus explicit GET-only latest-list recovery. Late identity replies discarded.",
+      "dependencies": []
+    },
+    {
+      "id": "DOC-REGISTRY-PAGE",
+      "status": "LOCAL-CHECKS-PASS-CI-PENDING",
+      "inventory_status": "REPRODUCED",
+      "title": "Bound document registry rows and retain complete kind choices",
+      "sources": [
+        "backend/app/api/routes/documents.py",
+        "backend/app/services/document_registry.py",
+        "frontend/src/pages/Documents.tsx"
+      ],
+      "next": "Compatible/page materializes100 default/200maximum stable rows, exact current filtered total and fulltenant kindchoices; legacyarray retained.21focusedbackend controls include actualnon-superuserPG and27browser cases cover pages/GETrecovery/URL/history/320px/2xtext.203row mock before/after payload52259→25686bytes and DOM203→100; no realdevice/capacityclaim. Fresh finalsource CI and connected browser/APIreadback remain required.",
       "dependencies": []
     }
   ]
