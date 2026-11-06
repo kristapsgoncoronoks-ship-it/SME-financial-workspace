@@ -187,17 +187,32 @@ async def _legacy(line_id: str, current: CurrentUser, db: DbSession):
     )
 
 
-@router.post("/lines/{line_id}/match", dependencies=_WRITE)
+@router.post(
+    "/lines/{line_id}/match",
+    dependencies=_WRITE,
+    deprecated=True,
+    responses={428: {"description": "Use a versioned command with an Idempotency-Key."}},
+)
 async def match_line(line_id: str, current: CurrentUser, db: DbSession):
     return await _legacy(line_id, current, db)
 
 
-@router.delete("/lines/{line_id}/match", dependencies=_WRITE)
+@router.delete(
+    "/lines/{line_id}/match",
+    dependencies=_WRITE,
+    deprecated=True,
+    responses={428: {"description": "Use a versioned command with an Idempotency-Key."}},
+)
 async def unmatch_line(line_id: str, current: CurrentUser, db: DbSession):
     return await _legacy(line_id, current, db)
 
 
-@router.post("/lines/{line_id}/ignore", dependencies=_WRITE)
+@router.post(
+    "/lines/{line_id}/ignore",
+    dependencies=_WRITE,
+    deprecated=True,
+    responses={428: {"description": "Use a versioned command with an Idempotency-Key."}},
+)
 async def ignore_line(line_id: str, current: CurrentUser, db: DbSession):
     return await _legacy(line_id, current, db)
 
