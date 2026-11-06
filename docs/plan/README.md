@@ -1,5 +1,14 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current expense-money follow-up: [Historical unavailable transaction amounts](EXPENSE-TRANSACTION-MONEY-2026-11-06.md).
+Expense reads, candidate search and consumption now retain unavailable amounts
+safely, with typed refusals before writes and immutable raw command receipts.
+Parent 165 is composed at `68cd768`; new native/static/frontend results and
+retained source-bound portable/mock-browser evidence are separated in the plan.
+All 51 docs/generated/CI-discovery checks pass (15.41s); fresh new-head hosted
+CI remains pending. The distinct expense finding makes 215 ledger
+rows while preserving all 214 complete parent rows; source remediation remains open.
+
 Current reconciliation delivery: [Durable versioned bank-line commands](DURABLE-RECONCILIATION-COMMANDS-2026-11-06.md).
 Ignore records a reason; all actions use reviewed versions and keys, with own
 immutable outcomes, separate current reads and bounded history. Old write aliases

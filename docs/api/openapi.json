@@ -11636,7 +11636,22 @@
       "ExpenseTransactionOut": {
         "properties": {
           "amount": {
-            "title": "Amount",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "amount_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Amount Status",
             "type": "string"
           },
           "currency": {
@@ -11713,6 +11728,7 @@
           "description",
           "merchant",
           "amount",
+          "amount_status",
           "currency",
           "direction",
           "source",

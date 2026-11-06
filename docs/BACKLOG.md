@@ -1,5 +1,26 @@
 # Engineering backlog
 
+**Current expense transaction money — 6 November:** [Unavailable historical amounts and safe consumption](plan/EXPENSE-TRANSACTION-MONEY-2026-11-06.md)
+composes expense `9d9b5c6` and registration `ceccf36` with reviewed parent 165
+`3d06b9e` (PR114) at `68cd768`. Invalid amounts stay visible as null plus status;
+candidates skip them and financial consumption refuses typed HTTP 409 before
+writes. Finite signs/currency/precision, owner/currency/version precedence,
+raw as-of receipts and the authorized bin action remain unchanged. The original
+184 portable and 80 mocked-data browser cases remain source-bound; nine owned
+files are byte-exact, and shared types add only parent `BankLine.version`.
+The new revision-165 cohort passes 20 native expense/R010 cases (19.85s, zero
+failures/errors/skips), with 115 tenant-table snapshots. The tree collects 7,260
+backend cases; full Ruff/format (1,007 files), Mypy (452 app files), frontend
+lint/build and the 460/135 kB bundle gate pass at 442.7/129.9 kB. OpenAPI retains
+429 paths with only `ExpenseTransactionOut` changing; ERD is parent-identical.
+All 51 docs/generated/CI-discovery controls pass in 15.41s with zero
+failures/errors/skips; fresh new-head hosted CI remains pending.
+Collection is not a full-suite pass, and source cohorts are not added as unique
+coverage. The ledger appends one separate expense finding after all 214 complete
+parent rows: 197 original + 18 findings = 215. Source verification and authorized
+historical remediation remain open; no production prevalence, zero substitution,
+normalization or receipt rewrite is claimed. Prior records retain their source scope.
+
 **Current durable reconciliation — 6 November:** [Versioned actions, reasons and recoverable outcomes](plan/DURABLE-RECONCILIATION-COMMANDS-2026-11-06.md)
 Ignore now requires an explanation. All four reconciliation actions use the
 reviewed line version, exact state and command key. Own receipts recover a past
