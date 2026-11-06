@@ -1,5 +1,43 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current Explore delivery: [Bounded tables](EXPLORE-BOUNDED-VIEWS-2026-11-06.md) and
+[native currency/file contract 2](EXPLORE-NATIVE-CURRENCY-2026-11-06.md). Money now requires a selected
+native unit; version-1 money files refuse, while quantity/count and report-read
+authority remain. Source-bound component/runtime proof and fresh composed
+static/generated/docs checks are recorded separately; hosted CI is pending.
+All parent progress including ARCH-006 remains, with one distinct currency
+finding appended as 216. Complete exports, snapshots and tie ordering remain open.
+
+Current transport availability: [One owned parser and explicit busy recovery](TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md).
+The Facts composition preserves all five component hashes and keeps request-owned
+FX, review, audit and writes. ARCH-006 remains partial; residual postparse and
+other renderer work, DB-021 and ARCH-010 remain open. Component/164 measurements
+and final composition checks are kept separate; fresh hosted CI is required.
+
+**Preceding recorded reading inspection — 6 November (source-scoped):** [Full-document facts and bounded history](OCR-FACTS-INSPECTION-2026-11-06.md)
+adds read-only upload/email details with four GETs, canonical current authority
+and explicit historical source/attempt labels. Requested versus observed
+settings, unresolved defaults, installed packs and target DPI remain distinct
+from measured execution/geometry. Manual and region edits remain separate;
+no raw text, reader/profile/default or accuracy claim is added. Component42
+portable/63 mocked-browser evidence stays source-bound; new composed165 proof
+passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
+RLS and unchanged source/business facts. Two separate native input controls
+refuse malformed UUID paths safely. That composition collects 7,290 cases, not a full-suite
+pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
+paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
+states remain; fresh delivered-source CI, customer corpus and human acceptance
+are open. The earlier164 receipts retain their dated scope.
+
+Current expense-money follow-up: [Historical unavailable transaction amounts](EXPENSE-TRANSACTION-MONEY-2026-11-06.md).
+Expense reads, candidate search and consumption now retain unavailable amounts
+safely, with typed refusals before writes and immutable raw command receipts.
+Parent 165 is composed at `68cd768`; new native/static/frontend results and
+retained source-bound portable/mock-browser evidence are separated in the plan.
+All 51 docs/generated/CI-discovery checks pass (15.41s); fresh new-head hosted
+CI remains pending. The distinct expense finding makes 215 ledger
+rows while preserving all 214 complete parent rows; source remediation remains open.
+
 Current reconciliation delivery: [Durable versioned bank-line commands](DURABLE-RECONCILIATION-COMMANDS-2026-11-06.md).
 Ignore records a reason; all actions use reviewed versions and keys, with own
 immutable outcomes, separate current reads and bounded history. Old write aliases

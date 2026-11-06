@@ -48,11 +48,46 @@ marker this order's own network requires.
 
 from __future__ import annotations
 
+import asyncio
+import threading
 from abc import ABC, abstractmethod
+from concurrent.futures import Future
 from dataclasses import dataclass
 from dataclasses import field as dc_field
 from datetime import date
 from decimal import Decimal
+
+from fastapi.concurrency import run_in_threadpool
+
+from app.core.errors import AppError
+
+# The synchronous request path admitted one parser at a time per process.
+# Offloading must not multiply that CPU/memory concurrency or queue uploads.
+_PARSE_SLOT = threading.Lock()
+
+
+class StatementReadingBusy(AppError):
+    status = 503
+    code = "statement_reading_busy"
+
+    def __init__(self, *, original_stored: bool = False):
+        message = (
+            "Statement reading is busy. Wait for the current reading to finish, then try again."
+        )
+        if original_stored:
+            message = (
+                "Statement reading is busy. The original file has been retained, but this attempt "
+                "did not register transactions. Wait for the current reading to finish, then "
+                "try again with the same file."
+            )
+        super().__init__(message)
+        self.original_stored = original_stored
+
+    def extra(self) -> dict:
+        extra = {"retryable": True}
+        if self.original_stored:
+            extra["original_stored"] = True
+        return extra
 
 
 @dataclass(frozen=True)
@@ -214,3 +249,69 @@ def run(filename: str, content: bytes) -> ParsedStatement:
     """Select a parser and parse. Raises `ValueError` for an unrecognized
     network or a structurally malformed statement."""
     return select(filename, content).parse(filename, content)
+
+
+async def run_async(filename: str, content: bytes) -> ParsedStatement:
+    """Read immutable bytes off loop; own the one CPU slot until work ends.
+
+    No session or domain work crosses this boundary. Busy callers are refused
+    immediately. A cancelled request joins its already-owned worker before
+    releasing admission, including repeated cancellation (the image reader's
+    existing shield/join discipline). The synchronous registry API stays intact.
+    """
+    physical: Future[ParsedStatement] = Future()
+    if not _PARSE_SLOT.acquire(blocking=False):
+        raise StatementReadingBusy()
+    # The asyncio/AnyIO wrapper can be cancelled before its callable exits.
+    # This thread-safe future owns admission independently of that wrapper.
+    physical.add_done_callback(lambda _: _PARSE_SLOT.release())
+
+    def execute() -> ParsedStatement:
+        # Atomic with cancel(): a cancelled queued submission must never parse
+        # later or release a slot now owned by a different request.
+        if not physical.set_running_or_notify_cancel():
+            raise asyncio.CancelledError()
+        try:
+            result = run(filename, content)
+        except BaseException as exc:
+            physical.set_exception(exc)
+            raise
+        physical.set_result(result)
+        return result
+
+    try:
+        coroutine = run_in_threadpool(execute)
+        try:
+            work = asyncio.create_task(coroutine)
+        except BaseException:
+            coroutine.close()
+            raise
+        try:
+            return await asyncio.shield(work)
+        except asyncio.CancelledError:
+            if physical.cancel():
+                work.cancel()  # No callable started; remove the queued wrapper.
+            completion = asyncio.wrap_future(physical)
+            while not completion.done():
+                try:
+                    await asyncio.shield(completion)
+                except asyncio.CancelledError:
+                    continue
+                except Exception:
+                    break
+            if not completion.cancelled():
+                completion.exception()
+            while not work.done():
+                try:
+                    await asyncio.shield(work)
+                except asyncio.CancelledError:
+                    continue
+                except Exception:
+                    break
+            if not work.cancelled():
+                work.exception()
+            raise
+    finally:
+        # Submission failures release pending admission. Once running, only
+        # execute() can complete physical and release it after the real parse.
+        physical.cancel()

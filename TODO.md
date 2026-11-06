@@ -1,5 +1,81 @@
 # TODO — Task Board
 
+**Current Explore delivery — 6 November:** [Bounded tables](docs/plan/EXPLORE-BOUNDED-VIEWS-2026-11-06.md) and
+[explicit native currency/file contract 2](docs/plan/EXPLORE-NATIVE-CURRENCY-2026-11-06.md) compose `58a3d075`,
+currency `a3ef5a2` and registration `5bed8ad` with Perf parent `18714df` at
+`81738da`. Table exposes all returned groups; scope/caps stay explicit.
+Money requires a user-selected native currency. JSON/HTTP declare its unit;
+money files opt into contract 2 with unit-labelled headers and filenames, while
+legacy money files refuse typed HTTP 422. Quantity/count and `REPORT_READ`
+remain compatible. No FX conversion, allocation or source rewrite is introduced.
+Qualified 78 portable, three native and 21 mocked-browser cases remain
+source-bound, with separate real connected three-invoice API/browser proof.
+Fresh Ruff/format (1,014 files), Mypy (452), frontend lint/build and bundle gate
+pass at 442.9/129.9 kB; all 51 docs/generated/CI-discovery controls pass.
+The tree collects 7,351 backend cases, with 122 tables/165 revisions; OpenAPI
+retains 433 paths and ERD is parent-identical. Collection and overlapping
+evidence are not a full-suite or larger unique-case result. New-head hosted CI
+is pending. All 215 parent identities, ARCH-006 and unrelated complete rows
+remain; only three bounded-progress rows change and the distinct currency
+finding is appended as 216. Complete filtered exports, immutable snapshots and
+tie order remain open. Earlier qualifications below retain their source scope.
+
+**Current transport parser availability — 6 November:** [Owned offload and explicit busy recovery](docs/plan/TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md)
+Transport estimates and statement ingestion now await only their pure parser
+in the existing thread pool, with one process-local slot held through physical
+completion and cancellation. Busy 503 responses offer explicit retry. Estimates
+store/write no domain facts; busy statement uploads retain the exact original
+but register no transactions or catalog/audit facts from that attempt.
+
+Frozen component `404b1c3` composes with Facts `6ed908d` at `c6d78d5` with all
+five source/test hashes unchanged. Its 312 portable cases (including 11 focused)
+and actual TCP/Python 3.12/PostgreSQL 164 comparison remain dated component
+proof, not new revision-165 performance or fleet capacity. Loop/health delays
+improved with exactly equal responses; postparse EUR aggregation remains open.
+The composition collects 7,301 cases, with Ruff/format 1,010, Mypy 452 and
+frontend lint/build passing; bundle 442.8/129.9 kB stays within 460/135 kB.
+OpenAPI 433 paths and the 122-table ERD are Facts-identical. All 51 docs/generated/CI-discovery controls pass (15.52s), as do 11 focused
+adapter compatibility cases (3.30s) on this parent. These overlap component
+evidence; fresh delivered-source hosted CI remains pending. All 215 ledger identities remain, with only ARCH-006 partial progress.
+Other inline renderers, DB-021 timeout and ARCH-010 audit-lock studies remain
+unqualified. No financial rule, job, provider, production migration or deployment.
+
+**Preceding recorded reading inspection — 6 November (source-scoped):** [Full-document facts and bounded history](docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md)
+adds read-only upload/email details with four GETs, canonical current authority
+and explicit historical source/attempt labels. Requested versus observed
+settings, unresolved defaults, installed packs and target DPI remain distinct
+from measured execution/geometry. Manual and region edits remain separate;
+no raw text, reader/profile/default or accuracy claim is added. Component42
+portable/63 mocked-browser evidence stays source-bound; new composed165 proof
+passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
+RLS and unchanged source/business facts. Two separate native input controls
+refuse malformed UUID paths safely. That composition collects 7,290 cases, not a full-suite
+pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
+paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
+states remain; fresh delivered-source CI, customer corpus and human acceptance
+are open. The earlier164 receipts retain their dated scope.
+
+**Current expense transaction money — 6 November:** [Unavailable historical amounts and safe consumption](docs/plan/EXPENSE-TRANSACTION-MONEY-2026-11-06.md)
+composes expense `9d9b5c6` and registration `ceccf36` with reviewed parent 165
+`3d06b9e` (PR114) at `68cd768`. Invalid amounts stay visible as null plus status;
+candidates skip them and financial consumption refuses typed HTTP 409 before
+writes. Finite signs/currency/precision, owner/currency/version precedence,
+raw as-of receipts and the authorized bin action remain unchanged. The original
+184 portable and 80 mocked-data browser cases remain source-bound; nine owned
+files are byte-exact, and shared types add only parent `BankLine.version`.
+The new revision-165 cohort passes 20 native expense/R010 cases (19.85s, zero
+failures/errors/skips), with 115 tenant-table snapshots. The tree collects 7,260
+backend cases; full Ruff/format (1,007 files), Mypy (452 app files), frontend
+lint/build and the 460/135 kB bundle gate pass at 442.7/129.9 kB. OpenAPI retains
+429 paths with only `ExpenseTransactionOut` changing; ERD is parent-identical.
+All 51 docs/generated/CI-discovery controls pass in 15.41s with zero
+failures/errors/skips; fresh new-head hosted CI remains pending.
+Collection is not a full-suite pass, and source cohorts are not added as unique
+coverage. The ledger appends one separate expense finding after all 214 complete
+parent rows: 197 original + 18 findings = 215. Source verification and authorized
+historical remediation remain open; no production prevalence, zero substitution,
+normalization or receipt rewrite is claimed. Prior records retain their source scope.
+
 **Current durable reconciliation — 6 November:** [Versioned actions, reasons and recoverable outcomes](docs/plan/DURABLE-RECONCILIATION-COMMANDS-2026-11-06.md)
 Ignore now requires an explanation. All four reconciliation actions use the
 reviewed line version, exact state and command key. Own receipts recover a past

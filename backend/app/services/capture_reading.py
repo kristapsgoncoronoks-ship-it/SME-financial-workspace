@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import UUID, uuid4
 
-from app.core.errors import ValidationError
+from app.core.errors import ConflictError, ValidationError
 from app.schemas.capture_reading import (
     METADATA_BYTES,
     PAGE_STATUSES,
@@ -433,9 +433,104 @@ def observe_profile(
     record({"profile": profile.model_dump(mode="json")})
 
 
-async def current_summaries(
+def _json_bytes(db: AsyncSession, column):
+    from sqlalchemy import LargeBinary, cast, func
+
+    if db.get_bind().dialect.name == "sqlite":
+        return func.length(cast(column, LargeBinary))
+    return func.octet_length(column)
+
+
+def _bounded_json(db: AsyncSession, column, limit: int):
+    from sqlalchemy import case
+
+    return case((_json_bytes(db, column) <= limit, column), else_=None)
+
+
+async def inspection_owner(
+    db: AsyncSession,
+    org_id: str,
+    owner_id: str,
+    *,
+    channel: Literal["upload", "inbound"],
+    include_current: bool,
+) -> Any:
+    """Scope the facts-only routes without transferring draft/preparation blobs.
+
+    This mirrors the existing owner id/org visibility predicates. Historical
+    reads need only existence; current reads also need the bounded owner hint.
+    The canonical resolver still rechecks its fresh joined owner atomically.
+    """
+    from sqlalchemy import literal, select
+
+    from app.models.email_intake import InboundInvoice
+    from app.models.extraction_run import ExtractionRun
+
+    owner_model = ExtractionRun if channel == "upload" else InboundInvoice
+    columns: list[Any] = [owner_model.id, owner_model.org_id]
+    if include_current:
+        source = ExtractionRun.source_sha256 if channel == "upload" else InboundInvoice.sha256
+        attempt = ExtractionRun.attempt_seq if channel == "upload" else literal(None)
+        columns.extend(
+            [
+                owner_model.status,
+                source.label("source_sha256"),
+                source.label("sha256"),
+                attempt.label("attempt_seq"),
+                owner_model.failure_seq,
+                _bounded_json(
+                    db, owner_model.reading_observation_json, ReadingObservationSummary.byte_limit
+                ).label("reading_observation_json"),
+            ]
+        )
+    with db.no_autoflush:
+        return (
+            await db.execute(
+                select(*columns).where(owner_model.org_id == org_id, owner_model.id == owner_id)
+            )
+        ).one_or_none()
+
+
+def _stored_projection(db: AsyncSession) -> tuple[Any, ...]:
+    """Transfer only bounded stored JSON, including on a corrupt legacy row.
+
+    Raw profile JSON keeps the existing overall metadata allowance; the profile
+    DTO applies its own canonical bound after parsing. Count UTF-8 bytes, not
+    text characters, without fetching an oversized value into the application.
+    """
+    from sqlalchemy import and_, case, or_
+
+    from app.models.capture_reading import CaptureReadingObservation as Observation
+
+    readable = and_(
+        or_(
+            Observation.profile_json.is_(None),
+            _json_bytes(db, Observation.profile_json) <= METADATA_BYTES,
+        ),
+        or_(
+            Observation.page_facts_json.is_(None),
+            _json_bytes(db, Observation.page_facts_json) <= METADATA_BYTES,
+        ),
+    )
+    return (
+        Observation.id,
+        Observation.org_id,
+        Observation.extraction_run_id,
+        Observation.inbound_invoice_id,
+        Observation.source_sha256,
+        Observation.attempt_seq,
+        Observation.outcome,
+        Observation.failure_code,
+        Observation.created_at,
+        case((readable, Observation.profile_json), else_=None).label("profile_json"),
+        case((readable, Observation.page_facts_json), else_=None).label("page_facts_json"),
+        readable.label("facts_readable"),
+    )
+
+
+async def current_observations(
     db: AsyncSession, owners: list, *, channel: Literal["upload", "inbound"]
-) -> dict[str, ReadingObservationSummary | None]:
+) -> dict[str, ReadingObservationFacts | None]:
     """Treat the small cache as a hint, never canonical source/attempt evidence.
 
     Corrupt/stale/foreign hints remain unknown without read mutation. Batches
@@ -447,7 +542,7 @@ async def current_summaries(
     from app.models.email_intake import InboundInvoice
     from app.models.extraction_run import ExtractionRun
 
-    result: dict[str, ReadingObservationSummary | None] = {owner.id: None for owner in owners}
+    result: dict[str, ReadingObservationFacts | None] = {owner.id: None for owner in owners}
     eligible = []
     for owner in owners:
         value = owner.reading_observation_json
@@ -456,7 +551,11 @@ async def current_summaries(
             if channel == "upload"
             else ("pending", "failed", "confirmed", "discarded")
         )
-        if owner.status not in valid_states or value is None or len(value) > 4096:
+        if (
+            owner.status not in valid_states
+            or value is None
+            or len(value) > ReadingObservationSummary.byte_limit
+        ):
             continue
         try:
             cached = ReadingObservationSummary.model_validate_json(value)
@@ -487,13 +586,18 @@ async def current_summaries(
         with db.no_autoflush:
             rows = await db.execute(
                 select(
-                    Observation,
-                    owner_model.status,
-                    source_column,
-                    attempt_column,
-                    owner_model.failure_seq,
-                    owner_model.reading_observation_json,
+                    *_stored_projection(db),
+                    owner_model.status.label("owner_status"),
+                    source_column.label("owner_source"),
+                    attempt_column.label("owner_attempt"),
+                    owner_model.failure_seq.label("owner_failure"),
+                    _bounded_json(
+                        db,
+                        owner_model.reading_observation_json,
+                        ReadingObservationSummary.byte_limit,
+                    ).label("owner_cache"),
                 )
+                .select_from(Observation)
                 .join(
                     owner_model,
                     and_(owner_model.org_id == Observation.org_id, owner_model.id == owner_column),
@@ -505,13 +609,17 @@ async def current_summaries(
                 )
                 .execution_options(populate_existing=True)
             )
-        records = {row[0].id: row for row in rows}
+        records = {row.id: row for row in rows}
         for owner, cached in batch:
-            record = records.get(str(cached.id))
-            if record is None:
+            row = records.get(str(cached.id))
+            if row is None or not row.facts_readable:
                 continue
-            row, current_state, current_sha, current_attempt, current_failure, current_cache = (
-                record
+            current_state, current_sha, current_attempt, current_failure, current_cache = (
+                row.owner_status,
+                row.owner_source,
+                row.owner_attempt,
+                row.owner_failure,
+                row.owner_cache,
             )
             if current_cache != owner.reading_observation_json:
                 continue
@@ -549,8 +657,24 @@ async def current_summaries(
                 and facts.attempt_seq == attempt_seq
                 and canonical_summary == cached
             ):
-                result[owner.id] = canonical_summary
+                result[owner.id] = facts
     return result
+
+
+async def current_summaries(
+    db: AsyncSession, owners: list, *, channel: Literal["upload", "inbound"]
+) -> dict[str, ReadingObservationSummary | None]:
+    observations = await current_observations(db, owners, channel=channel)
+    return {
+        identity: _summary(facts) if facts is not None else None
+        for identity, facts in observations.items()
+    }
+
+
+async def current_observation(
+    db: AsyncSession, owner, *, channel: Literal["upload", "inbound"]
+) -> ReadingObservationFacts | None:
+    return (await current_observations(db, [owner], channel=channel))[owner.id]
 
 
 async def current_summary(
@@ -637,7 +761,7 @@ async def publish(
 def _facts_for_row(row) -> ReadingObservationFacts:
     pages = (
         PageReadingFacts.model_validate_json(row.page_facts_json)
-        if row.page_facts_json
+        if row.page_facts_json is not None
         else PageReadingFacts()
     )
     return ReadingObservationFacts(
@@ -653,9 +777,50 @@ def _facts_for_row(row) -> ReadingObservationFacts:
         if row.created_at.tzinfo is None
         else row.created_at,
         profile=ReadingProfileFacts.model_validate_json(row.profile_json)
-        if row.profile_json
+        if row.profile_json is not None
         else None,
     )
+
+
+def _readable_facts(row) -> ReadingObservationFacts:
+    try:
+        if not row.facts_readable:
+            raise ValueError("Stored reading facts exceed their reporting limit")
+        return _facts_for_row(row)
+    except ValueError:
+        raise ConflictError(
+            "These recorded reading facts could not be verified. The document and saved values have not been changed. Ask an administrator to review this observation.",
+            code="reading_observation_unavailable",
+        ) from None
+
+
+async def observation(
+    db: AsyncSession,
+    org_id: str,
+    owner_id: str,
+    observation_id: str,
+    *,
+    channel: Literal["upload", "inbound"],
+) -> ReadingObservationFacts | None:
+    """One source-owned historical reading; no current/default inference."""
+    from sqlalchemy import select
+
+    from app.models.capture_reading import CaptureReadingObservation as Observation
+
+    owner_column = (
+        Observation.extraction_run_id if channel == "upload" else Observation.inbound_invoice_id
+    )
+    with db.no_autoflush:
+        row = (
+            await db.execute(
+                select(*_stored_projection(db)).where(
+                    Observation.org_id == org_id,
+                    owner_column == owner_id,
+                    Observation.id == observation_id,
+                )
+            )
+        ).one_or_none()
+    return _readable_facts(row) if row is not None else None
 
 
 async def history(
@@ -700,8 +865,10 @@ async def history(
                 and_(Observation.created_at == created, Observation.id < identity),
             )
         )
+    # Invalid cursors must be rejected before even consulting a database bind.
+    statement = statement.with_only_columns(*_stored_projection(db))
     rows = list(
-        await db.scalars(
+        await db.execute(
             statement.order_by(Observation.created_at.desc(), Observation.id.desc()).limit(21)
         )
     )
@@ -723,7 +890,7 @@ async def history(
             .rstrip("=")
         )
     return ReadingObservationHistory(
-        items=[_summary(_facts_for_row(row)) for row in selected],
+        items=[_summary(_readable_facts(row)) for row in selected],
         has_more=more,
         next_cursor=next_cursor,
     )

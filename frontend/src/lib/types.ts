@@ -1,3 +1,5 @@
+import type { ReadingSummary } from "./readingFacts";
+
 export type InvoiceStatus = "draft" | "pending" | "paid" | "overdue";
 
 // Shape of every paginated list endpoint ({ items, total }).
@@ -272,7 +274,8 @@ export interface ExpenseTransaction {
   txn_date: string;
   description: string;
   merchant: string | null;
-  amount: string;
+  amount: string | null;
+  amount_status?: "valid" | "invalid";
   currency: string;
   direction: string;
   source: string;
@@ -804,6 +807,7 @@ export interface UploadAccepted {
 }
 
 export interface ExtractionResult {
+  reading_observation?: ReadingSummary | null;
   extraction_run_id: string;
   status: "queued" | "running" | "parsed" | "failed" | "saved";
   method?: string | null;
@@ -1078,6 +1082,12 @@ export interface ExploreResult {
   measure: { key: string; label: string; unit: "money" | "number" | "count" };
   dimensions: { key: string; label: string; temporal: boolean }[];
   rows: Record<string, string>[];
+  scope: "bounded_groups";
+  limit: number;
+  returned_rows: number;
+  truncated: boolean;
+  currency: string | null;
+  currency_basis: "native" | "not_applicable";
 }
 
 export interface SupplierBenchmark {
@@ -1247,6 +1257,7 @@ export interface InboundInvoice {
 }
 
 export interface InboundInvoiceDetail extends InboundInvoice {
+  reading_observation?: ReadingSummary | null;
   draft: ParsedDraft | null;
   has_file: boolean;
 }
