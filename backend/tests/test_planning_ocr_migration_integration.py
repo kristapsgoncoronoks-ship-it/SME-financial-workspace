@@ -37,7 +37,8 @@ EXPENSE_ITEM = "d5e7f9a1b3c6"
 EXPENSE_CHILDREN = "e6f8a0b2c4d7"
 PARTNER_DOCUMENTS = "f7a9c1e3b5d8"
 WEBHOOK_DELIVERIES = "a8b0d2f4c6e9"
-EXPECTED_HEAD = WEBHOOK_DELIVERIES
+READING_OBSERVATIONS = "b9c1e3f5a7d0"
+EXPECTED_HEAD = READING_OBSERVATIONS
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -541,6 +542,7 @@ def _records_before_additive_heads(records):
         # Historical image preparation is deliberately unknown. These tests
         # may remove only the newly added NULL, never measured provenance.
         assert run.pop("reading_preparation_json") is None
+        assert run.pop("reading_observation_json") is None
     return expected
 
 
@@ -756,11 +758,55 @@ def _partner_webhook_marker_schema(expected, head, marker, backend):
         ] == [idempotency_index]
 
 
+def _reading_marker_schema(expected, head, marker, backend):
+    """Project only the reviewed additive163 contract, retaining unrelated drift."""
+    table = "capture_reading_observations"
+    fixture = Path(__file__).parent / "fixtures" / f"reading_observation_schema_{backend}.json"
+    assert head[table] == json.loads(fixture.read_text())
+    assert table not in marker
+    del expected[table]
+    index = {
+        "name": "uq_inbound_invoices_org_id",
+        "unique": True,
+        "column_names": ["org_id", "id"],
+        "dialect_options": {"postgresql_include": []} if backend == "postgresql" else {},
+    }
+    assert [
+        entry for entry in head["inbound_invoices"]["indexes"] if entry["name"] == index["name"]
+    ] == [index]
+    assert all(entry["name"] != index["name"] for entry in marker["inbound_invoices"]["indexes"])
+    expected["inbound_invoices"]["indexes"].remove(index)
+    for owner in ("extraction_runs", "inbound_invoices"):
+        column = ["reading_observation_json", "TEXT", True, None]
+        assert [entry for entry in head[owner]["columns"] if entry[0] == column[0]] == [column]
+        assert all(entry[0] != column[0] for entry in marker[owner]["columns"])
+        expected[owner]["columns"].remove(column)
+    if backend == "postgresql":
+        assert [row for row in head["_rls"] if row[0] == table] == [[table, True, True]]
+        policies = [row for row in head["_policies"] if row[0] == table]
+        assert policies == [
+            [
+                table,
+                "tenant_isolation",
+                "ALL",
+                "((current_setting('app.current_org'::text, true) IS NULL) OR "
+                "(current_setting('app.current_org'::text, true) = ''::text) OR "
+                "((org_id)::text = current_setting('app.current_org'::text, true)))",
+                "((current_setting('app.current_org'::text, true) IS NULL) OR "
+                "(current_setting('app.current_org'::text, true) = ''::text) OR "
+                "((org_id)::text = current_setting('app.current_org'::text, true)))",
+                ["public"],
+                "PERMISSIVE",
+            ]
+        ]
+
+
 def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert EXPECTED_HEAD == WEBHOOK_DELIVERIES
+    assert EXPECTED_HEAD == READING_OBSERVATIONS
+    assert graph.get_revision(READING_OBSERVATIONS).down_revision == WEBHOOK_DELIVERIES
     assert graph.get_heads() == [EXPECTED_HEAD]
     assert graph.get_revision(WEBHOOK_DELIVERIES).down_revision == PARTNER_DOCUMENTS
     assert graph.get_revision(PARTNER_DOCUMENTS).down_revision == EXPENSE_CHILDREN
@@ -773,7 +819,7 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 162
+    assert len(revisions) == 163
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -845,13 +891,23 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     head_schema = database(migration_url, schemas)
     # Later additive heads introduce an empty planning receipt table, the
     # unused nullable job token, two unknown image-preparation fields, and
-    # report/partner/webhook-parent constraints. Compare only these exact deltas, then test
+    # report/partner/webhook-parent constraints and empty reading facts.
+    # Compare only these exact deltas, then test
     # ambiguity AT the merge.
     # Separate tests guard destructive removal of populated evidence.
     migrate(migration_url, "downgrade", MERGE)
     schema_before = database(migration_url, schemas)
-    assert set(head_schema) - set(schema_before) == {"planning_commands"}
+    assert set(head_schema) - set(schema_before) == {
+        "planning_commands",
+        "capture_reading_observations",
+    }
     expected_marker_schema = deepcopy(head_schema)
+    _reading_marker_schema(
+        expected_marker_schema,
+        head_schema,
+        schema_before,
+        make_url(migration_url).get_backend_name(),
+    )
     _expense_marker_schema(
         expected_marker_schema,
         head_schema,
@@ -892,7 +948,9 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         assert len(policies) == 1 and policies[0][1] == "tenant_isolation"
         for key in ("_rls", "_policies"):
             expected_marker_schema[key] = [
-                row for row in head_schema[key] if row[0] != "planning_commands"
+                row
+                for row in head_schema[key]
+                if row[0] not in ("planning_commands", "capture_reading_observations")
             ]
     assert expected_marker_schema == schema_before
     marker_records = _records_before_additive_heads(after)

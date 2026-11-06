@@ -1,10 +1,19 @@
 # TODO — Task Board
 
-**Current162 follow-up:** [Partner document and webhook tenant integrity](docs/plan/PARTNER-WEBHOOK-TENANT-162-2026-11-05.md)
-adds two mandatory CASCADE pairs without changing optional references or money.
-118 focused,28 graph/generic and98 composed native checks pass; fresh CI remains
-required. Corrected PR109254dd9e now passes all13 contexts. Older paragraphs
-below retain their own source context. No main merge or deployment.
+**6 November backend CI repairs:** [Reading facts qualification](docs/plan/OCR-READING-FACTS-2026-11-05.md)
+now includes native fixture opt-in, real reading-history tenant parity and a
+bounded PDF raster-rounding repair. The original failed hosted runs remain
+recorded. Local checks pass; fresh delivered-source CI is required. No gate,
+limit, timeout or visual baseline was weakened.
+
+**Current163 reading facts:** [Per-page selection and fenced publication](docs/plan/OCR-READING-FACTS-2026-11-05.md)
+adds bounded provenance without retained raw page text.73 focused,15 native
+authority/cache,40 boxed runtime and658 broader portable controls pass; those
+cohorts overlap. The full graph passes28 checks/3 explicit SQLite-only skips.
+PR105–PR110 separately pass all13 required contexts. Current combined-source CI
+remain required for this composite; its actual browser/native-worker/PG163
+reading and independent expense navigation proofs pass. Historical paragraphs below retain
+their dated source scope. No main/PR merge, deployment or complete-backlog claim.
 
 **Current160 sibling follow-up:** [Comment and approval-step tenant parents](docs/plan/EXPENSE-PARENT-TENANT-160-2026-11-05.md)
 retain CASCADE and historical data.122 focused and83 integration controls pass;
@@ -16,11 +25,23 @@ adds the composite mandatory parent without rewriting history. Focused native
 and rollback controls pass; full graph/fresh CI remain required. Sibling160 and
 OCR/workflow repairs continue separately. No main merge or deployment.
 
+**Expense report navigation follow-up:** [Independent report and approval pages](docs/plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md)
+make the 201/101 fixture populations reachable through existing 100-row API pages.
+81 browser, 18 portable and 2 PostgreSQL checks pass; the retained red manual-save
+readback regression is repaired with current-scope GET invalidation/recovery.
+The independent TEN tree collects 6,273 cases with 158 revisions. Other list/export contracts and
+fresh delivered-source CI remain open; no financial write or baseline change.
+
+**Document registry follow-up:** [Bounded pages and complete kind choices](docs/plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+reduce the measured203-row fixture to100 rendered rows and fix mobile overflow.
+21 backend/27 browser checks pass; final-source CI and connected combined
+readback remain required. No main merge, deployment or source-byte change.
+
 **5 November current status:** PR105 `9efcd1c` and PR106 `37b826b` pass all13
 required CI contexts. The [current OCR/workflow wave](docs/plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
 has scoped local/native/connected qualification; newly delivered source needs
 fresh CI. Continue the [execution inventory](docs/plan/BACKLOG-COMPLETION-2026-11-05.json),
-including isolated tenant-link/parser/workflow/resource follow-ups. Owner/legal/
+including remaining tenant-link, list/export and resource boundaries. Owner/legal/
 provider/corpus/restore acceptance is not inferred. No main merge or deployment.
 
 

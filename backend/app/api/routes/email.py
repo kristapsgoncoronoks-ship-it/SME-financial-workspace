@@ -15,6 +15,7 @@ from app.core.errors import AppError
 from app.core.security_headers import content_disposition
 from app.core.tenant import reset_current_org, set_current_org
 from app.models.email_intake import InboundInvoice
+from app.schemas.capture_reading import ReadingObservationHistory
 from app.schemas.email_intake import (
     MAX_INBOUND_ATTACHMENTS,
     ChannelCadenceIn,
@@ -29,7 +30,16 @@ from app.schemas.email_intake import (
 )
 from app.schemas.image_reading import load_preparation
 from app.schemas.invoice import InvoiceDetailOut, ParsedInvoiceDraft
-from app.services import access, audit, documents, email_intake, filesec, inbound_health, modules
+from app.services import (
+    access,
+    audit,
+    capture_reading,
+    documents,
+    email_intake,
+    filesec,
+    inbound_health,
+    modules,
+)
 from app.services.email_providers import mailgun
 
 # Structural authorization (ADR-0024): declared PER-ROUTE because POST /inbound
@@ -480,10 +490,29 @@ async def get_inbound(inbound_id: str, current: CurrentUser, db: DbSession):
     detail = InboundInvoiceDetail.model_validate(row)
     detail.draft = draft
     detail.reading_preparation = load_preparation(row.reading_preparation_json)
+    detail.reading_observation = await capture_reading.current_summary(db, row, channel="inbound")
     # A rejected (quarantined) attachment carries a sha256 for the audit trail but
     # its bytes were never retained — so it has no downloadable file.
     detail.has_file = row.status != "rejected" and row.sha256 is not None
     return detail
+
+
+@router.get(
+    "/inbox/{inbound_id}/reading-observations",
+    response_model=ReadingObservationHistory,
+    dependencies=_CAPTURE,
+)
+async def inbound_reading_history(
+    inbound_id: str,
+    current: CurrentUser,
+    db: DbSession,
+    cursor: str | None = Query(default=None, max_length=128),
+):
+    await _guard(db, current.org_id)
+    row = await _load(db, current.org_id, inbound_id)
+    return await capture_reading.history(
+        db, current.org_id, row.id, channel="inbound", cursor=cursor
+    )
 
 
 @router.post(

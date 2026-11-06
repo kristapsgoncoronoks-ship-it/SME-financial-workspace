@@ -105,6 +105,7 @@ UNSUPPORTED_FORMAT = "unsupported_format"
 MALFORMED_DOCUMENT = "malformed_document"
 UNREADABLE_SCAN = "unreadable_scan"
 IMAGE_PROCESSING_LIMIT = "image_processing_limit"
+IMAGE_READING_BUSY = "image_reading_busy"
 CAPTURE_UNAVAILABLE = "capture_unavailable"
 STORED_FILE_MISSING = "stored_file_missing"
 STORED_FILE_TOO_LARGE = "stored_file_too_large"
@@ -166,6 +167,16 @@ KINDS: dict[str, FailureKind] = {
         ),
         retry_helps=True,
         user_fixable=False,
+    ),
+    IMAGE_READING_BUSY: FailureKind(
+        code=IMAGE_READING_BUSY,
+        summary="Image reading is busy with another document.",
+        remediation=(
+            "Wait for the current reading to finish, then retry this capture. "
+            "Nothing is wrong with the file; the original is still stored."
+        ),
+        retry_helps=True,
+        user_fixable=True,
     ),
     STORED_FILE_MISSING: FailureKind(
         code=STORED_FILE_MISSING,

@@ -1,10 +1,13 @@
 # Engineering backlog
 
-**Current162 follow-up:** [Partner document and webhook tenant integrity](plan/PARTNER-WEBHOOK-TENANT-162-2026-11-05.md)
-adds two mandatory CASCADE pairs without changing optional references or money.
-118 focused,28 graph/generic and98 composed native checks pass; fresh CI remains
-required. Corrected PR109254dd9e now passes all13 contexts. Older paragraphs
-below retain their own source context. No main merge or deployment.
+**Current163 reading facts:** [Per-page selection and fenced publication](plan/OCR-READING-FACTS-2026-11-05.md)
+adds bounded provenance without retained raw page text.73 focused,15 native
+authority/cache,40 boxed runtime and658 broader portable controls pass; those
+cohorts overlap. The full graph passes28 checks/3 explicit SQLite-only skips.
+PR105–PR110 separately pass all13 required contexts. Current combined-source CI
+remain required for this composite; its actual browser/native-worker/PG163
+reading and independent expense navigation proofs pass. Historical paragraphs below retain
+their dated source scope. No main/PR merge, deployment or complete-backlog claim.
 
 ## Current160 sibling tenant-parent follow-up
 
@@ -22,14 +25,34 @@ atomic rollback.77 focused checks pass; broad graph and fresh CI qualification
 remain required. Separate160 siblings and six dated candidates are not silently
 closed. Earlier dated wave status below retains its original source.
 
+## Expense navigation at independent158 source
+
+[Independent own/approval report pages](plan/EXPENSE-REPORT-PAGINATION-2026-11-05.md)
+preserve the existing 100-row envelope and financial commands while making
+201/101 fixture populations reachable. 81 browser, 18 portable and 2 actual
+PostgreSQL checks pass. Manual-create readback now refreshes the current scoped
+page and recovers a lost GET without repeating the write; both original red
+cases remain preserved. The independent TEN tree collects 6,273 cases/158 revisions.
+BE-018/PERF-010/PERF-014/FE-016 remain partial: other list/selection/filter/export
+consumers need individual contracts, and fresh delivered-source CI is pending.
+
+## Current document registry follow-up
+
+[Bounded registry pages and complete kind choices](plan/DOCUMENT-REGISTRY-PAGINATION-2026-11-05.md)
+preserve all originals through100-row navigation, with exact current filtered
+totals and a compatible legacy API.21 backend/27 browser checks pass; fresh
+combined-source CI and connected readback remain required. Other list contracts
+and owner/provider/operations dependencies remain explicit.
+
 ## Active backlog completion — 5 November 2026
 
 [Current implementation and dependencies](plan/BACKLOG-COMPLETION-2026-11-05.md)
-and the [197-row baseline plus15 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
+and the [197-row baseline plus 16 appended findings](plan/BACKLOG-COMPLETION-2026-11-05.json)
 are the current entry points. PR1059efcd1c and PR10637b826b passed all13 required
 actual PR contexts. [The current OCR/workflow wave](plan/OCR-WORKFLOW-REPAIRS-2026-11-05.md)
-has local/native/connected qualification and needs fresh hosted CI. Tenant-link,
-parser, recurring-notice and concurrent resource follow-ups continue separately.
+has local/native/connected qualification and needs fresh hosted CI. The current
+base includes parser, recurring-outcome, shared-image and review-epoch repairs;
+remaining tenant-link, list/export and wider resource boundaries stay open.
 Owner/provider/legal/corpus/hardware/release dependencies remain explicit. No
 main merge or deployment; older dated statements below are historical.
 

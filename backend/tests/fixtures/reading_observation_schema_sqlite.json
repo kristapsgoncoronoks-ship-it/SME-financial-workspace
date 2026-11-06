@@ -1,0 +1,175 @@
+{
+  "check_constraints": [
+    {
+      "name": "ck_capture_reading_attempt_nonnegative",
+      "sqltext": "attempt_seq IS NULL OR attempt_seq >= 0"
+    },
+    {
+      "name": "ck_capture_reading_one_owner",
+      "sqltext": "(extraction_run_id IS NOT NULL AND inbound_invoice_id IS NULL) OR (extraction_run_id IS NULL AND inbound_invoice_id IS NOT NULL)"
+    },
+    {
+      "name": "ck_capture_reading_outcome",
+      "sqltext": "outcome IN ('success', 'failure')"
+    },
+    {
+      "name": "ck_capture_reading_owner_generation",
+      "sqltext": "(extraction_run_id IS NOT NULL AND attempt_seq IS NOT NULL) OR (inbound_invoice_id IS NOT NULL AND attempt_seq IS NULL)"
+    }
+  ],
+  "columns": [
+    [
+      "id",
+      "CHAR(36)",
+      false,
+      null
+    ],
+    [
+      "org_id",
+      "CHAR(36)",
+      false,
+      null
+    ],
+    [
+      "created_at",
+      "DATETIME",
+      false,
+      "CURRENT_TIMESTAMP"
+    ],
+    [
+      "extraction_run_id",
+      "CHAR(36)",
+      true,
+      null
+    ],
+    [
+      "inbound_invoice_id",
+      "CHAR(36)",
+      true,
+      null
+    ],
+    [
+      "source_sha256",
+      "VARCHAR(64)",
+      true,
+      null
+    ],
+    [
+      "attempt_seq",
+      "INTEGER",
+      true,
+      null
+    ],
+    [
+      "outcome",
+      "VARCHAR(8)",
+      false,
+      null
+    ],
+    [
+      "failure_code",
+      "VARCHAR(40)",
+      true,
+      null
+    ],
+    [
+      "profile_json",
+      "TEXT",
+      true,
+      null
+    ],
+    [
+      "page_facts_json",
+      "TEXT",
+      true,
+      null
+    ]
+  ],
+  "foreign_keys": [
+    {
+      "constrained_columns": [
+        "org_id",
+        "extraction_run_id"
+      ],
+      "name": "fk_capture_reading_run",
+      "options": {
+        "ondelete": "CASCADE"
+      },
+      "referred_columns": [
+        "org_id",
+        "id"
+      ],
+      "referred_schema": null,
+      "referred_table": "extraction_runs"
+    },
+    {
+      "constrained_columns": [
+        "org_id",
+        "inbound_invoice_id"
+      ],
+      "name": "fk_capture_reading_inbound",
+      "options": {
+        "ondelete": "CASCADE"
+      },
+      "referred_columns": [
+        "org_id",
+        "id"
+      ],
+      "referred_schema": null,
+      "referred_table": "inbound_invoices"
+    },
+    {
+      "constrained_columns": [
+        "org_id"
+      ],
+      "name": null,
+      "options": {
+        "ondelete": "CASCADE"
+      },
+      "referred_columns": [
+        "id"
+      ],
+      "referred_schema": null,
+      "referred_table": "organizations"
+    }
+  ],
+  "indexes": [
+    {
+      "column_names": [
+        "org_id",
+        "extraction_run_id",
+        "created_at",
+        "id"
+      ],
+      "dialect_options": {},
+      "name": "ix_capture_reading_org_run_history",
+      "unique": 0
+    },
+    {
+      "column_names": [
+        "org_id",
+        "inbound_invoice_id",
+        "created_at",
+        "id"
+      ],
+      "dialect_options": {},
+      "name": "ix_capture_reading_org_inbound_history",
+      "unique": 0
+    }
+  ],
+  "primary_key": {
+    "constrained_columns": [
+      "id"
+    ],
+    "name": null
+  },
+  "unique_constraints": [
+    {
+      "column_names": [
+        "org_id",
+        "id"
+      ],
+      "name": "uq_capture_reading_org_id"
+    }
+  ]
+}

@@ -402,6 +402,41 @@ def test_wo94_no_second_upload_cap_is_defined_anywhere_in_the_app():
     assert violations == [], "a second upload cap:\n" + "\n".join(violations)
 
 
+@pytest.mark.parametrize("upload_mb", [1, 50])
+def test_reading_selected_text_uses_existing_processing_ceiling(monkeypatch, upload_mb):
+    from pydantic import ValidationError
+
+    from app.schemas.capture_reading import PageReadingFacts
+
+    monkeypatch.setattr(filesec.settings, "max_upload_mb", upload_mb)
+    limit = filesec.RESOURCE_BYTES["pdf_decoded_text"]
+    assert limit == filesec.RESOURCE_BYTES["image_ocr_text"] == 2 * 1024 * 1024
+    for size in (0, limit):
+        facts = PageReadingFacts(
+            selected_stream_complete=True,
+            selected_stream_bytes=size,
+            selected_stream_sha256="a" * 64,
+        )
+        assert facts.selected_stream_bytes == size
+    with pytest.raises(ValidationError, match="existing text budget"):
+        PageReadingFacts(
+            selected_stream_complete=True,
+            selected_stream_bytes=limit + 1,
+            selected_stream_sha256="a" * 64,
+        )
+
+
+def test_reading_dto_literal_regression_is_still_detected_by_full_cap_scanner():
+    from app.schemas import capture_reading
+
+    source = Path(capture_reading.__file__).read_text(encoding="utf-8")
+    assert _cap_policy_violations(source, filename="app/schemas/capture_reading.py") == []
+    seeded = source.replace('filesec.RESOURCE_BYTES["pdf_decoded_text"]', "2 * 1024 * 1024")
+    assert seeded != source
+    violations = _cap_policy_violations(seeded, filename="app/schemas/capture_reading.py")
+    assert len(violations) == 1 and "megabyte cap literal" in violations[0]
+
+
 def test_wo94_the_cap_scanner_detects_a_seeded_violation():
     """The self-test. The scanner runs over source that re-introduces the real
     defect — the exact two lines deleted from `routes/invoices.py` — and must
