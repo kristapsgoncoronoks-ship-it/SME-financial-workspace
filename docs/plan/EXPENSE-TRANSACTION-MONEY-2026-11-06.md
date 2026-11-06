@@ -127,3 +127,24 @@ prevalence, zero substitution, historical normalization, receipt rewrite,
 production migration or deployment is claimed. The bank-line finding remains
 separate. The inventory preserves 197 original rows plus 18 findings: 215 named
 items, not a completion percentage.
+
+## Initial hosted bootstrap failure and correction
+
+The initial Expense head `e0e0088` passed its browser and image jobs but failed
+one of 15 development-bootstrap controls. Its 50-character random test-schema
+prefix caused PostgreSQL's 63-character identifier truncation to give two
+independent generated indexes the same name. Exact-source compilation and an
+actual restricted-role replay reproduce `invitations.token` and
+`expense_items.report_id` both ending in `__5943`; this is not an Expense model
+or data regression. The original hosted and local failure logs are retained.
+
+Qualified source `19983777a38c5d00f34f8b5384ac2e12eb87a5bc` changes only that
+test: the already-unique disposable database uses a short deterministic schema,
+with explicit pre-existing-schema refusal and compiled-name uniqueness checks.
+Every earlier metadata, SELECT-only comparison, shared-model, snapshot and
+rollback assertion remains. All 15 bootstrap controls pass; no production
+metadata/index name, retry, filter, timeout or gate changes. This is development
+create_all evidence from source 165, rather than a migration-only RLS claim.
+[Repair receipt](/workspace/artifacts/backlog-bootstrap-name-repair-2026-11-06/agent-proof/verification.json).
+Fresh hosted CI is required for the corrected head; the earlier 20-case native,
+184-case portable and 80-case browser receipts retain their stated source scopes.
