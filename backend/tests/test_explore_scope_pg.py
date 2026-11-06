@@ -200,11 +200,11 @@ async def test_native_bounded_groups_filters_download_and_no_writes(explore_pg):
             assert response.headers["x-explore-limit"] == str(limit)
             assert response.headers["x-explore-truncated"] == "true"
             csv_response = await client.get(
-                f"/api/v1/analytics/explore?dim=category&limit={limit}&currency=EUR&format=csv"
+                f"/api/v1/analytics/explore?export_contract=2&dim=category&limit={limit}&currency=EUR&format=csv"
             )
             assert csv_response.status_code == 200
             assert list(csv.reader(io.StringIO(csv_response.text))) == [
-                ["Category", "Net spend"]
+                ["Category", "Net spend (EUR)"]
             ] + [[row["category"], row["value"]] for row in result["rows"]]
         for filters in (
             "category=group-0000",
@@ -213,7 +213,8 @@ async def test_native_bounded_groups_filters_download_and_no_writes(explore_pg):
             "start=2027-01-01",
             "category=foreign-only",
         ):
-            response = await client.get(f"/api/v1/analytics/explore?dim=category&{filters}")
+            query = filters if filters.startswith("currency=") else f"currency=EUR&{filters}"
+            response = await client.get(f"/api/v1/analytics/explore?dim=category&{query}")
             assert response.status_code == 200, response.text
             result = response.json()
             assert result["truncated"] is False

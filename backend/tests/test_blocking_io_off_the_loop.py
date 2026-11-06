@@ -92,8 +92,12 @@ async def test_analytics_writers_render_off_the_loop(auth_client, monkeypatch):
 
     monkeypatch.setattr(analytics_routes.report_writers, "to_xlsx", _fake_xlsx)
     monkeypatch.setattr(analytics_routes.report_writers, "to_pdf", _fake_pdf)
-    x = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=category&format=xlsx")
-    p = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=category&format=pdf")
+    x = await auth_client.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=xlsx"
+    )
+    p = await auth_client.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=pdf"
+    )
     assert x.status_code == 200 and p.status_code == 200
     assert seen["xlsx"] != threading.get_ident() and seen["pdf"] != threading.get_ident()
 

@@ -54,7 +54,9 @@ async def test_scope_and_single_bounded_group_query(
 
     event.listen(engine, "before_cursor_execute", record)
     try:
-        response = await auth_client.get(f"/api/v1/analytics/explore?dim=category&limit={limit}")
+        response = await auth_client.get(
+            f"/api/v1/analytics/explore?currency=EUR&dim=category&limit={limit}"
+        )
     finally:
         event.remove(engine, "before_cursor_execute", record)
     assert response.status_code == 200, response.text
@@ -81,7 +83,7 @@ async def test_scope_and_single_bounded_group_query(
 async def test_download_scope_headers_and_unchanged_columns(auth_client, db_session, format):
     await seed_groups(auth_client, db_session, 3)
     response = await auth_client.get(
-        f"/api/v1/analytics/explore?dim=category&limit=2&format={format}"
+        f"/api/v1/analytics/explore?currency=EUR&export_contract=2&dim=category&limit=2&format={format}"
     )
     assert response.status_code == 200, response.text
     assert {
@@ -93,8 +95,8 @@ async def test_download_scope_headers_and_unchanged_columns(auth_client, db_sess
         "returned-rows": "2",
         "truncated": "true",
     }
-    assert f"explore-up-to-2-groups.{format}" in response.headers["content-disposition"]
-    expected = [["Category", "Net spend"], ["group-0002", "3.00"], ["group-0001", "2.00"]]
+    assert f"explore-EUR-up-to-2-groups.{format}" in response.headers["content-disposition"]
+    expected = [["Category", "Net spend (EUR)"], ["group-0002", "3.00"], ["group-0001", "2.00"]]
     if format == "csv":
         assert list(csv.reader(io.StringIO(response.text))) == expected
     elif format == "xlsx":
@@ -114,12 +116,15 @@ async def test_download_scope_headers_and_unchanged_columns(auth_client, db_sess
 async def test_default_filter_scope_and_limit_validation(auth_client, db_session):
     await seed_groups(auth_client, db_session, 3)
     for suffix in ("status=pending", "currency=USD", "start=2027-01-01", "category=absent"):
-        result = (await auth_client.get(f"/api/v1/analytics/explore?dim=category&{suffix}")).json()
+        query = suffix if suffix.startswith("currency=") else f"currency=EUR&{suffix}"
+        result = (await auth_client.get(f"/api/v1/analytics/explore?dim=category&{query}")).json()
         assert result["limit"] == 100
         assert result["returned_rows"] == 0 and result["truncated"] is False
     for limit in (0, 1001):
         assert (
-            await auth_client.get(f"/api/v1/analytics/explore?dim=category&limit={limit}")
+            await auth_client.get(
+                f"/api/v1/analytics/explore?currency=EUR&dim=category&limit={limit}"
+            )
         ).status_code == 422
 
 
@@ -127,6 +132,8 @@ async def test_default_filter_scope_and_limit_validation(auth_client, db_session
 @pytest.mark.parametrize("format", ["json", "csv", "xlsx", "pdf"])
 async def test_bounded_formats_keep_report_read_permission(role_client, format):
     employee = await role_client("user")
-    denied = await employee.get(f"/api/v1/analytics/explore?dim=category&format={format}")
+    denied = await employee.get(
+        f"/api/v1/analytics/explore?currency=EUR&export_contract=2&dim=category&format={format}"
+    )
     assert denied.status_code == 403
     assert "x-explore-scope" not in denied.headers

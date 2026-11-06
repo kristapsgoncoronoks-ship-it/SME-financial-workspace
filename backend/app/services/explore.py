@@ -16,6 +16,7 @@ can read a materialised daily rollup with no API change.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
@@ -27,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import dimensions as core_dimensions
 from app.core.config import settings
+from app.core.errors import ValidationError
 from app.models.invoice import Invoice, InvoiceStatus, LineItem
 from app.models.vendor import Vendor
 
@@ -176,6 +178,21 @@ async def run(db: AsyncSession, org_id: str, q: ExploreQuery) -> dict:
             raise ValueError(f"Unknown dimension '{d}'")
 
     measure = MEASURES[q.measure]
+    currency = q.currency
+    if currency is not None:
+        if not isinstance(currency, str) or re.fullmatch(r"[A-Za-z]{3}", currency) is None:
+            raise ValidationError(
+                "Enter a three-letter native currency code, such as USD.",
+                code="explore_currency_invalid",
+            )
+        currency = currency.upper()
+    money = measure.unit == "money"
+    if money and currency is None:
+        raise ValidationError(
+            "Choose a native currency before querying money. Add currency=USD, for example; "
+            "amounts are not converted between currencies.",
+            code="explore_currency_required",
+        )
     dim_specs = [DIMENSIONS[d] for d in dims]
     dim_cols = [spec.expr().label(f"d{i}") for i, spec in enumerate(dim_specs)]
     value_col = measure.expr().label("value")
@@ -195,8 +212,8 @@ async def run(db: AsyncSession, org_id: str, q: ExploreQuery) -> dict:
         stmt = stmt.where(Invoice.status == InvoiceStatus(q.status))
     if q.category:
         stmt = stmt.where(LineItem.category == q.category)
-    if q.currency:
-        stmt = stmt.where(Invoice.currency == q.currency.upper())
+    if currency:
+        stmt = stmt.where(Invoice.currency == currency)
     if q.country:
         stmt = stmt.where(Vendor.country == q.country.upper())
     if q.vendor_id:
@@ -244,6 +261,8 @@ async def run(db: AsyncSession, org_id: str, q: ExploreQuery) -> dict:
         "limit": limit,
         "returned_rows": len(out_rows),
         "truncated": truncated,
+        "currency": currency if money else None,
+        "currency_basis": "native" if money else "not_applicable",
     }
 
 

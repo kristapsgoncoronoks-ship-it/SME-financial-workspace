@@ -65,7 +65,7 @@ async def test_explore_groups_by_each_cost_dimension(auth_client):
     await _invoice(auth_client, "T-1", [("100.00", "0")], **tags)
     await _invoice(auth_client, "T-2", [("40.00", "0")])  # untagged
     for key in core_dimensions.DIMENSION_KEYS:
-        r = await auth_client.get(f"/api/v1/analytics/explore?measure=net&dim={key}")
+        r = await auth_client.get(f"/api/v1/analytics/explore?currency=EUR&measure=net&dim={key}")
         assert r.status_code == 200, r.text
         rows = {row[key]: row["value"] for row in r.json()["rows"]}
         assert rows[f"TAG-{key}"] == "100.00"
@@ -95,7 +95,9 @@ async def test_explore_matches_fixed_report_same_cut(auth_client):
     ).json()
     fixed_rows = {row["value"]: row for row in fixed["rows"]}
 
-    pivot = (await auth_client.get("/api/v1/analytics/explore?measure=gross&dim=vehicle")).json()
+    pivot = (
+        await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=gross&dim=vehicle")
+    ).json()
     pivot_totals = {row["vehicle"]: row["value"] for row in pivot["rows"]}
 
     counts = (
@@ -118,7 +120,9 @@ async def test_explore_two_dimensions_with_cost_dimension(auth_client):
     await _invoice(auth_client, "M-1", [("100.00", "0")], vehicle="TRUCK-01")
     await _invoice(auth_client, "M-2", [("50.00", "0")], vehicle="TRUCK-01")
     r = (
-        await auth_client.get("/api/v1/analytics/explore?measure=net&dim=month&dim=vehicle")
+        await auth_client.get(
+            "/api/v1/analytics/explore?currency=EUR&measure=net&dim=month&dim=vehicle"
+        )
     ).json()
     assert [d["key"] for d in r["dimensions"]] == ["month", "vehicle"]
     assert r["rows"] == [{"month": "2026-05", "vehicle": "TRUCK-01", "value": "150.00"}]
@@ -156,15 +160,17 @@ async def test_explore_cost_dimension_cross_tenant_zero_rows(auth_client, client
         },
     )
 
-    b = (await client.get("/api/v1/analytics/explore?measure=net&dim=vehicle")).json()
+    b = (await client.get("/api/v1/analytics/explore?currency=EUR&measure=net&dim=vehicle")).json()
     assert b["rows"] == [{"vehicle": "TRUCK-01", "value": "9.00"}]  # B's own row only
     auth_client.headers["Authorization"] = tenant_a_token
-    a = (await auth_client.get("/api/v1/analytics/explore?measure=net&dim=vehicle")).json()
+    a = (
+        await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=net&dim=vehicle")
+    ).json()
     assert a["rows"] == [{"vehicle": "TRUCK-01", "value": "500.00"}]  # A unchanged
 
 
 @pytest.mark.asyncio
 async def test_explore_rejects_unknown_dimension_still(auth_client):
-    r = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=not_a_dim")
+    r = await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=net&dim=not_a_dim")
     assert r.status_code == 422
     assert "not_a_dim" in r.json()["detail"]

@@ -42,7 +42,9 @@ async def test_pivot_by_category(auth_client):
     await _mk(auth_client, "AWS", "A2", "2026-01-11", "cloud", "50.00")
     await _mk(auth_client, "Slack", "S1", "2026-02-01", "software", "30.00")
 
-    r = (await auth_client.get("/api/v1/analytics/explore?measure=net&dim=category")).json()
+    r = (
+        await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=net&dim=category")
+    ).json()
     assert r["measure"]["key"] == "net"
     rows = {row["category"]: row["value"] for row in r["rows"]}
     assert rows["cloud"] == "150.00"
@@ -58,7 +60,9 @@ async def test_two_dimensions_and_measures(auth_client):
 
     # month × category, net measure
     r = (
-        await auth_client.get("/api/v1/analytics/explore?measure=net&dim=month&dim=category")
+        await auth_client.get(
+            "/api/v1/analytics/explore?currency=EUR&measure=net&dim=month&dim=category"
+        )
     ).json()
     assert [d["key"] for d in r["dimensions"]] == ["month", "category"]
     by_month = {row["month"]: row["value"] for row in r["rows"]}
@@ -68,7 +72,9 @@ async def test_two_dimensions_and_measures(auth_client):
     assert [row["month"] for row in r["rows"]] == ["2026-01", "2026-02"]
 
     # tax measure: 21% of net
-    tax = (await auth_client.get("/api/v1/analytics/explore?measure=tax&dim=category")).json()
+    tax = (
+        await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=tax&dim=category")
+    ).json()
     assert tax["rows"][0]["value"] == "84.00"  # 21% of 400
 
     # quantity + counts
@@ -85,20 +91,26 @@ async def test_filters_and_csv(auth_client):
 
     # date filter
     r = (
-        await auth_client.get("/api/v1/analytics/explore?measure=net&dim=vendor&start=2026-02-01")
+        await auth_client.get(
+            "/api/v1/analytics/explore?currency=EUR&measure=net&dim=vendor&start=2026-02-01"
+        )
     ).json()
     assert r["rows"][0]["value"] == "200.00"
     # status filter
     r = (
-        await auth_client.get("/api/v1/analytics/explore?measure=net&dim=vendor&status=paid")
+        await auth_client.get(
+            "/api/v1/analytics/explore?currency=EUR&measure=net&dim=vendor&status=paid"
+        )
     ).json()
     assert r["rows"][0]["value"] == "100.00"
 
     # CSV export
-    csv = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=category&format=csv")
+    csv = await auth_client.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=csv"
+    )
     assert csv.status_code == 200
     assert csv.headers["content-type"].startswith("text/csv")
-    assert "Category,Net spend" in csv.text
+    assert "Category,Net spend (EUR)" in csv.text
     assert "cloud" in csv.text
 
 
@@ -111,11 +123,13 @@ async def test_to_csv_is_formula_injection_safe(auth_client):
     column must never be touched."""
     await _mk(auth_client, "=cmd|'/c calc'!A1", "A1", "2026-01-10", "cloud", "100.00")
 
-    r = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=vendor&format=csv")
+    r = await auth_client.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=vendor&format=csv"
+    )
     assert r.status_code == 200
     rows = list(csv.reader(io.StringIO(r.text)))
     header, data = rows[0], rows[1]
-    assert header == ["Vendor", "Net spend"]
+    assert header == ["Vendor", "Net spend (EUR)"]
     # The attacker-influenceable dimension value is neutralised with a
     # leading quote so Excel/Sheets renders it as inert text, not a formula.
     assert data[0].startswith("'="), data[0]
@@ -126,9 +140,9 @@ async def test_to_csv_is_formula_injection_safe(auth_client):
 
 @pytest.mark.asyncio
 async def test_bad_field_rejected(auth_client):
-    r = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=not_a_dim")
+    r = await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=net&dim=not_a_dim")
     assert r.status_code == 422
-    r2 = await auth_client.get("/api/v1/analytics/explore?measure=bogus&dim=vendor")
+    r2 = await auth_client.get("/api/v1/analytics/explore?currency=EUR&measure=bogus&dim=vendor")
     assert r2.status_code == 422
 
 
@@ -140,7 +154,9 @@ async def test_xlsx_and_pdf_export(auth_client):
     await _mk(auth_client, "AWS", "A1", "2026-01-10", "cloud", "100.00")
     await _mk(auth_client, "AWS", "A2", "2026-01-11", "cloud", "50.00")
 
-    xlsx = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=category&format=xlsx")
+    xlsx = await auth_client.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=xlsx"
+    )
     assert xlsx.status_code == 200
     assert xlsx.headers["content-type"].startswith(
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -152,10 +168,12 @@ async def test_xlsx_and_pdf_export(auth_client):
 
     wb = openpyxl.load_workbook(io.BytesIO(xlsx.content))
     ws = wb.active
-    assert [c.value for c in ws[1]] == ["Category", "Net spend"]
+    assert [c.value for c in ws[1]] == ["Category", "Net spend (EUR)"]
     assert [c.value for c in ws[2]] == ["cloud", "150.00"]
 
-    pdf = await auth_client.get("/api/v1/analytics/explore?measure=net&dim=category&format=pdf")
+    pdf = await auth_client.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=pdf"
+    )
     assert pdf.status_code == 200
     assert pdf.headers["content-type"].startswith("application/pdf")
     assert pdf.content[:4] == b"%PDF"
@@ -168,7 +186,11 @@ async def test_xlsx_export_requires_report_read(role_client):
     code path, not just a new format string on an unrelated route."""
     employee = await role_client("user")  # EMPLOYEE — no report.read
     ro = await role_client("user_free")  # READ_ONLY — holds report.read
-    denied = await employee.get("/api/v1/analytics/explore?measure=net&dim=category&format=xlsx")
+    denied = await employee.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=xlsx"
+    )
     assert denied.status_code == 403
-    granted = await ro.get("/api/v1/analytics/explore?measure=net&dim=category&format=xlsx")
+    granted = await ro.get(
+        "/api/v1/analytics/explore?currency=EUR&export_contract=2&measure=net&dim=category&format=xlsx"
+    )
     assert granted.status_code == 200

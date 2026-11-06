@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExploreMeasureOut(BaseModel):
@@ -26,6 +26,8 @@ class ExploreResultOut(BaseModel):
     limit: int
     returned_rows: int
     truncated: bool
+    currency: str | None = Field(pattern=r"^[A-Z]{3}$")
+    currency_basis: Literal["native", "not_applicable"]
 
 
 class SummaryOut(BaseModel):

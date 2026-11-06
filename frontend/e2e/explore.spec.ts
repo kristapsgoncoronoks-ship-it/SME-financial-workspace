@@ -31,12 +31,15 @@ async function open(page: Page, options: { count?: number; failQuery?: boolean; 
       const count = Math.min(options.count ?? 501, limit);
       const dimensions = url.searchParams.getAll("dim").map((key) => catalog.dimensions.find((dim) => dim.key === key)!);
       return json({ measure: catalog.measures.find((measure) => measure.key === url.searchParams.get("measure")), dimensions,
+        currency: url.searchParams.get("measure") === "net" ? url.searchParams.get("currency") : null,
+        currency_basis: url.searchParams.get("measure") === "net" ? "native" : "not_applicable",
         rows: Array.from({ length: count }, (_, index) => ({ category: `group-${String(index + 1).padStart(4, "0")}`, vendor: `Synthetic vendor ${index + 1}`, value: String(index + 1) + ".00" })),
         scope: "bounded_groups", limit, returned_rows: count, truncated: (options.count ?? 501) > limit });
     }
     return json({ items: [], total: 0 });
   });
   await page.goto("/explore");
+  await page.getByLabel("Native currency", { exact: true }).fill("EUR");
   return { requests, recoverQuery: () => { queryFails = false; }, recoverExport: () => { exportFails = false; } };
 }
 
@@ -127,7 +130,7 @@ test("bounded downloads preserve the query and offer visible recovery after fail
   fixture.recoverExport();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download CSV (up to 1000 groups)", exact: true }).click();
-  expect((await download).suggestedFilename()).toBe("explore-up-to-1000-groups.csv");
+  expect((await download).suggestedFilename()).toBe("explore-EUR-up-to-1000-groups.csv");
   const exported = fixture.requests.filter((url) => url.searchParams.has("format"));
   expect(exported).toHaveLength(2);
   expect(exported[1].searchParams.getAll("dim")).toEqual(["category", "vendor"]);

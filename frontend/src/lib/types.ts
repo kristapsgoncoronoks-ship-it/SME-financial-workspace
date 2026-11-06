@@ -1083,6 +1083,8 @@ export interface ExploreResult {
   limit: number;
   returned_rows: number;
   truncated: boolean;
+  currency: string | null;
+  currency_basis: "native" | "not_applicable";
 }
 
 export interface SupplierBenchmark {

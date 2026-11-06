@@ -8,6 +8,7 @@ from fastapi.concurrency import run_in_threadpool
 from app.api.deps import CurrentUser, DbSession, require_perm
 from app.core import authz
 from app.core.dimensions import DIMENSION_KEYS, DIMENSIONS, is_dimension
+from app.core.errors import ValidationError
 from app.core.security_headers import content_disposition
 from app.schemas.analytics import (
     ByCategoryOut,
@@ -339,13 +340,27 @@ async def get_explore(
     sort: str = "auto",
     limit: int = Query(default=100, ge=1, le=1000),
     format: str = Query(default="json", pattern="^(json|csv|xlsx|pdf)$"),
+    export_contract: int = Query(default=1, ge=1, le=2),
 ):
     """Bounded current-data pivot, also serialized as CSV/XLSX/PDF.
 
     `truncated` means more groups match the filters. Downloads rerun the query;
     they are not a frozen snapshot or an unbounded complete filtered export.
     All formats disclose the effective scope through X-Explore-* headers.
+    Money requires an explicit native currency; no FX conversion is performed.
+    Money files require export_contract=2 and declare that unit in their header.
     """
+    if (
+        format != "json"
+        and export_contract != 2
+        and measure in explore.MEASURES
+        and explore.MEASURES[measure].unit == "money"
+    ):
+        raise ValidationError(
+            "Money downloads require export_contract=2 and an explicit native currency. "
+            "Use the current Explore download controls or add those query parameters.",
+            code="explore_export_contract_required",
+        )
     q = explore.ExploreQuery(
         measure=measure,
         dimensions=dim,
@@ -369,12 +384,29 @@ async def get_explore(
         "X-Explore-Limit": str(result["limit"]),
         "X-Explore-Returned-Rows": str(result["returned_rows"]),
         "X-Explore-Truncated": str(result["truncated"]).lower(),
+        "X-Explore-Currency-Basis": result["currency_basis"],
     }
-    response.headers.update(scope_headers)
     filename = f"explore-up-to-{result['limit']}-groups"
+    export_result = result
+    if result["currency"] is not None:
+        scope_headers["X-Explore-Currency"] = result["currency"]
+        filename = f"explore-{result['currency']}-up-to-{result['limit']}-groups"
+        # The canonical JSON label remains stable. Only the explicitly opted-in
+        # offline representation adds the known native unit; cells and generic
+        # writers keep their existing contracts.
+        export_result = {
+            **result,
+            "measure": {
+                **result["measure"],
+                "label": f"{result['measure']['label']} ({result['currency']})",
+            },
+        }
+    if format != "json":
+        scope_headers["X-Explore-Export-Contract"] = str(export_contract)
+    response.headers.update(scope_headers)
     if format == "csv":
         return Response(
-            content=explore.to_csv(result),
+            content=explore.to_csv(export_result),
             media_type="text/csv",
             headers={
                 **scope_headers,
@@ -383,7 +415,7 @@ async def get_explore(
         )
     if format == "xlsx":
         return Response(
-            content=await run_in_threadpool(report_writers.to_xlsx, result),  # PERF-007
+            content=await run_in_threadpool(report_writers.to_xlsx, export_result),  # PERF-007
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
                 **scope_headers,
@@ -392,7 +424,7 @@ async def get_explore(
         )
     if format == "pdf":
         return Response(
-            content=await run_in_threadpool(report_writers.to_pdf, result),  # PERF-007
+            content=await run_in_threadpool(report_writers.to_pdf, export_result),  # PERF-007
             media_type="application/pdf",
             headers={
                 **scope_headers,

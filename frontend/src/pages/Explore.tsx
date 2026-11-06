@@ -4,7 +4,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { api, apiError, downloadFile, isCanceledRequest, tokenStore } from "../lib/api";
+import { api, apiError, apiErrorCode, downloadFile, isCanceledRequest, tokenStore } from "../lib/api";
 import { CHART_PALETTE as PALETTE, compactMoney, formatNumber, money } from "../lib/format";
 import type { ExploreCatalog, ExploreResult } from "../lib/types";
 import { ErrorState } from "../components/ui";
@@ -19,6 +19,8 @@ export default function Explore() {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [status, setStatus] = useState("");
+  const [currency, setCurrency] = useState("");
+  const currencyId = useId();
   const [limit, setLimit] = useState("100");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -27,6 +29,12 @@ export default function Explore() {
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const fields = useQuery<ExploreCatalog>({ queryKey: ["explore", "fields"], queryFn: async () => (await api.get("/analytics/fields")).data });
+  const selectedMeasure = fields.data?.measures.find((item) => item.key === measure);
+  const moneyMeasure = selectedMeasure?.unit === "money";
+  const validCurrency = /^[A-Z]{3}$/.test(currency);
+  const missingCurrency = moneyMeasure && !currency;
+  const invalidCurrency = !!currency && !validCurrency;
+  const queryEnabled = !!selectedMeasure && !fields.isError && !missingCurrency && !invalidCurrency;
 
   const params = useMemo(() => {
     const p = new URLSearchParams({ measure, dim: dim0, limit });
@@ -34,21 +42,40 @@ export default function Explore() {
     if (start) p.set("start", start);
     if (end) p.set("end", end);
     if (status) p.set("status", status);
+    if (validCurrency) p.set("currency", currency);
     return p;
-  }, [measure, dim0, dim1, start, end, status, limit]);
+  }, [measure, dim0, dim1, start, end, status, limit, currency, validCurrency]);
 
   const result = useQuery<ExploreResult>({
     queryKey: ["explore", params.toString()],
     queryFn: async ({ signal }) => (await api.get(`/analytics/explore?${params.toString()}`, { signal })).data,
-    enabled: !!fields.data,
+    enabled: queryEnabled,
   });
 
-  const unit = result.data?.measure.unit ?? "money";
-  const fmt = (v: number) => (unit === "money" ? money(v) : unit === "count" ? String(Math.round(v)) : formatNumber(v, 2));
-  const fmtAxis = (v: number) => (unit === "money" ? compactMoney(v) : String(v));
+  // Cached or late money results must prove the current explicit native cut.
+  // Clearing/invalidating the input disables the query and hides prior values.
+  const verifiedResult = !!result.data && result.data.measure.key === measure
+    && result.data.measure.unit === selectedMeasure?.unit
+    && (moneyMeasure
+      ? validCurrency && result.data.currency === currency && result.data.currency_basis === "native"
+      : result.data.currency === null && result.data.currency_basis === "not_applicable");
+  const ready = queryEnabled && verifiedResult && !fields.isError && !result.isError && !result.isFetching;
+  const visibleResult = ready ? result.data : undefined;
+  const unit = selectedMeasure?.unit;
+  const resultCurrency = visibleResult?.currency ?? "";
+  const fmt = (v: number) => {
+    if (unit !== "money") return unit === "count" ? String(Math.round(v)) : formatNumber(v, 2);
+    try { return money(v, resultCurrency); }
+    catch { return `${formatNumber(v, 2)} ${resultCurrency}`; }
+  };
+  const fmtAxis = (v: number) => {
+    if (unit !== "money") return String(v);
+    try { return compactMoney(v, resultCurrency); }
+    catch { return `${formatNumber(v, 1)} ${resultCurrency}`; }
+  };
   const dim0Temporal = fields.data?.dimensions.find((d) => d.key === dim0)?.temporal;
-  const ready = !!result.data && !fields.isError && !result.isError && !result.isFetching;
-  const canExport = ready && result.data!.rows.length > 0 && !exporting;
+  const canExport = !!visibleResult?.rows.length && !exporting;
+  const currencyRefusal = ["explore_currency_required", "explore_currency_invalid"].includes(apiErrorCode(result.error) ?? "");
 
   async function exportResult(format: "csv" | "xlsx" | "pdf") {
     if (!canExport || exportPending.current) return;
@@ -59,7 +86,11 @@ export default function Explore() {
     setExporting(true);
     setExportError(null);
     try {
-      await downloadFile(`/analytics/explore?${params.toString()}&format=${format}`, `explore-up-to-${limit}-groups.${format}`);
+      const downloadParams = new URLSearchParams(params);
+      downloadParams.set("format", format);
+      downloadParams.set("export_contract", "2");
+      const currencyPart = moneyMeasure ? `-${resultCurrency}` : "";
+      await downloadFile(`/analytics/explore?${downloadParams.toString()}`, `explore${currencyPart}-up-to-${limit}-groups.${format}`);
     } catch (error) {
       if (fresh() && !isCanceledRequest(error)) setExportError(apiError(error));
     } finally {
@@ -96,9 +127,18 @@ export default function Explore() {
       </fieldset>
 
       <fieldset disabled={exporting} className="flex min-w-0 flex-wrap items-end gap-3">
+        <div className="min-w-0 w-full sm:w-56">
+          <label className="label" htmlFor={currencyId}>Native currency</label>
+          <input id={currencyId} className="input" value={currency} placeholder="e.g. USD" autoCapitalize="characters" autoComplete="off" spellCheck={false}
+            aria-invalid={invalidCurrency || undefined} aria-describedby={`${currencyId}-hint`}
+            onChange={(event) => setCurrency(event.target.value.replace(/[a-z]/g, (letter) => letter.toUpperCase()))} />
+        </div>
         <Picker label="Status filter" value={status} onChange={setStatus} options={[["", "All"], ["paid", "paid"], ["pending", "pending"], ["overdue", "overdue"], ["draft", "draft"]]} className="w-40 max-w-full" />
         <Picker label="Group limit" value={limit} onChange={setLimit} options={[["100", "Up to 100 groups"], ["500", "Up to 500 groups"], ["1000", "Up to 1000 groups"]]} />
       </fieldset>
+      <p id={`${currencyId}-hint`} role={invalidCurrency ? "alert" : undefined} className="text-sm text-text-secondary">
+        {invalidCurrency ? "Enter a three-letter currency code, such as USD." : "Money queries require one native currency. Quantity and counts can include all currencies when this field is blank."}
+      </p>
       <div className="space-y-2">
         <p className="text-sm text-text-secondary">Downloads rerun these filters on current data, up to the selected group limit.</p>
         <div className="flex flex-wrap gap-2">
@@ -112,31 +152,38 @@ export default function Explore() {
 
       <div className="card">
         <div className="mb-2 text-sm font-semibold text-slate-600">
-          {result.data?.measure.label} by {result.data?.dimensions.map((d) => d.label).join(" × ")}
+          {visibleResult && <>{visibleResult.measure.label}{moneyMeasure ? ` (${resultCurrency})` : ""} by {visibleResult.dimensions.map((d) => d.label).join(" × ")}</>}
         </div>
+        {visibleResult && moneyMeasure && <p className="mb-3 text-sm text-text-secondary">Native amounts in {resultCurrency}. No currency conversion is applied.</p>}
         {fields.isError ? (
           // The catalogue failed, so this query never ran. The alert above says
           // so; an eternal "Loading…" here would say something else.
           <p className="py-10 text-center text-sm text-text-secondary">
             Nothing to draw until the field catalogue loads.
           </p>
+        ) : missingCurrency ? (
+          <p role="status" className="py-10 text-center text-sm text-text-secondary">Choose a native currency to run a money query.</p>
+        ) : invalidCurrency ? (
+          <p className="py-10 text-center text-sm text-text-secondary">Correct the native currency code to run this query.</p>
         ) : result.isError ? (
-          <ErrorState title="Couldn’t run this query" onRetry={() => result.refetch()} />
+          <ErrorState title="Couldn’t run this query" description={currencyRefusal ? "Check the native currency code or try this query again." : undefined} onRetry={() => result.refetch()} />
         ) : result.isFetching || !result.data ? (
           <div className="grid h-72 place-items-center text-text-secondary">Loading…</div>
-        ) : result.data.rows.length === 0 ? (
-          <div className="grid h-72 place-items-center text-text-secondary">No data for this selection.</div>
+        ) : !verifiedResult ? (
+          <ErrorState title="The result currency could not be verified. Try this query again." onRetry={() => result.refetch()} />
+        ) : visibleResult?.rows.length === 0 ? (
+          <div className="grid min-h-72 content-center gap-2 text-center text-text-secondary"><p>No data for this selection.</p>{moneyMeasure && <p>Try another currency or adjust the filters.</p>}</div>
         ) : (
           <>
             <p role="status" className="mb-3 text-sm text-text-secondary">
-              Showing {result.data.returned_rows} groups. {result.data.truncated ? (result.data.limit < 1000 ? "More groups match; narrow the filters or increase the group limit." : "More groups match; narrow the filters to see another bounded result.") : "All matching groups are included in this result."}
+              Showing {visibleResult!.returned_rows} groups. {visibleResult!.truncated ? (visibleResult!.limit < 1000 ? "More groups match; narrow the filters or increase the group limit." : "More groups match; narrow the filters to see another bounded result.") : "All matching groups are included in this result."}
             </p>
-            {chart !== "table" && <ChartView result={result.data} chart={chart} fmt={fmt} fmtAxis={fmtAxis} temporal={dim0Temporal} />}
+            {chart !== "table" && <ChartView result={visibleResult!} chart={chart} fmt={fmt} fmtAxis={fmtAxis} temporal={dim0Temporal} />}
           </>
         )}
       </div>
 
-      {ready && result.data!.rows.length > 0 && <DataTable key={params.toString()} result={result.data!} fmt={fmt} />}
+      {!!visibleResult?.rows.length && <DataTable key={params.toString()} result={visibleResult} fmt={fmt} />}
     </div>
   );
 }
@@ -249,7 +296,7 @@ function DataTable({ result, fmt }: { result: ExploreResult; fmt: (v: number) =>
         <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
           <tr>
             {result.dimensions.map((d) => <th key={d.key} className="px-4 py-3">{d.label}</th>)}
-            <th className="px-4 py-3 text-right">{result.measure.label}</th>
+            <th className="px-4 py-3 text-right">{result.measure.label}{result.measure.unit === "money" ? ` (${result.currency})` : ""}</th>
           </tr>
         </thead>
         <tbody>
