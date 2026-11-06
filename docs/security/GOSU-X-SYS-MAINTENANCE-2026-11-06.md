@@ -1,6 +1,7 @@
 # Gosu x/sys manifest maintenance — 6 November 2026
 
-Status: source implemented and locally checked in an isolated branch based on
+Status: helper source and additive runtime qualification are composed and locally
+checked in an isolated branch based on
 frozen PR120 `76d6d7f9babbbf4ef4707f5b1dfdc980d16a693d`. **Actual candidate
 PostgreSQL image builds, full inventories and delivered-source CI remain
 required.** The existing SEC-X-SYS row stays INVESTIGATE. No current image,
@@ -62,7 +63,10 @@ AWK guard now requires that exact dirty identity, Go 1.27.3, both exact linked
 dependency versions/checksums, release/time/CGO/Linux fields and the declared
 target architecture. It rejects missing/duplicate/contradictory/replacement
 records, old x/sys and falsely clean metadata. No other role gains a dirty-source
-allowance; all other Dockerfiles, scanners, workflows and filters are unchanged.
+allowance. Helper component `1fee7a5` left other Dockerfiles, scanners, workflows
+and filters unchanged. The final composition adds only the explicit runtime
+qualification script/tests and Docker-job step described below; existing gates
+and scanner/rating controls remain intact.
 
 BuildKit TARGETARCH is made stage-visible and required. Actual GOARCH must
 match it; the amd64 default level remains v1, while non-amd64 targets do not
@@ -168,3 +172,61 @@ to manufacture a clean scan, infer Windows/future-platform clearance or report a
 current Linux exploit. Source recovery, financial policy, global timeouts/indexes
 and production deployment are unchanged. A rollback must use a separately
 qualified helper; restoring old module metadata alone is not a security repair.
+
+## Composed runtime qualification and final metadata
+
+Helper component `1fee7a558debb283f729b2d8503967af8d399f1f` composes with the
+accepted runtime component `1e9c232a7807e38bbba343f2c8b398fd3459dda0` at
+`16fabc8`. All eight reviewed helper source/test files remain byte-identical.
+The runtime component adds only `scripts/check_postgres_runtime.py`, its new
+portable safety test and one CI Docker-job step. After successful image audit
+and before the unchanged S3 check, CI invokes the actual newly built
+`bidit-ci-postgres:review` and writes `image-security/postgres-runtime-smoke.json`,
+included in the existing always-uploaded image evidence. The stock PostgreSQL
+application job does not supply this custom-image proof. Ten CI jobs remain;
+no required context, threshold, image scan or severity control is removed.
+
+The owner-qualified 65 fake-Docker controls and static checks bind the exact
+merged source; they were not rerun here. Its separate 111 incumbent image-audit
+cases overlap the 111 already included in the helper's 147-case cohort, so they
+are not added again. The previous 201 helper contracts, 17 prototype pairs and
+all earlier failed/checkpoint runs retain their original scope.
+
+The local functional result uses the old immutable `2c1d5e2a…` image, not the
+new module recipe. Fresh initialization and same-container/same-volume graceful
+restart preserve system identifier, ordinary-role/table OIDs and the signed
+numeric/JSON marker. PID1 is UID/GID 70 with zero effective/permitted capabilities;
+PGDATA is 70:70/mode 700. Startup follows the declared image/entrypoint defaults,
+not the helper-only restricted-capability prototype. Both owned container and
+fresh volume and the private environment are verified removed. This is not a
+cross-image baseline-volume transition or new-helper qualification.
+
+Authentication is observational: inherited local/loopback HBA rules use trust,
+and the deliberately wrong password is accepted in that fixture. The reported
+scram-sha-256 password-encryption setting does not prove password enforcement.
+The same facts must persist after restart; no HBA/auth policy is changed.
+
+Six fixed public helper paths report hashes/sizes/status, with at most two
+16-KiB UTF-8 text fields. The 64-KiB output check is post-capture validation,
+not a general memory bound. The generic old-image smoke may pass while the
+three new overlay files are unavailable. Its own label says reported metadata
+is not helper clearance. The actual new-image collector must require expected
+manifests, notice/buildinfo/provenance and binary identity, joined to the new
+immutable role IDs/full SBOMs; old-image success is insufficient.
+[Runtime receipt](/workspace/artifacts/postgres-runtime-smoke-2026-11-06/FINAL-RECEIPT.json).
+
+The composed tree collects 7,697 cases, not a full-suite execution. App,
+frontend, models/migrations and generated API/ERD remain unchanged. The 147/54
+and 51-check figures above are dated helper-component qualification; final
+composed docs controls are recorded in the delivery receipt. No new local
+candidate image build, pull, scan or runtime cohort was executed here. Actual
+new-image/PG proof and all required hosted CI remain pending.
+
+A separate root-reviewed [hosted component reconciliation](../plan/BACKLOG-HOSTED-QUALIFICATION-2026-11-06.md)
+records 17 CI-PASS-HUMAN-REVIEW and 19 PARTIAL-CI-PASS-HUMAN-REVIEW statuses using
+specific sealed PR 115–120 sources/logs, not ancestry. Those 36 updates preserve
+the old next text/qualifications and all identity/inventory/provenance fields.
+SEC-X-SYS is excluded from that qualification and separately gains only this
+runtime-progress note; it remains INVESTIGATE. The other 182 complete raw rows
+remain exact in this combined delivery. There are still 219 IDs and no new
+finding, workflow/policy completion or current image/platform clearance.
