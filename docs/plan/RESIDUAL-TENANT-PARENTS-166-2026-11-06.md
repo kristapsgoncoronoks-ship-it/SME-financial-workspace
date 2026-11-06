@@ -110,3 +110,19 @@ No naive user/session organization pair, customer-data remediation, broad
 relationship-completeness or full-backlog completion claim follows.
 
 [Final composition receipt](/workspace/artifacts/db010-residual-link-review-2026-11-06/final-composition/FINAL-RECEIPT.json).
+
+## Downstream R15 caller follow-up — 6 November 2026
+
+This branch incorporates Explore repair `0d4767f`: its performance scenario
+explicitly selects the EUR currency already used by every seeded invoice.
+The earlier parent run received 422 before producing growth results; this was
+a missed client-contract transition, not evidence of a growth-budget breach.
+Scenario labels, budgets, repetitions, warmups, growth factor and assertions
+remain unchanged. The existing nine perf/seed controls pass on both bounded
+PostgreSQL fixtures at revisions 165 and 166. The latter uses the ordinary
+non-superuser/non-bypass role, emits all six growth results at 100 → 400 rows,
+and restores its synthetic fixture and plan policies. Fresh hosted checks
+remain required. The revision166 application, model, migration,
+test, workflow and frontend trees and the complete 216-row ledger retain their
+qualified contents. No foreign-key comparison, validation or data is changed
+by this caller repair. Earlier sealed receipts retain their original heads.
