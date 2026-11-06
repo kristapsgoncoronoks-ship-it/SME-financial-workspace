@@ -177,3 +177,14 @@ Scoped receipts: [fixture and parity](/workspace/artifacts/backlog-pr111-backend
 and [PDF and budget](/workspace/artifacts/backlog-pr111-backend-2026-11-06/OWNED-TEST-RECEIPT.json).
 Full Ruff/format checks 978 files and Mypy 447 app files; 6536 backend cases
 collect. These local results require a fresh hosted run of the delivered head.
+
+### Read-only inspection follow-up — 6 November
+
+[Recorded full-document inspection](OCR-FACTS-INSPECTION-2026-11-06.md) adds the
+bounded current/history-detail GETs and upload/email panel that were explicitly
+outside the foundation above. Existing history now uses metadata-only owner
+checks; broader source getters retain their inherited full-row scope. Canonical
+publication, source/attempt/failure/cache checks and limits remain. Malformed
+records are unavailable without repair; NULL stays unknown. The preceding163/164
+evidence remains dated; composed165 native controls are separately recorded.
+No raw text, new engine/profile/default/retention or customer accuracy is claimed.

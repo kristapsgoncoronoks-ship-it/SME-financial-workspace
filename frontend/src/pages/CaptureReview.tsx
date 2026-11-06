@@ -1,3 +1,4 @@
+import { CaptureReadingDetails } from "../components/CaptureReadingDetails";
 import { useAuth } from "../auth/AuthContext";
 import { CapturePagePane } from "../components/CapturePagePane";
 import { CaptureProcessNav } from "../components/CaptureProcessNav";
@@ -540,15 +541,15 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
   const heading = (
     <>
       <CaptureProcessNav />
-    <div className="flex items-end justify-between gap-4">
-      <div>
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0 flex-1">
         <nav aria-label="Breadcrumb" className="text-xs text-text-secondary">
           <Link to="/captures" className="hover:text-brand-600 hover:underline">
             Captures
           </Link>{" "}
           / review
         </nav>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="break-words text-2xl font-semibold tracking-tight">
           {poll.data?.draft?.draft.source_filename || "Capture review"}
         </h1>
         <p className="text-sm text-slate-500">
@@ -556,11 +557,12 @@ function CaptureReviewWorkspace({ runId }: { runId: string }) {
         </p>
       </div>
       {poll.data?.method && poll.data.method !== "unknown" && (
-        <span className={`badge shrink-0 ${METHOD_STYLES[poll.data.method] ?? "bg-slate-100 text-slate-600"}`}>
+        <span className={`badge max-w-full shrink-0 whitespace-normal ${METHOD_STYLES[poll.data.method] ?? "bg-slate-100 text-slate-600"}`}>
           Read via {methodLabel(poll.data.method)}
         </span>
       )}
     </div>
+      {poll.data && <CaptureReadingDetails channel="upload" ownerId={runId} revision={`${reviewEpoch}:${poll.data.status}:${poll.data.reading_observation?.id ?? "unknown"}`} />}
     </>
   );
 

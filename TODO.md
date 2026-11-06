@@ -1,23 +1,39 @@
 # TODO — Task Board
 
-**Current Explore bounded views — 6 November:** [Table navigation and explicit download scope](docs/plan/EXPLORE-BOUNDED-VIEWS-2026-11-06.md)
-composes qualified `58a3d075` with Expense parent `e0e00882` at `e6bcbbe`.
-Table renders every returned group through local 100-row pages; JSON and
-CSV/XLSX/PDF disclose the selected bounded group cut. The existing 100 default
-and 1,000 maximum remain; fetching one extra group establishes truncation.
-Downloads rerun current filtered data and retain the accepted `REPORT_READ`
-contract. Complete filtered exports, immutable snapshots, equal-value tie order
-and currency semantics remain separate. Source-bound 29 portable and nine
-mocked-browser controls are reused; new restricted PostgreSQL proof passes
-one case at revision 165 (3.31s, nine real requests, unchanged 14-table hashes
-per tenant). Full Ruff/format (1,009 files), Mypy (452 app files), frontend
-lint/build and the 460/135 kB gate pass at 442.8/129.9 kB. The current tree
-collects 7,274 backend cases; OpenAPI retains 429 paths with a typed Explore
-response and ERD is parent-identical. All 51 docs/generated/CI-discovery
-controls pass against this metadata; fresh hosted CI remains pending.
-Collection and overlapping source evidence are not a full-suite or combined
-unique-case result. All 215 ledger identities/provenance remain; only existing
-BE-018/PERF-010/FE-016 progress changes. Earlier qualifications keep their scope.
+**Current transport parser availability — 6 November:** [Owned offload and explicit busy recovery](docs/plan/TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md)
+Transport estimates and statement ingestion now await only their pure parser
+in the existing thread pool, with one process-local slot held through physical
+completion and cancellation. Busy 503 responses offer explicit retry. Estimates
+store/write no domain facts; busy statement uploads retain the exact original
+but register no transactions or catalog/audit facts from that attempt.
+
+Frozen component `404b1c3` composes with Facts `6ed908d` at `c6d78d5` with all
+five source/test hashes unchanged. Its 312 portable cases (including 11 focused)
+and actual TCP/Python 3.12/PostgreSQL 164 comparison remain dated component
+proof, not new revision-165 performance or fleet capacity. Loop/health delays
+improved with exactly equal responses; postparse EUR aggregation remains open.
+The composition collects 7,301 cases, with Ruff/format 1,010, Mypy 452 and
+frontend lint/build passing; bundle 442.8/129.9 kB stays within 460/135 kB.
+OpenAPI 433 paths and the 122-table ERD are Facts-identical. All 51 docs/generated/CI-discovery controls pass (15.52s), as do 11 focused
+adapter compatibility cases (3.30s) on this parent. These overlap component
+evidence; fresh delivered-source hosted CI remains pending. All 215 ledger identities remain, with only ARCH-006 partial progress.
+Other inline renderers, DB-021 timeout and ARCH-010 audit-lock studies remain
+unqualified. No financial rule, job, provider, production migration or deployment.
+
+**Preceding recorded reading inspection — 6 November (source-scoped):** [Full-document facts and bounded history](docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md)
+adds read-only upload/email details with four GETs, canonical current authority
+and explicit historical source/attempt labels. Requested versus observed
+settings, unresolved defaults, installed packs and target DPI remain distinct
+from measured execution/geometry. Manual and region edits remain separate;
+no raw text, reader/profile/default or accuracy claim is added. Component42
+portable/63 mocked-browser evidence stays source-bound; new composed165 proof
+passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
+RLS and unchanged source/business facts. Two separate native input controls
+refuse malformed UUID paths safely. That composition collects 7,290 cases, not a full-suite
+pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
+paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
+states remain; fresh delivered-source CI, customer corpus and human acceptance
+are open. The earlier164 receipts retain their dated scope.
 
 **Current expense transaction money — 6 November:** [Unavailable historical amounts and safe consumption](docs/plan/EXPENSE-TRANSACTION-MONEY-2026-11-06.md)
 composes expense `9d9b5c6` and registration `ceccf36` with reviewed parent 165

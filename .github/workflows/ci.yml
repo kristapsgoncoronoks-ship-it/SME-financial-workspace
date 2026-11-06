@@ -260,6 +260,7 @@ jobs:
           tests/test_image_reading_metadata_pg.py
           tests/test_capture_reading_cache_pg.py
           tests/test_capture_reading_leases_pg.py
+          tests/test_capture_reading_inspection_pg.py
           tests/test_expense_item_parent_tenant_pg.py
           tests/test_expense_report_children_tenant_pg.py
           tests/test_partner_webhook_parent_tenant_pg.py

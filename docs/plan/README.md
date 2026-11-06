@@ -1,11 +1,25 @@
 # Execution hub — how to run Plan A or Plan B
 
-Current Explore follow-up: [Bounded tables and download scope](EXPLORE-BOUNDED-VIEWS-2026-11-06.md).
-Table exposes every returned group, and JSON/CSV/XLSX/PDF state their bounded
-scope. Component evidence and new revision-165 native/static/frontend checks
-remain separate; fresh hosted CI is pending. Complete filtered exports,
-immutable snapshots, tie order and currency semantics remain open. The existing
-BE-018/PERF-010/FE-016 progress changes without adding a ledger identity.
+Current transport availability: [One owned parser and explicit busy recovery](TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md).
+The Facts composition preserves all five component hashes and keeps request-owned
+FX, review, audit and writes. ARCH-006 remains partial; residual postparse and
+other renderer work, DB-021 and ARCH-010 remain open. Component/164 measurements
+and final composition checks are kept separate; fresh hosted CI is required.
+
+**Preceding recorded reading inspection — 6 November (source-scoped):** [Full-document facts and bounded history](OCR-FACTS-INSPECTION-2026-11-06.md)
+adds read-only upload/email details with four GETs, canonical current authority
+and explicit historical source/attempt labels. Requested versus observed
+settings, unresolved defaults, installed packs and target DPI remain distinct
+from measured execution/geometry. Manual and region edits remain separate;
+no raw text, reader/profile/default or accuracy claim is added. Component42
+portable/63 mocked-browser evidence stays source-bound; new composed165 proof
+passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
+RLS and unchanged source/business facts. Two separate native input controls
+refuse malformed UUID paths safely. That composition collects 7,290 cases, not a full-suite
+pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
+paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
+states remain; fresh delivered-source CI, customer corpus and human acceptance
+are open. The earlier164 receipts retain their dated scope.
 
 Current expense-money follow-up: [Historical unavailable transaction amounts](EXPENSE-TRANSACTION-MONEY-2026-11-06.md).
 Expense reads, candidate search and consumption now retain unavailable amounts
