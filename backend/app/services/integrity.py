@@ -220,9 +220,21 @@ async def verify_ledger(db: AsyncSession, org_id: str) -> IntegrityReport:
 
     # 1) amount_paid cache == SUM(payments.amount) per issued invoice.
     invoices = list(await db.scalars(select(IssuedInvoice).where(IssuedInvoice.org_id == org_id)))
+    ar_sums: dict[str, Decimal] = (
+        {
+            inv_id: money.q2(Decimal(total or 0))
+            for inv_id, total in await db.execute(
+                select(Payment.issued_invoice_id, func.sum(Payment.amount))
+                .where(Payment.org_id == org_id)
+                .group_by(Payment.issued_invoice_id)
+            )
+        }
+        if invoices
+        else {}
+    )
     for inv in invoices:
         report.checked += 1
-        ledger = await _ledger_sum(db, org_id, Payment.issued_invoice_id, inv.id)
+        ledger = ar_sums.get(inv.id, money.q2(_ZERO))
         cache = money.q2(Decimal(inv.amount_paid or _ZERO))
         if ledger != cache:
             report.issues.append(
@@ -271,9 +283,21 @@ async def verify_ledger(db: AsyncSession, org_id: str) -> IntegrityReport:
 
     # 2) SUM(allocations) <= receipt.amount per receipt.
     receipts = list(await db.scalars(select(Receipt).where(Receipt.org_id == org_id)))
+    receipt_sums: dict[str, Decimal] = (
+        {
+            receipt_id: money.q2(Decimal(total or 0))
+            for receipt_id, total in await db.execute(
+                select(NotNullable(Payment.receipt_id), func.sum(Payment.amount))
+                .where(Payment.org_id == org_id, Payment.receipt_id.is_not(None))
+                .group_by(Payment.receipt_id)
+            )
+        }
+        if receipts
+        else {}
+    )
     for r in receipts:
         report.checked += 1
-        allocated = await _ledger_sum(db, org_id, Payment.receipt_id, r.id)
+        allocated = receipt_sums.get(r.id, money.q2(_ZERO))
         if allocated > money.q2(Decimal(r.amount)):
             report.issues.append(
                 DocIssue(
