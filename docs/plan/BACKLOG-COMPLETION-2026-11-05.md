@@ -14,6 +14,28 @@ named rows and16 separately appended findings. These are differently sized
 engineering/review/policy items, not213 equivalent features or a completion
 percentage. Source references retain their original baseline context.
 
+## Current composite qualification boundary
+
+The current tree has121 tables,163 revisions and6528 collected backend cases.
+PR105–PR110 each pass all13 required contexts at their frozen sources; this new
+composite still needs fresh CI. Its447-file app snapshot differs from the frozen
+reading matrix only in the expense-list GET ordering. Component evidence is
+source-bound; overlapping cohorts are not added as unique coverage.
+
+TEN source42d09b5 also passed actual Chrome→API→PostgreSQL158 navigation:
+201 own/101 approval reports, foreign/employee isolation, reload/Back and all13
+checked table snapshots unchanged. The combined447-file browser/native-worker/PG163 reading journey also passes:
+one bounded observation, two ordered native/OCR pages, original checksum and
+foreign/absent404 opacity. Source proof includes no invoice confirmation. No new source is silently qualified by a parent green result.
+
+The older9October uploaded register was found (1735lines/424261bytes,
+SHA5fa192cbd5af8ae2f1d93d315325bd68145f316d2908580745c7e75a38028df1).
+RN03/RN06–09 now have independently reviewed current contracts. Their isolated
+CSV-accounting53c996e and line-serializationedf6d6e repairs pass62/66 scoped
+checks but are not included in this composite. RN07–09 reason/history/version
+work remains open. The newer29October83-action register remains unavailable;
+EX11–16/ACC01 are not silently reconstructed from unrelated older IDs.
+
 ## Current160 sibling follow-up
 
 [Expense comment and approval-step parents](EXPENSE-PARENT-TENANT-160-2026-11-05.md)

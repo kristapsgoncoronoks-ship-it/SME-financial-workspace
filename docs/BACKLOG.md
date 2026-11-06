@@ -5,7 +5,8 @@ adds bounded provenance without retained raw page text.73 focused,15 native
 authority/cache,40 boxed runtime and658 broader portable controls pass; those
 cohorts overlap. The full graph passes28 checks/3 explicit SQLite-only skips.
 PR105–PR110 separately pass all13 required contexts. Current combined-source CI
-and connected qualification remain required. Historical paragraphs below retain
+remain required for this composite; its actual browser/native-worker/PG163
+reading and independent expense navigation proofs pass. Historical paragraphs below retain
 their dated source scope. No main/PR merge, deployment or complete-backlog claim.
 
 ## Current160 sibling tenant-parent follow-up

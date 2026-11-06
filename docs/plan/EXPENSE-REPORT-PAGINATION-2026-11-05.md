@@ -90,3 +90,15 @@ source. `historical-pre-readback/` preserves the original 79-case seal;
 The initial currency-oracle/focus observations and the first post-fix Vite
 connection-refused run remain separately recorded. No assertion, retry, timeout,
 security gate or dependency was relaxed.
+
+## Actual connected navigation
+
+Frozen source42d09b5 passed unmocked Chrome156→Vite5189→API8004→owned
+PostgreSQL158 navigation:201 personal reports and101 approval reports in exact
+order, independent tails, URL reload/Back, employee/foreign isolation and
+anonymous401. All13 checked table snapshots for own302/foreign7 records remain
+unchanged across20 browser GETs and9 explicit API GET checks. Setup accounts,
+invitation, module and report writes precede that baseline. No financial command
+or provider is executed. This source-bound proof is distinct from newer combined
+CI; its sealed receipt is `expense-pagination/connected/TEST-RECEIPT.json` under
+the tenth-wave artifacts, SHA6c3f81d4c9f8504989fda2eba652e037ea2f32dd8d8dbf9ef93e6d9fcb7eef5d.

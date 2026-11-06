@@ -98,12 +98,39 @@ At the current local checkpoint:
   matrix does not establish fleet capacity, customer accuracy or VPS sizing.
 - CI-scope Ruff/format checks pass975 files; Mypy passes447 app sources.
 
-Combined-source assembly, connected readback and fresh delivered-source CI
-remain pending. Prior-candidate native receipts are retained separately and
+Combined-source local verification is complete; fresh delivered-source CI
+remains pending. Prior-candidate native receipts are retained separately and
 do not qualify the final source. The final matrix binds the447 app-file freeze
 and is distinct from future combined-source changes. Runtime image
 `addeda248664d…` is Python3.14.8; local host checks use Python3.12.14. See the
 [runtime provenance erratum](RUNTIME-PROVENANCE-ERRATUM-2026-11-05.md).
+
+### Connected combined-source reading
+
+The actual browser→API→native worker→PostgreSQL163→browser journey passes
+using all447 app files from combined source `b15196f`. The real file chooser
+uploads a synthetic mixed PDF, then exactly one real worker publishes one
+3250-byte canonical observation, one native page and one OCR page. The existing
+review renders MIXED-001 and ordered10.00/20.00 rows; both source previews,
+reload, summary/history digest, original download checksum and foreign/absent
+owner404 opacity are verified. The history check is an authenticated browser
+API read; no new history panel is claimed.
+
+Admission/worker/preview bookkeeping is declared separately. No financial
+confirmation or correction is requested, and nine checked financial tables
+remain empty. Browser-stage row counts are unchanged; that does not establish
+absence of all UPDATE statements. The isolated1CPU/1GiB backend context peaks
+at472,530,944 bytes with zero OOM/native survivors. PostgreSQL and the browser
+run outside that cgroup, so this is not full-stack hardware sizing. Actual
+Tesseract is5.5.2, with engine-default resolved settings left NULL.
+
+The sealed receipt is `connected-reading/receipt.json` under the ninth-wave
+artifact directory (SHA3735fa929c0dd6cd51414351ee698490b6480a5a82cf7d35949aebae8091bb39).
+Combined-source collection is6528 cases; Ruff/format977 files, Mypy447,
+51 OpenAPI/ERD/docs/native-discovery checks, frontend lint/build and the existing
+bundle gate pass. First-load output is442.5kB raw/129.8kB gzip within460/135.
+These checks do not replace fresh full CI. Original customer OCR accuracy,
+comparison/highlights and live fleet remain open.
 
 Keep additive metadata for a compatible code rollback. Destructive downgrade
 locks owner/history tables and refuses any history or current summary, including
