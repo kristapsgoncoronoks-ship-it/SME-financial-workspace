@@ -12,7 +12,16 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
 import pytest
-from sqlalchemy import Column, ForeignKeyConstraint, Index, Integer, MetaData, Table, inspect
+from sqlalchemy import (
+    Column,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    MetaData,
+    Table,
+    UniqueConstraint,
+    inspect,
+)
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.schema import CreateIndex, CreateTable
@@ -35,6 +44,16 @@ OPTIONAL_LINKS = (
         "fk_vendor_change_requests_source_document",
         "source_document_id",
         "documents",
+    ),
+)
+RESIDUAL_LINKS = (
+    ("inbound_invoices", "fk_inbound_invoices_invoice_tenant", "invoice_id", "invoices"),
+    ("issued_invoices", "fk_issued_invoices_customer_tenant", "customer_id", "customers"),
+    (
+        "issued_invoices",
+        "fk_issued_invoices_corrected_tenant",
+        "corrected_invoice_id",
+        "issued_invoices",
     ),
 )
 
@@ -78,7 +97,7 @@ def named_fk(metadata, table, name):
     return next(fk for fk in metadata.tables[table].foreign_key_constraints if fk.name == name)
 
 
-def test_postgresql_ddl_changes_only_eight_actions_and_one_legacy_name():
+def test_postgresql_ddl_changes_only_eleven_actions_and_three_legacy_names():
     pg = postgresql.dialect()
     before = ddl_snapshot(Base.metadata, pg)
     expected = {key: {**value} for key, value in before.items()}
@@ -94,7 +113,7 @@ def test_postgresql_ddl_changes_only_eight_actions_and_one_legacy_name():
         ]
         assert sum(count for _line, count in changed) == 1
         expected[table]["table"] = tuple(sorted(line for line, _count in changed))
-    for table, name, column, _parent in OPTIONAL_LINKS:
+    for table, name, column, _parent in OPTIONAL_LINKS + RESIDUAL_LINKS:
         original = expected[table]["table"]
         assert sum(line.startswith(f"CONSTRAINT {name} ") for line in original) == 1
         expected[table]["table"] = tuple(
@@ -115,10 +134,20 @@ def test_postgresql_ddl_changes_only_eight_actions_and_one_legacy_name():
     ]
     assert sum(count for _, count in changed) == 1
     expected["issued_invoices"]["table"] = tuple(sorted(line for line, _ in changed))
+    for column, name in (
+        ("customer_id", "fk_issued_invoices_customer"),
+        ("corrected_invoice_id", "fk_issued_corrected"),
+    ):
+        changed = [
+            re.subn(rf"^FOREIGN KEY\({column}\)", f"CONSTRAINT {name} FOREIGN KEY({column})", line)
+            for line in expected["issued_invoices"]["table"]
+        ]
+        assert sum(count for _, count in changed) == 1
+        expected["issued_invoices"]["table"] = tuple(sorted(line for line, _ in changed))
     projected = project(Base.metadata, pg)
     assert ddl_snapshot(projected, pg) == expected
     assert projected is not Base.metadata
-    for table, name, column, _parent in LINKS + OPTIONAL_LINKS:
+    for table, name, column, _parent in LINKS + OPTIONAL_LINKS + RESIDUAL_LINKS:
         fk = named_fk(projected, table, name)
         assert fk.ondelete == f"SET NULL ({column})"
         assert all(element.ondelete == fk.ondelete for element in fk.elements)
@@ -137,7 +166,7 @@ def test_alternating_concurrent_dialects_preserve_shared_metadata():
             assert metadata is Base.metadata
             assert ddl == before_sqlite
         else:
-            for table, constraint, column, _parent in LINKS + OPTIONAL_LINKS:
+            for table, constraint, column, _parent in LINKS + OPTIONAL_LINKS + RESIDUAL_LINKS:
                 assert re.search(
                     rf"CONSTRAINT {constraint} [^\n]*ON DELETE SET NULL \({column}\)",
                     "\n".join(ddl[table]["table"]),
@@ -169,7 +198,7 @@ def declaration_metadata(*, invalid=None, schema=None):
             Column("project_id", Integer, nullable=True),
             *([Column("issuer_id", Integer, nullable=True)] if name == "issued_invoices" else []),
         )
-    for parent in ("partners", "documents"):
+    for parent in ("partners", "documents", "customers"):
         tables[parent] = Table(
             parent,
             metadata,
@@ -177,7 +206,7 @@ def declaration_metadata(*, invalid=None, schema=None):
             Column("id", Integer, primary_key=True),
         )
     tables["issued_invoices"].append_column(Column("partner_id", Integer, nullable=True))
-    for table, _, column, _parent in OPTIONAL_LINKS:
+    for table, _, column, _parent in OPTIONAL_LINKS + RESIDUAL_LINKS:
         if table not in tables:
             tables[table] = Table(
                 table,
@@ -186,9 +215,15 @@ def declaration_metadata(*, invalid=None, schema=None):
                 Column("id", Integer, primary_key=True),
                 Column(column, Integer, nullable=True),
             )
+        elif column not in tables[table].c:
+            tables[table].append_column(Column(column, Integer, nullable=True))
     for parent in ("expense_items", "partners", "documents"):
         Index(f"uq_{parent}_org_id", tables[parent].c.org_id, tables[parent].c.id, unique=True)
-    for table, name, column, parent in OPTIONAL_LINKS:
+    for parent in ("customers", "invoices", "issued_invoices"):
+        tables[parent].append_constraint(
+            UniqueConstraint("org_id", "id", name=f"uq_{parent}_org_id")
+        )
+    for table, name, column, parent in OPTIONAL_LINKS + RESIDUAL_LINKS:
         prefix = f"{schema}." if schema else ""
         tables[table].append_constraint(
             ForeignKeyConstraint(
@@ -228,7 +263,7 @@ def test_projection_preserves_metadata_schema_and_naming_convention():
     assert projected.schema == metadata.schema
     assert projected.naming_convention == metadata.naming_convention
     assert set(projected.tables) == set(metadata.tables)
-    for table, name, column, parent in LINKS + OPTIONAL_LINKS:
+    for table, name, column, parent in LINKS + OPTIONAL_LINKS + RESIDUAL_LINKS:
         fk = named_fk(projected, f"synthetic_schema.{table}", name)
         assert fk.ondelete == f"SET NULL ({column})"
         assert [element.target_fullname for element in fk.elements] == [

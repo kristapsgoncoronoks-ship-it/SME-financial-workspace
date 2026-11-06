@@ -184,6 +184,17 @@ async def test_native_wrong_pair_is_immediately_rejected_by_the_intended_guard(
                         text("DELETE FROM issued_invoice_attachments WHERE invoice_id=:id"),
                         {"id": a["invoice"]},
                     )
+                    # The166 corrected-invoice pair is another incoming guard.
+                    # Detach only this fixture's credit links within the same
+                    # savepoint; keep their legal snapshots and money intact.
+                    await db.execute(
+                        text(
+                            "UPDATE issued_invoices SET corrected_invoice_id=NULL "
+                            "WHERE org_id=:org AND doc_type='credit_note' "
+                            "AND corrected_invoice_id=:id"
+                        ),
+                        {"org": a["org"], "id": a["invoice"]},
+                    )
                 await db.execute(child.update().where(child.c.id == a[child_key]).values(**values))
             else:
                 values = {"org_id": b["org"]}

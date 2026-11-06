@@ -1,5 +1,34 @@
 # Execution hub — how to run Plan A or Plan B
 
+**Current tenant integrity — 6 November:** [Four residual parent guards — revision 166](RESIDUAL-TENANT-PARENTS-166-2026-11-06.md)
+repairs customer contacts and three optional inbound/issued references while
+retaining original CASCADE/SET NULL behavior, organization IDs, legal snapshots
+and money. The migration reuses existing UNIQUE targets, refuses scoped
+maintenance callers and retains FORCE RLS; strict comparison exposes unrelated
+drift. All 497 component checks retain their exact source scope. The separate
+31-case graph cohort passes 28 with three explicit SQLite-only skips and all
+12 native paths executed. The approved older-guard fixture correction passes
+34 native cases; fresh composed parity/bootstrap passes 30. These cohorts
+overlap earlier evidence and are not a larger distinct-case total.
+
+Merged Explore parent `ae3925e1` retains its frontend byte-for-byte. Ruff/format
+(1,019 files), Mypy (452), owned 166 upgrade/check and 51 docs/generated/discovery
+controls pass. OpenAPI 433 and ERD 122 are parent-identical. The tree collects
+7,553 tests, not a full-suite result. All 216 ledger identities and 215 unrelated
+complete rows remain; only DB-010 progresses, with no appended finding.
+DB-010 remains partial for mutable-session/global-user and other independently
+contracted semantics. Fresh delivered-source hosted CI is pending; no production
+migration, deployment or historical source repair is claimed. Prior entries
+below retain their dated source scope.
+
+Current Explore delivery: [Bounded tables](EXPLORE-BOUNDED-VIEWS-2026-11-06.md) and
+[native currency/file contract 2](EXPLORE-NATIVE-CURRENCY-2026-11-06.md). Money now requires a selected
+native unit; version-1 money files refuse, while quantity/count and report-read
+authority remain. Source-bound component/runtime proof and fresh composed
+static/generated/docs checks are recorded separately; hosted CI is pending.
+All parent progress including ARCH-006 remains, with one distinct currency
+finding appended as 216. Complete exports, snapshots and tie ordering remain open.
+
 Current transport availability: [One owned parser and explicit busy recovery](TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md).
 The Facts composition preserves all five component hashes and keeps request-owned
 FX, review, audit and writes. ARCH-006 remains partial; residual postparse and

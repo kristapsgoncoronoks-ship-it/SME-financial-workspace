@@ -1082,6 +1082,12 @@ export interface ExploreResult {
   measure: { key: string; label: string; unit: "money" | "number" | "count" };
   dimensions: { key: string; label: string; temporal: boolean }[];
   rows: Record<string, string>[];
+  scope: "bounded_groups";
+  limit: number;
+  returned_rows: number;
+  truncated: boolean;
+  currency: string | null;
+  currency_basis: "native" | "not_applicable";
 }
 
 export interface SupplierBenchmark {

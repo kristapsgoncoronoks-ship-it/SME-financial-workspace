@@ -1,5 +1,46 @@
 # Engineering backlog
 
+**Current tenant integrity — 6 November:** [Four residual parent guards — revision 166](plan/RESIDUAL-TENANT-PARENTS-166-2026-11-06.md)
+repairs customer contacts and three optional inbound/issued references while
+retaining original CASCADE/SET NULL behavior, organization IDs, legal snapshots
+and money. The migration reuses existing UNIQUE targets, refuses scoped
+maintenance callers and retains FORCE RLS; strict comparison exposes unrelated
+drift. All 497 component checks retain their exact source scope. The separate
+31-case graph cohort passes 28 with three explicit SQLite-only skips and all
+12 native paths executed. The approved older-guard fixture correction passes
+34 native cases; fresh composed parity/bootstrap passes 30. These cohorts
+overlap earlier evidence and are not a larger distinct-case total.
+
+Merged Explore parent `ae3925e1` retains its frontend byte-for-byte. Ruff/format
+(1,019 files), Mypy (452), owned 166 upgrade/check and 51 docs/generated/discovery
+controls pass. OpenAPI 433 and ERD 122 are parent-identical. The tree collects
+7,553 tests, not a full-suite result. All 216 ledger identities and 215 unrelated
+complete rows remain; only DB-010 progresses, with no appended finding.
+DB-010 remains partial for mutable-session/global-user and other independently
+contracted semantics. Fresh delivered-source hosted CI is pending; no production
+migration, deployment or historical source repair is claimed. Prior entries
+below retain their dated source scope.
+
+**Current Explore delivery — 6 November:** [Bounded tables](plan/EXPLORE-BOUNDED-VIEWS-2026-11-06.md) and
+[explicit native currency/file contract 2](plan/EXPLORE-NATIVE-CURRENCY-2026-11-06.md) compose `58a3d075`,
+currency `a3ef5a2` and registration `5bed8ad` with Perf parent `18714df` at
+`81738da`. Table exposes all returned groups; scope/caps stay explicit.
+Money requires a user-selected native currency. JSON/HTTP declare its unit;
+money files opt into contract 2 with unit-labelled headers and filenames, while
+legacy money files refuse typed HTTP 422. Quantity/count and `REPORT_READ`
+remain compatible. No FX conversion, allocation or source rewrite is introduced.
+Qualified 78 portable, three native and 21 mocked-browser cases remain
+source-bound, with separate real connected three-invoice API/browser proof.
+Fresh Ruff/format (1,014 files), Mypy (452), frontend lint/build and bundle gate
+pass at 442.9/129.9 kB; all 51 docs/generated/CI-discovery controls pass.
+The tree collects 7,351 backend cases, with 122 tables/165 revisions; OpenAPI
+retains 433 paths and ERD is parent-identical. Collection and overlapping
+evidence are not a full-suite or larger unique-case result. New-head hosted CI
+is pending. All 215 parent identities, ARCH-006 and unrelated complete rows
+remain; only three bounded-progress rows change and the distinct currency
+finding is appended as 216. Complete filtered exports, immutable snapshots and
+tie order remain open. Earlier qualifications below retain their source scope.
+
 **Current transport parser availability — 6 November:** [Owned offload and explicit busy recovery](plan/TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md)
 Transport estimates and statement ingestion now await only their pure parser
 in the existing thread pool, with one process-local slot held through physical
