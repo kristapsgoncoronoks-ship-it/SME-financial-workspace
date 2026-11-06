@@ -121,11 +121,32 @@
         "backend/tests/conftest.py",
         "backend/requirements-dev.txt"
       ],
-      "next": "Pinned runner/isolation fixes ready. Paired strict serial then two-worker full6185-case qualification is prepared on an immutable third-wave source/environment with two-CPU affinity, exact node/status/skip parity and scoped resource sampling. No CI parallelism adopted before green comparison.",
+      "next": "6 November 2026 historical clarification: the old 4fd44b8 full 6,185-case serial/two-worker pair already passed on Python3.12.14: 5,597 passed and the same 588 skips each, exact node/phase/reason parity, 46.9 versus 22.5 minutes. This does not qualify current 7,712 cases or hosted Python3.11, and no CI worker adoption occurs. A fresh estimated 85–90 minute pair is deferred by priority, not externally blocked: actual PR120 whole backend job was 35.7 minutes versus PostgreSQL 41.8. Current-source qualification remains PREPARED. Original prepared next text is retained as history: Pinned runner/isolation fixes ready. Paired strict serial then two-worker full6185-case qualification is prepared on an immutable third-wave source/environment with two-CPU affinity, exact node/status/skip parity and scoped resource sampling. No CI parallelism adopted before green comparison.",
       "dependencies": [
         "TEST-GC-ISOLATION",
         "Serial baseline and isolation proof"
-      ]
+      ],
+      "qualification": {
+        "historical_pair_clarification_20261106": {
+          "plan": "docs/plan/PROJECT-DOCUMENT-RENDERING-2026-11-06.md",
+          "source": "4fd44b8bed97e91cf75ac12649d1f42a580ff2d3",
+          "python": "3.12.14",
+          "collected_each": 6185,
+          "passed_each": 5597,
+          "identical_skips_each": 588,
+          "exact_node_phase_reason_parity": true,
+          "serial_wall_seconds": 2816.609260757017,
+          "two_worker_wall_seconds": 1347.9515706790262,
+          "packet": "/workspace/artifacts/backlog-third-wave-2026-11-05/process-workers/",
+          "pair_verification_sha256": "57dbc8f6a69bf4f87f5ec5798bf6b457c655ba89e397aaeb5fed4ecd0f2f26a1",
+          "limits": "One serial-first warm-cache pair; shared-host aggregate RSS double-counts pages. Not current/Python3.11/native/fleet qualification or CI adoption",
+          "current_pair": "Estimated 85–90 minutes, deliberately deferred by priority; no external blocker. Original next preserved verbatim",
+          "PR120_whole_job_minutes": {
+            "backend": 35.717,
+            "postgres": 41.783
+          }
+        }
+      }
     },
     {
       "id": "TEST-GC-ISOLATION",
@@ -2470,7 +2491,7 @@
         "docs/audit/2026-09-05/FINDINGS-AND-BACKLOG.md",
         "docs/plan/DEVELOPMENT-PLAN-2026-08.md"
       ],
-      "next": "6 November 2026: The implemented bounded transport parser offload and admission has source-bound hosted CI qualification; see docs/plan/BACKLOG-HOSTED-QUALIFICATION-2026-11-06.md (G03). Human review and existing partial, policy, acceptance and remediation limits remain. Pending-CI wording below is preserved dated local-delivery history, superseded only for this implementation. Partial local progress at 404b1c3: transport estimate and statement ingestion await only the pure filename/bytes parser in the existing thread pool, with one nonblocking process slot owned through physical parser completion, including inner/repeated cancellation and late canceled submission. Explicit busy 503 has retryable true and string detail; estimates store/write nothing, while statements retain the exact original before parser admission and report original_stored true without catalog/refusal/audit/import writes from the busy attempt. Existing successful 200 workflow, FX/review/session/audit/DML ownership, all seven network rules and natural-key behavior remain. Owner 312 portable cases include 11 focused; final 11 is overlapping subset. Actual same-fixture TCP/ordinary-role PostgreSQL 164 comparison improves loop/health availability with equal complete responses and unchanged 115 table entries per synthetic org; host Python 3.12 local scope only. Residual EUR aggregation/postparse work and inventoried inline renderers remain open. DB-021 timeout and ARCH-010 audit-lock studies are not qualified; no guessed limit or audit change. Facts parent 6ed908d is composed at c6d78d5 with five unchanged hashes. Composed static/collection/build, 51 docs controls and 11 focused adapter cases pass; fresh delivered-source CI remains pending.",
+      "next": "6 November 2026: The implemented bounded transport parser offload and admission has source-bound hosted CI qualification; see docs/plan/BACKLOG-HOSTED-QUALIFICATION-2026-11-06.md (G03). Human review and existing partial, policy, acceptance and remediation limits remain. Pending-CI wording below is preserved dated local-delivery history, superseded only for this implementation. Partial local progress at 404b1c3: transport estimate and statement ingestion await only the pure filename/bytes parser in the existing thread pool, with one nonblocking process slot owned through physical parser completion, including inner/repeated cancellation and late canceled submission. Explicit busy 503 has retryable true and string detail; estimates store/write nothing, while statements retain the exact original before parser admission and report original_stored true without catalog/refusal/audit/import writes from the busy attempt. Existing successful 200 workflow, FX/review/session/audit/DML ownership, all seven network rules and natural-key behavior remain. Owner 312 portable cases include 11 focused; final 11 is overlapping subset. Actual same-fixture TCP/ordinary-role PostgreSQL 164 comparison improves loop/health availability with equal complete responses and unchanged 115 table entries per synthetic org; host Python 3.12 local scope only. Residual EUR aggregation/postparse work and inventoried inline renderers remain open. DB-021 timeout and ARCH-010 audit-lock studies are not qualified; no guessed limit or audit change. Facts parent 6ed908d is composed at c6d78d5 with five unchanged hashes. Composed static/collection/build, 51 docs controls and 11 focused adapter cases pass; fresh delivered-source CI remains pending. 6 November 2026 renderer followup: component c6557b11 moves only detached project text/PDF construction off loop, with one nonblocking physical slot per process and typed project_document_render_busy 503 before attachment/storage/audit. Caller Task cancellation retains physical ownership; this is not automatic browser-disconnect cancellation or an uncertain-save retry guarantee. Same synthetic TCP/real-renderer fixture improves health median 415.800 to 118.019 ms while render median increases 429.241 to 476.396 ms. Component 80 passes include 15 new and 65 incumbent, with 18 existing native-gate skips; the strengthened one-pass target overlaps. Current collection 7,712 and full static checks pass; fresh delivered-source hosted CI is pending. Other inline/postparse paths and DB-021/ARCH-010 remain open. See docs/plan/PROJECT-DOCUMENT-RENDERING-2026-11-06.md.",
       "dependencies": [],
       "delivery": {
         "proposed_plan": "docs/plan/TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md",
@@ -2535,6 +2556,27 @@
           "group": "G03",
           "hosted_head": "76d6d7f9babbbf4ef4707f5b1dfdc980d16a693d",
           "current_1fee_candidate_ci": "Not qualified by this record"
+        },
+        "project_document_rendering_20261106": {
+          "plan": "docs/plan/PROJECT-DOCUMENT-RENDERING-2026-11-06.md",
+          "component": "c6557b11a8f139237df81135706988a0d2752ad4",
+          "parent": "9b8e4647adac233ee81bc74505c3c2905d9f294b",
+          "app_sha256": "63f4a778a8285bf5a0ce0abe932c031e46224f8225106dd9d179167fa4bdf6ed",
+          "test_sha256": "231e4b53c94b7494179ddf59b4cd567a96a009aee957fab26678982bac44de6b",
+          "owner_receipt_sha256": "2038b97711d621d15824e473936085a02c4ede7950191ab22d958a8d11ed3a7c",
+          "OID_bound_peer_sha256": "2484494b6ba024e7c9b067ae4efaff666ef779d486c2a031fa1fb4750247ef28",
+          "component_scope": "80 passed (15 new, 65 incumbent), 18 existing native-gate skips; final strengthened one-pass target overlaps, not 81 unique",
+          "measurement_scope": "One warm and three sampled synthetic TCP calls with real renderer/asynchronous I/O stubs; Python3.12.14 shared host, no real database/storage/native or capacity claim",
+          "health_median_ms_before_after": [
+            415.8,
+            118.019
+          ],
+          "render_wall_median_ms_before_after": [
+            429.241,
+            476.396
+          ],
+          "delivery": "7,712 collected; full Ruff/format 1,025 files and Mypy 452 app files pass. Fresh hosted CI pending; no frontend/native/full suite repeated",
+          "limits": "No new size/time/RAM/global policy or automatic retry; physical cancellation ownership is not browser-disconnect cancellation; other ARCH-006/DB-021/ARCH-010 work remains open"
         }
       }
     },
