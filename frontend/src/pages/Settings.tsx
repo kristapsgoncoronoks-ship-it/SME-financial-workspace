@@ -648,10 +648,9 @@ function RetentionPanel() {
   );
 }
 
-// Admin: re-hash stored documents (receipts, logos, email attachments) against
-// their recorded sha256 to detect corruption or loss. A large store answers
-// 202 instead: the check runs as a background job (PERF-009) and its result
-// appears in the "Background jobs" list further down this page.
+// Admin: re-hash the verifier's supported references, not every stored file.
+// A large supported set answers 202 with a new or existing background job;
+// that response does not establish the job's current execution state.
 function IntegrityCheck() {
   const toast = useToast();
   const qc = useQueryClient();
@@ -667,8 +666,8 @@ function IntegrityCheck() {
         qc.invalidateQueries({ queryKey: ["jobs"] });
         toast.success(
           out.queued.created
-            ? "Too many documents to verify while you wait — a background job was queued. Its result appears under Background jobs."
-            : "Today's verification job is already queued — its result appears under Background jobs.",
+            ? "Verification job queued. Check Background jobs for its status and result."
+            : "Today's verification job already exists. Check Background jobs for its status and result.",
         );
       }
     },
@@ -682,25 +681,31 @@ function IntegrityCheck() {
       <div className="px-1">
         <h2 className="text-sm font-semibold text-slate-600">Data integrity</h2>
         <p className="text-sm text-slate-500">
-          Re-hash every stored document against its recorded checksum to detect silent corruption or a lost file.
+          Check current expense receipts, company logos, retained email attachments and original supplier invoice uploads against their recorded checksums.
+        </p>
+        <p className="text-sm text-slate-500">
+          Other document categories and the version history of replaced files are outside this check.
         </p>
       </div>
       <div className="card space-y-3">
         <button className="btn-ghost" disabled={verify.isPending} onClick={() => verify.mutate()}>
-          {verify.isPending ? "Verifying…" : "Verify stored documents"}
+          {verify.isPending ? "Verifying…" : "Verify supported documents"}
         </button>
         {q && (
           <div className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-700" data-testid="integrity-queued">
-            {formatNumber(q.references)} documents exceed the {formatNumber(q.sync_limit)} this page checks while you wait.
-            The check is running as a background job — see <span className="font-medium">Background jobs</span> below for its result.
+            {formatNumber(q.references)} supported references exceed the {formatNumber(q.sync_limit)} this page checks while you wait.{" "}
+            {q.created ? "Verification job queued." : "Today's verification job already exists."}{" "}
+            Check <span className="font-medium">Background jobs</span> for its status and result.
           </div>
         )}
         {r && (
           <div className="space-y-2">
-            <div className={`rounded-lg px-3 py-2 text-sm ${r.healthy ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+            <div className={`rounded-lg px-3 py-2 text-sm ${r.healthy ? r.checked === 0 ? "bg-slate-50 text-slate-700" : "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
               {r.healthy
-                ? `All ${r.ok} document${r.ok === 1 ? "" : "s"} verified — no corruption or loss.`
-                : `${r.issues.length} problem${r.issues.length === 1 ? "" : "s"} found across ${r.checked} document${r.checked === 1 ? "" : "s"}.`}
+                ? r.checked === 0
+                  ? "No supported document references to check."
+                  : `No problems found in ${formatNumber(r.checked)} checked supported reference${r.checked === 1 ? "" : "s"}.`
+                : `${formatNumber(r.issues.length)} problem${r.issues.length === 1 ? "" : "s"} found across ${formatNumber(r.checked)} checked supported reference${r.checked === 1 ? "" : "s"}.`}
             </div>
             {r.issues.length > 0 && (
               <ul className="space-y-1 text-xs">

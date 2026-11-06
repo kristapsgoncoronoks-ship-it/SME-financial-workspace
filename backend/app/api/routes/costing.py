@@ -18,7 +18,8 @@ from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, refresh_current_identity, require_perm
 from app.api.upload_read import read_upload
-from app.core import authz
+from app.core import authz, storage
+from app.core.errors import AppError
 from app.core.security_headers import content_disposition
 from app.models.costing import CostCenter, Department, Project
 from app.models.customer import Customer
@@ -475,6 +476,17 @@ async def download_project_document(
             raise project_profit.NotFoundError("Document not found")
     except project_profit.ProjectProfitError as exc:
         _raise_pp(exc)
+    except storage.StorageError as exc:
+        # Missing objects and adapter base-read failures are availability faults.
+        # Preserve typed interrupted/oversize/write errors and their contracts.
+        if type(exc) is not storage.StorageError:
+            raise
+        raise AppError(
+            "Stored document could not be read. Check storage and retry.",
+            code="storage_read_unavailable",
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            headers={"Cache-Control": "private, no-store"},
+        ) from None
     return Response(
         content=data,
         media_type="application/octet-stream",
