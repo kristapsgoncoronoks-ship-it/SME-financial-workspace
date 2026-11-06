@@ -135,7 +135,11 @@ class RequestContextMiddleware:
             await self.app(scope, receive, send)
             return
 
-        headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        headers = {
+            k.decode().lower(): v.decode()
+            for k, v in scope.get("headers", [])
+            if k.lower() == b"x-request-id"
+        }
         rid = headers.get("x-request-id") or uuid.uuid4().hex
         state = scope.get("state")
         if not isinstance(state, dict):

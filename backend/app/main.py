@@ -211,7 +211,11 @@ async def _unhandled_error_handler(request, exc: Exception):
         # Header decode failures and middleware-bypassing fixtures have no
         # resolved ID to recover. Never reuse ambient context for the fallback.
         try:
-            headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+            headers = {
+                k.decode().lower(): v.decode()
+                for k, v in scope.get("headers", [])
+                if k.lower() == b"x-request-id"
+            }
         except UnicodeDecodeError:
             headers = {}
         rid = headers.get("x-request-id") or uuid.uuid4().hex

@@ -274,14 +274,69 @@ async def test_invalid_utf8_header_keeps_safe_fallback_before_context_is_resolve
         transport=ASGITransport(app=probe, raise_app_exceptions=False), base_url="http://test"
     ) as client:
         response = await client.get(
-            "/unexpected/not-admitted", headers=[(b"x-synthetic-unrelated", b"\xff")]
+            "/unexpected/not-admitted", headers=[(b"x-request-id", b"\xff")]
         )
     assert response.status_code == 500
     assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
     _response_id(response, None)
-    # Existing header decoding still refuses this request before route/context
+    # Existing target-ID decoding still refuses this request before route/context
     # admission. There is no resolved/logged request ID to recover in this case.
     assert observed == {}
     assert not [entry for entry in request_error_logs if entry["msg"] == "unhandled error"]
     assert unwound["/unexpected/not-admitted"] == {"before": before, "after": before}
+    assert request_id_ctx.get() == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("supplied", [b"last-target-id", None], ids=["upstream-last", "generated"])
+async def test_unrelated_non_utf8_header_does_not_fail_a_normal_read(
+    request_probe, request_error_logs, supplied
+):
+    probe, _, unwound = request_probe
+    headers = [(b"X-Test-Note", b"\xff")]
+    if supplied is not None:
+        # Valid duplicate target IDs retain the existing last-value selection.
+        headers.extend([(b"x-request-id", b"first-target-id"), (b"X-Request-ID", supplied)])
+    before = request_id_ctx.get()
+    async with AsyncClient(
+        transport=ASGITransport(app=probe, raise_app_exceptions=False), base_url="http://test"
+    ) as client:
+        response = await client.get("/ok", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    resolved = _response_id(response, supplied)
+    access = [
+        entry
+        for entry in request_error_logs
+        if entry["msg"] == "request" and entry.get("path") == "/ok"
+    ]
+    assert len(access) == 1 and access[0]["request_id"] == resolved
+    assert not [entry for entry in request_error_logs if entry["msg"] == "unhandled error"]
+    assert unwound["/ok"] == {"before": before, "after": before}
+    assert request_id_ctx.get() == before
+
+
+@pytest.mark.asyncio
+async def test_unrelated_non_utf8_header_does_not_hide_the_selected_error_id(
+    request_probe, request_error_logs
+):
+    probe, observed, unwound = request_probe
+    before = request_id_ctx.get()
+    async with AsyncClient(
+        transport=ASGITransport(app=probe, raise_app_exceptions=False), base_url="http://test"
+    ) as client:
+        response = await client.get(
+            "/unexpected/unrelated-header",
+            headers=[(b"X-Test-Note", b"\xff"), (b"X-Request-ID", b"selected-error-id")],
+        )
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
+    assert PRIVATE not in response.text
+    resolved = _response_id(response, b"selected-error-id")
+    assert _error_id(request_error_logs, "/unexpected/unrelated-header") == resolved
+    assert (
+        observed["unrelated-header"]["before"] == observed["unrelated-header"]["after"] == resolved
+    )
+    assert observed["unrelated-header"]["state"]["request_id"] == resolved
+    assert unwound["/unexpected/unrelated-header"] == {"before": before, "after": before}
     assert request_id_ctx.get() == before
