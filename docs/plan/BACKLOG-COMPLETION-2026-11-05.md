@@ -1,5 +1,25 @@
 # Backlog completion — 5 November 2026
 
+**Current Explore delivery — 6 November:** [Bounded tables](EXPLORE-BOUNDED-VIEWS-2026-11-06.md) and
+[explicit native currency/file contract 2](EXPLORE-NATIVE-CURRENCY-2026-11-06.md) compose `58a3d075`,
+currency `a3ef5a2` and registration `5bed8ad` with Perf parent `18714df` at
+`81738da`. Table exposes all returned groups; scope/caps stay explicit.
+Money requires a user-selected native currency. JSON/HTTP declare its unit;
+money files opt into contract 2 with unit-labelled headers and filenames, while
+legacy money files refuse typed HTTP 422. Quantity/count and `REPORT_READ`
+remain compatible. No FX conversion, allocation or source rewrite is introduced.
+Qualified 78 portable, three native and 21 mocked-browser cases remain
+source-bound, with separate real connected three-invoice API/browser proof.
+Fresh Ruff/format (1,014 files), Mypy (452), frontend lint/build and bundle gate
+pass at 442.9/129.9 kB; all 51 docs/generated/CI-discovery controls pass.
+The tree collects 7,351 backend cases, with 122 tables/165 revisions; OpenAPI
+retains 433 paths and ERD is parent-identical. Collection and overlapping
+evidence are not a full-suite or larger unique-case result. New-head hosted CI
+is pending. All 215 parent identities, ARCH-006 and unrelated complete rows
+remain; only three bounded-progress rows change and the distinct currency
+finding is appended as 216. Complete filtered exports, immutable snapshots and
+tie order remain open. Earlier qualifications below retain their source scope.
+
 **Current transport parser availability — 6 November:** [Owned offload and explicit busy recovery](TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md)
 Transport estimates and statement ingestion now await only their pure parser
 in the existing thread pool, with one process-local slot held through physical

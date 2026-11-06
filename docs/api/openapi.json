@@ -11862,6 +11862,26 @@
       },
       "ExploreResultOut": {
         "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "currency_basis": {
+            "enum": [
+              "native",
+              "not_applicable"
+            ],
+            "title": "Currency Basis",
+            "type": "string"
+          },
           "dimensions": {
             "items": {
               "$ref": "#/components/schemas/ExploreDimensionOut"
@@ -11907,7 +11927,9 @@
           "scope",
           "limit",
           "returned_rows",
-          "truncated"
+          "truncated",
+          "currency",
+          "currency_basis"
         ],
         "title": "ExploreResultOut",
         "type": "object"
@@ -31551,7 +31573,7 @@
     },
     "/api/v1/analytics/explore": {
       "get": {
-        "description": "Bounded current-data pivot, also serialized as CSV/XLSX/PDF.\n\n`truncated` means more groups match the filters. Downloads rerun the query;\nthey are not a frozen snapshot or an unbounded complete filtered export.\nAll formats disclose the effective scope through X-Explore-* headers.",
+        "description": "Bounded current-data pivot, also serialized as CSV/XLSX/PDF.\n\n`truncated` means more groups match the filters. Downloads rerun the query;\nthey are not a frozen snapshot or an unbounded complete filtered export.\nAll formats disclose the effective scope through X-Explore-* headers.\nMoney requires an explicit native currency; no FX conversion is performed.\nMoney files require export_contract=2 and declare that unit in their header.",
         "operationId": "get_explore_api_v1_analytics_explore_get",
         "parameters": [
           {
@@ -31723,6 +31745,18 @@
               "pattern": "^(json|csv|xlsx|pdf)$",
               "title": "Format",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "export_contract",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 2,
+              "minimum": 1,
+              "title": "Export Contract",
+              "type": "integer"
             }
           }
         ],

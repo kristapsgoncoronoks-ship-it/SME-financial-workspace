@@ -1,5 +1,13 @@
 # Execution hub — how to run Plan A or Plan B
 
+Current Explore delivery: [Bounded tables](EXPLORE-BOUNDED-VIEWS-2026-11-06.md) and
+[native currency/file contract 2](EXPLORE-NATIVE-CURRENCY-2026-11-06.md). Money now requires a selected
+native unit; version-1 money files refuse, while quantity/count and report-read
+authority remain. Source-bound component/runtime proof and fresh composed
+static/generated/docs checks are recorded separately; hosted CI is pending.
+All parent progress including ARCH-006 remains, with one distinct currency
+finding appended as 216. Complete exports, snapshots and tie ordering remain open.
+
 Current transport availability: [One owned parser and explicit busy recovery](TRANSPORT-PARSER-AVAILABILITY-2026-11-06.md).
 The Facts composition preserves all five component hashes and keeps request-owned
 FX, review, audit and writes. ARCH-006 remains partial; residual postparse and
