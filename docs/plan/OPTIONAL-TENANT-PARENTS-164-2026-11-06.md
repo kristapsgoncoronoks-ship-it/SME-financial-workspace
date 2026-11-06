@@ -51,6 +51,24 @@ cases; there are no test filters or assertion waivers. The 159 org-update test
 isolates the newly enforced incoming transaction FK only inside its failing savepoint, retaining its exact
 old constraint assertion and full before/after restoration check.
 
+## Final composition — 6 November
+
+Source `13b7392` adds Bank `964b26b`, including the Projects correction and
+PR111's bounded PDF/backend CI repairs. All 21 optional-owner source files and
+the three qualified 164 graph files remain byte-identical to their reviewed
+component receipts. The new combined tree collects 7,102 cases, passes full
+Ruff/format across 994 files and Mypy across 448 app files. The 37-check RLS/bank
+cohort passes in 21.56s: 36 database cases plus one migration-registry assertion,
+with no failures or skips. The previous “37 native” wording described this
+mixed cohort, rather than 37 distinct database operations.
+
+The 637-case component inventory, full graph 28-pass/3-skip result and earlier
+native receipts retain their original scope; they were not rerun or added to
+an invented unique total. The final generated-contract/docs controls and fresh
+hosted CI are recorded in the final composition receipt. No production migration,
+main merge, deployment or full-backlog completion follows from this delivery.
+[Composition receipt](/workspace/artifacts/backlog-eleventh-wave-2026-11-06/final-composition/FINAL-RECEIPT.json).
+
 ## Qualified component evidence
 
 The [source case inventory](/workspace/artifacts/backlog-eleventh-wave-2026-11-05/optional-parent/QUALIFIED-CASE-INVENTORY.json)

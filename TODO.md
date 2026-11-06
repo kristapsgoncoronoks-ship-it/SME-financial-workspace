@@ -10,13 +10,14 @@ five separately identified current links and session/membership semantics remain
 open. Source-reviewed evidence covers 637 distinct applicable component cases,
 including 28 full-graph passes/3 explicit SQLite-only skips; all 12 native graph
 cases executed. The composed ordinary-RLS/Bank native cohort passes 37 cases
-(24.47s); these overlapping scopes are not added as a new unique total. The
-current tree collects 7,094 backend cases; full Ruff/format (993 files), Mypy
-(448 app files) and 51 docs/generated/CI-discovery controls (12.55s, zero
-failures/errors/skips) pass. OpenAPI and ERD match Bank555 byte-for-byte. The CI
+(21.56s: 36 database cases plus one registry control); these overlapping scopes are not added as a new unique total. The
+current tree collects 7,102 backend cases; full Ruff/format (994 files), Mypy
+(448 app files) and 51 docs/generated/CI-discovery controls (zero
+failures/errors/skips) pass. OpenAPI and ERD retain the qualified bank contracts. The CI
 split preserves existing paths and filters; fresh delivered-source hosted CI
 remains pending. Collection is not a full-suite pass. All 214 ledger identities
-and unrelated row statuses are preserved. Bank555 and prior records below
+and unrelated row statuses are preserved. The current source includes Bank `964b26b` and the bounded backend CI repairs.
+Bank555 and prior records below
 retain their dated source scope.
 
 **Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
