@@ -209,3 +209,27 @@ Fresh new-head hosted CI and root review precede publication. No production
 migration, provider operation, source repair, main/PR merge or deployment is
 claimed. Revert these application/copy changes and registrations together if
 needed; this delivery has no schema/data downgrade or automatic repair step.
+
+## Corrected parent follow-up — 6 November
+
+This delivery subsequently composes corrected revision-166 parent
+`2594150377992ae5780bd3bf85880ab2e18c9dd2`. Its only executable change from
+`cd226a1` supplies the existing EUR fixture currency to the Explore growth
+harness's monetary request; two parent plans record that caller transition.
+The strict missing-currency refusal remains. Budgets, thresholds, repetitions
+12, warmups two and scale factor four are unchanged.
+
+Nine existing native growth/seed controls pass on the parent's owned actual
+166 database at 100→400 scale, with fixture policies restored. That is the
+parent's source-bound growth proof, not a new reliability/performance total.
+All eight reliability component hashes, application/migration/test/frontend/CI
+trees and this delivery's complete 219-row ledger remain exact to `c543993`;
+the corrected parent's 216-row baseline is also exact to `cd226a1`.
+Thus the completed four native, static/build, collection and 51 docs proofs
+retain their dated scope without another native/shape/build cohort. Only
+fresh affected docs controls are run for this final note. Hosted CI remains
+pending; no release, production or completed-backlog claim follows.
+
+All seven affected docs-truth controls pass in 0.07 s after this composition.
+They overlap the earlier 51-control cohort and are not seven additional unique
+release cases. No repeated native, shape, static or build run was needed.
