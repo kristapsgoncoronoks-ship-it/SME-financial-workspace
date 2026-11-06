@@ -20,7 +20,7 @@ import io
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, DecimalException
 
 from app.services import pdf_ocr
 
@@ -144,6 +144,8 @@ _DEBIT_COLS = ("debit", "withdrawal", "paid out", "money out", "out")
 _CREDIT_COLS = ("credit", "deposit", "paid in", "money in", "in")
 _CURRENCY_COLS = ("currency", "ccy", "transaction currency")
 _CSV_ROW_WARNING_LIMIT = 20
+# BankLine.amount and ExpenseTransaction.amount both use Numeric(14, 2).
+_CSV_MAX_AMOUNT = Decimal("999999999999.99")
 
 
 def _pick(fieldmap: dict, names) -> str | None:
@@ -175,6 +177,11 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
         if len(row_warnings) < _CSV_ROW_WARNING_LIMIT:
             row_warnings.append(f"CSV row {row_number} skipped: {reason}.")
 
+    def invalid_amount(row_number: int) -> ValueError:
+        return ValueError(
+            f"Invalid amount on CSV row {row_number}; use a finite value within the supported range."
+        )
+
     txns: list[Txn] = []
     for row_number, row in enumerate(reader, start=2):
         d = pdf_ocr._to_date((row.get(date_c) or "").strip())
@@ -183,21 +190,30 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
             warn_skip(row_number, "invalid or missing date")
             continue
         desc = (row.get(desc_c) or "").strip() if desc_c else "Transaction"
-        if amount_c:
-            amt = pdf_ocr._num(row.get(amount_c) or "0")
-            direction = "credit" if amt > 0 else "debit"
-            amount = abs(amt)
-        else:
-            debit = pdf_ocr._num(row.get(debit_c) or "0") if debit_c else Decimal("0")
-            credit = pdf_ocr._num(row.get(credit_c) or "0") if credit_c else Decimal("0")
-            if debit:
-                direction, amount = "debit", abs(debit)
-            elif credit:
-                direction, amount = "credit", abs(credit)
+        try:
+            if amount_c:
+                amt = pdf_ocr._num(row.get(amount_c) or "0")
+                if not amt.is_finite():
+                    raise invalid_amount(row_number)
+                direction = "credit" if amt > 0 else "debit"
+                amount = abs(amt)
             else:
-                skipped_amounts += 1
-                warn_skip(row_number, "no nonzero amount was recognized")
-                continue
+                debit = pdf_ocr._num(row.get(debit_c) or "0") if debit_c else Decimal("0")
+                credit = pdf_ocr._num(row.get(credit_c) or "0") if credit_c else Decimal("0")
+                if not debit.is_finite() or not credit.is_finite():
+                    raise invalid_amount(row_number)
+                if debit:
+                    direction, amount = "debit", abs(debit)
+                elif credit:
+                    direction, amount = "credit", abs(credit)
+                else:
+                    skipped_amounts += 1
+                    warn_skip(row_number, "no nonzero amount was recognized")
+                    continue
+            if not amount.is_finite():
+                raise invalid_amount(row_number)
+        except DecimalException:
+            raise invalid_amount(row_number) from None
         if amount == 0:
             skipped_amounts += 1
             warn_skip(row_number, "no nonzero amount was recognized")
@@ -207,11 +223,17 @@ def _parse_csv(content: bytes, warnings: list[str]) -> list[Txn]:
             # Refuse the whole import rather than treating a stated invalid unit
             # as unknown (which the legacy matcher permits). Do not echo source data.
             raise ValueError(f"Invalid currency code on CSV row {row_number}; use three letters.")
+        try:
+            rounded_amount = amount.quantize(_CENTS)
+        except DecimalException:
+            raise invalid_amount(row_number) from None
+        if not rounded_amount.is_finite() or rounded_amount > _CSV_MAX_AMOUNT:
+            raise invalid_amount(row_number)
         txns.append(
             Txn(
                 date=d,
                 description=(desc or "Transaction")[:300],
-                amount=amount.quantize(_CENTS),
+                amount=rounded_amount,
                 direction=direction,
                 currency=currency or None,
             )
