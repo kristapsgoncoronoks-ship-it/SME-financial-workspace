@@ -14,6 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import delete, select
 
 from app.core.database import SessionLocal, engine
+from app.core.development_schema import development_metadata
 from app.core.security import hash_password
 from app.models import Base
 from app.models.invoice import Invoice, InvoiceStatus, LineItem
@@ -59,7 +60,11 @@ _DEMO_DEPT_CODES = ("OPS", "FIN", "SALES")
 async def seed() -> None:
     rng = random.Random(42)  # deterministic demo data
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(
+            lambda connection: development_metadata(Base.metadata, connection.dialect).create_all(
+                connection
+            )
+        )
 
     async with SessionLocal() as db:
         # Reset every org this seed owns. Deleting the org cascades to its rows

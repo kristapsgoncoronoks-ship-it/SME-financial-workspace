@@ -23,6 +23,7 @@ from app.models.base import GUID, Base, TimestampMixin, UUIDPrimaryKeyMixin
 class Document(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "documents"
     __table_args__ = (
+        Index("uq_documents_org_id", "org_id", "id", unique=True),
         # One row per distinct (content, kind) within a tenant — content-addressed.
         UniqueConstraint("org_id", "sha256", "kind", name="uq_documents_org_sha_kind"),
         Index("ix_documents_org_kind", "org_id", "kind"),

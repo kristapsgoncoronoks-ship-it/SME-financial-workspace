@@ -125,6 +125,7 @@ class ExpenseReport(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class ExpenseItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "expense_items"
     __table_args__ = (
+        Index("uq_expense_items_org_id", "org_id", "id", unique=True),
         ForeignKeyConstraint(
             ["org_id", "report_id"],
             ["expense_reports.org_id", "expense_reports.id"],
@@ -269,6 +270,13 @@ class ExpenseTransaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # The 'available expenses' inbox filters by (employee, status) together.
     __table_args__ = (
         Index("ix_exp_txn_employee_status", "employee_id", "status"),
+        # The single item FK detaches the optional ID on SQLite. PostgreSQL
+        # projects this immediate guard to SET NULL(item_id), preserving org.
+        ForeignKeyConstraint(
+            ["org_id", "item_id"],
+            ["expense_items.org_id", "expense_items.id"],
+            name="fk_expense_transactions_item",
+        ),
         ForeignKeyConstraint(
             ["org_id", "import_batch_id"],
             ["expense_import_batches.org_id", "expense_import_batches.id"],
