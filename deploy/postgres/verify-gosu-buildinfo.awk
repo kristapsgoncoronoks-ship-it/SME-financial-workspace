@@ -1,11 +1,15 @@
-# Validate only the pinned source build's relevant Go BuildInfo records.
+# Validate this exact downstream gosu manifest build, not arbitrary dirty sources.
 # The caller must capture successful `go version -m` output before invoking awk.
+# BuildKit's declared architecture is required; a match does not qualify a platform.
 BEGIN {
+    if (expected_goarch !~ /^[a-z0-9]+$/) invalid = 1
     want["vcs.revision"] = "1.20"
     want["vcs.time"] = "2026-10-25T09:43:55Z"
-    want["vcs.modified"] = "false"
+    want["vcs.modified"] = "true"
     want["CGO_ENABLED"] = "0"
     want["GOOS"] = "linux"
+    want["GOARCH"] = expected_goarch
+    if (expected_goarch == "amd64") want["GOAMD64"] = "v1"
 }
 function record(key, valid) {
     seen[key]++
@@ -13,7 +17,7 @@ function record(key, valid) {
 }
 $1 ~ /:$/ {
     record("header", NR == 1 && NF == 2 && $1 == "/out/gosu:" &&
-           $2 ~ /^go[0-9]+\.[0-9]+(\.[0-9]+)?$/)
+           $2 == "go1.27.3")
     next
 }
 $1 == "path" {
@@ -21,15 +25,21 @@ $1 == "path" {
 }
 $1 == "mod" {
     record("mod", (NF == 3 || (NF == 4 && $4 ~ /^h1:/)) &&
-           $2 == "github.com/tianon/gosu" && $3 == "v1.20.0")
+           $2 == "github.com/tianon/gosu" && $3 == "v1.20.0+dirty")
 }
 $1 == "dep" && $2 == "github.com/moby/sys/user" {
-    record("moby", NF == 4 && $3 == "v0.4.1" && $4 ~ /^h1:/)
+    record("moby", NF == 4 && $3 == "v0.4.1" &&
+           $4 == "h1:RgjRlaDKi/Xmyrz4t8lyzXT6v2ooFeO/7xtchmhVWE0=")
+}
+$1 == "dep" && $2 == "golang.org/x/sys" {
+    record("xsys", NF == 4 && $3 == "v0.49.0" &&
+           $4 == "h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=")
 }
 $1 == "=>" { invalid = 1 }
 $1 == "build" {
     key = $2
     sub(/=.*/, "", key)
+    if (key == "GOAMD64" && expected_goarch != "amd64") invalid = 1
     if (key in want) {
         value = $2
         sub(/^[^=]*=/, "", value)
@@ -37,7 +47,7 @@ $1 == "build" {
     }
 }
 END {
-    if (seen["header"] != 1 || seen["path"] != 1 || seen["mod"] != 1 || seen["moby"] != 1)
+    if (seen["header"] != 1 || seen["path"] != 1 || seen["mod"] != 1 || seen["moby"] != 1 || seen["xsys"] != 1)
         invalid = 1
     for (key in want)
         if (seen[key] != 1) invalid = 1

@@ -1,0 +1,17 @@
+/out/gosu: go1.27.3
+	path	github.com/tianon/gosu
+	mod	github.com/tianon/gosu	v1.20.0	
+	dep	github.com/moby/sys/user	v0.4.1	h1:RgjRlaDKi/Xmyrz4t8lyzXT6v2ooFeO/7xtchmhVWE0=
+	dep	golang.org/x/sys	v0.1.0	h1:kunALQeHf1/185U1i0GOB/fy1IPRDDpuoOOqRReG57U=
+	build	-buildmode=exe
+	build	-compiler=gc
+	build	-trimpath=true
+	build	DefaultGODEBUG=containermaxprocs=0,cryptocustomrand=1,decoratemappings=0,gotestjsonbuildtext=1,httpcookiemaxnum=0,httplaxcontentlength=1,httpmuxgo121=1,httpservecontentkeepheaders=1,httpservecontentmaxranges=1,multipathtcp=0,panicnil=1,randseednop=0,rsa1024min=0,tlsmlkem=0,tlssecpmlkem=0,tlssha1=1,tracebacklabels=0,updatemaxprocs=0,urlmaxqueryparams=0,urlstrictcolons=0,winreadlinkvolume=0,winsymlink=0,x509negativeserial=1,x509rsacrt=0,x509sha256skid=0,x509sslcertoverrideplatform=0,x509usepolicies=0
+	build	CGO_ENABLED=0
+	build	GOARCH=amd64
+	build	GOOS=linux
+	build	GOAMD64=v1
+	build	vcs=git
+	build	vcs.revision=1.20
+	build	vcs.time=2026-10-25T09:43:55Z
+	build	vcs.modified=false

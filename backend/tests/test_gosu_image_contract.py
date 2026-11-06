@@ -17,7 +17,7 @@ MOBY = "\tdep\tgithub.com/moby/sys/user\tv0.4.1\th1:RgjRlaDKi/Xmyrz4t8lyzXT6v2oo
 
 # Public upstream hashes and realistic Go output shape; this is deliberately a
 # synthetic parser control, not a claim that a replacement binary was built.
-VALID_BUILDINFO = (
+PUBLISHED_BUILDINFO = (
     "/out/gosu: go1.27.3\n"
     "\tpath\tgithub.com/tianon/gosu\n"
     "\tmod\tgithub.com/tianon/gosu\tv1.20.0\t\n"
@@ -32,6 +32,17 @@ VALID_BUILDINFO = (
     "\tbuild\tvcs.time=2026-10-25T09:43:55Z\n"
     "\tbuild\tvcs.modified=false\n"
 )
+# Explicit current-fixture transition: the published clean release remains
+# negative evidence; only this pinned, truthfully modified overlay is admitted.
+VALID_BUILDINFO = (
+    PUBLISHED_BUILDINFO.replace("\tv1.20.0\t", "\tv1.20.0+dirty\t")
+    .replace(
+        "v0.1.0\th1:kunALQeHf1/185U1i0GOB/fy1IPRDDpuoOOqRReG57U=",
+        "v0.49.0\th1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=",
+    )
+    .replace("vcs.modified=false", "vcs.modified=true")
+    .replace("GOARCH=amd64\n", "GOARCH=amd64\n\tbuild\tGOAMD64=v1\n")
+)
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +55,7 @@ def guard():
 
 def _check(guard, metadata):
     return subprocess.run(
-        ["awk", "-f", str(guard)],
+        ["awk", "-v", "expected_goarch=amd64", "-f", str(guard)],
         input=metadata,
         text=True,
         capture_output=True,
@@ -61,7 +72,7 @@ def _check(guard, metadata):
         + "\n\tdep\texample.test/unrelated\tv2.0.0\th1:unrelated\n"
         + "\tbuild\t-unrelated-setting=retained\n",
     ],
-    ids=["published-output-shape", "reordered-with-unrelated-fields"],
+    ids=["reviewed-overlay-output-shape", "reordered-with-unrelated-fields"],
 )
 def test_buildinfo_guard_accepts_expected_linked_module_and_build_records(guard, metadata):
     result = _check(guard, metadata)
@@ -72,6 +83,7 @@ def test_buildinfo_guard_accepts_expected_linked_module_and_build_records(guard,
 @pytest.mark.parametrize(
     "metadata",
     [
+        PUBLISHED_BUILDINFO,
         VALID_BUILDINFO.replace("v0.4.1", "v0.1.0"),
         VALID_BUILDINFO.replace(MOBY, ""),
         VALID_BUILDINFO + MOBY,
@@ -83,19 +95,20 @@ def test_buildinfo_guard_accepts_expected_linked_module_and_build_records(guard,
         VALID_BUILDINFO.replace("\tbuild\tvcs.revision=1.20\n", ""),
         VALID_BUILDINFO.replace("vcs.revision=1.20", "vcs.revision=1.19"),
         VALID_BUILDINFO.replace("2026-10-25T09:43:55Z", "2025-09-23T19:09:38Z"),
-        VALID_BUILDINFO.replace("vcs.modified=false", "vcs.modified=true"),
+        VALID_BUILDINFO.replace("vcs.modified=true", "vcs.modified=false"),
         VALID_BUILDINFO.replace("GOOS=linux", "GOOS=windows"),
         VALID_BUILDINFO.replace("CGO_ENABLED=0", "CGO_ENABLED=1"),
         VALID_BUILDINFO + "\tbuild\tCGO_ENABLED=0\n",
         "\n".join(VALID_BUILDINFO.splitlines()[:3]) + "\n",
         VALID_BUILDINFO.replace(MOBY, "\tdep\tgithub.com/moby/sys/user\tv0.4.1\n"),
-        VALID_BUILDINFO.replace("\tv1.20.0\t\n", "\tv1.20.0\th1:present\textra\n"),
+        VALID_BUILDINFO.replace("\tv1.20.0+dirty\t\n", "\tv1.20.0+dirty\th1:present\textra\n"),
         "\n".join(VALID_BUILDINFO.splitlines()[1:]) + "\n",
         "",
         VALID_BUILDINFO.replace(MOBY, "# " + MOBY.lstrip()),
         VALID_BUILDINFO.replace("\tbuild\tvcs.time=", "\tnote\tvcs.time="),
     ],
     ids=[
+        "published-clean-release-is-not-overlay",
         "old-linked-dependency-with-new-main-version",
         "missing-linked-dependency",
         "duplicate-linked-dependency",
@@ -107,7 +120,7 @@ def test_buildinfo_guard_accepts_expected_linked_module_and_build_records(guard,
         "missing-revision",
         "wrong-revision",
         "wrong-time",
-        "dirty-build",
+        "falsely-clean-overlay",
         "wrong-platform",
         "cgo-reenabled",
         "duplicate-build-setting",
@@ -137,7 +150,8 @@ def _metadata_fragment(text):
     assert re.match(r"RUN (?:--mount=\S+\s+)*set -eu;", run)
     match = re.search(
         r"go version -m /out/gosu\s*>\s*/out/gosu-buildinfo\.txt;\s*"
-        r"awk -f /usr/local/share/gosu/verify-buildinfo\.awk /out/gosu-buildinfo\.txt;",
+        r'awk -v expected_goarch="\$TARGETARCH" -f '
+        r"/usr/local/share/gosu/verify-buildinfo\.awk /out/gosu-buildinfo\.txt;",
         run,
     )
     assert match, "capture must succeed before the actual awk guard executes"
@@ -164,10 +178,13 @@ def _admit_source(text):
         "FAKEGIT_GO_SEMVER=v1.20.0",
         "FAKEGIT_GO_REVISION=1.20",
         "FAKEGIT_GO_TIMESTAMP=1792921435",
+        "FAKEGIT_GO_MODIFIED=",
+        "ARG TARGETARCH",
+        "${TARGETARCH:?BuildKit TARGETARCH is required for gosu provenance}",
         "CGO_ENABLED=0 GOTOOLCHAIN=local go build -mod=readonly",
         "COPY --chmod=0644 verify-gosu-buildinfo.awk " + GUARD_TARGET,
         "cp /go/pkg/mod/github.com/moby/sys/user@v0.4.1/LICENSE",
-        "cp /go/pkg/mod/golang.org/x/sys@v0.1.0/LICENSE",
+        "cp /go/pkg/mod/golang.org/x/sys@v0.49.0/LICENSE",
         "cp /out/gosu-buildinfo.txt /out/licenses/gosu-buildinfo.txt",
         "'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1'",
     ):
@@ -257,6 +274,7 @@ def test_actual_docker_capture_guard_fragment_propagates_failures(
         "PATH": str(tmp_path) + os.pathsep + os.environ["PATH"],
         "GOSU_TEST_INPUT": str(supplied),
         "GOSU_TEST_GO_EXIT": str(go_exit),
+        "TARGETARCH": "amd64",
     }
     result = subprocess.run(
         ["sh", "-eu", "-c", fragment + " : > " + shlex.quote(str(marker))],
