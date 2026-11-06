@@ -40,7 +40,8 @@ WEBHOOK_DELIVERIES = "a8b0d2f4c6e9"
 READING_OBSERVATIONS = "b9c1e3f5a7d0"
 OPTIONAL_PARENTS = "c0d2e4f6a8b1"
 RECONCILIATION_COMMANDS = "d1e3f5a7c9b2"
-EXPECTED_HEAD = RECONCILIATION_COMMANDS
+RESIDUAL_PARENTS = "e2f4a6b8d0c3"
+EXPECTED_HEAD = RESIDUAL_PARENTS
 OLD_MERGE = "e5f7091a2345"
 PLANNING = "c3d5e7f90112"
 OCR = "d4e6f8a01223"
@@ -75,6 +76,11 @@ PRESERVED_TABLES = (
     "partners",
     "partner_documents",
     "issued_invoices",
+    "customers",
+    "customer_contacts",
+    "vendors",
+    "invoices",
+    "inbound_invoices",
     "recurring_invoices",
     "webhook_endpoints",
     "webhook_deliveries",
@@ -377,10 +383,58 @@ def seed(connection):
         )
         _insert(
             connection,
+            "customers",
+            id=(customer := str(uuid.uuid4())),
+            org_id=org,
+            name="Synthetic retained sales customer",
+        )
+        _insert(
+            connection,
+            "customer_contacts",
+            org_id=org,
+            customer_id=customer,
+            name="Synthetic retained customer contact",
+            email="synthetic-contact@example.invalid",
+        )
+        _insert(
+            connection,
+            "vendors",
+            id=(vendor := str(uuid.uuid4())),
+            org_id=org,
+            name="Synthetic retained received-invoice supplier",
+        )
+        _insert(
+            connection,
+            "invoices",
+            id=(received_invoice := str(uuid.uuid4())),
+            org_id=org,
+            vendor_id=vendor,
+            invoice_number=f"SYNTHETIC-RECEIVED-{tenant}",
+            issue_date=STAMP.date(),
+            currency="EUR",
+            subtotal=Decimal("35.07"),
+            tax_amount=Decimal("0.00"),
+            total=Decimal("35.07"),
+        )
+        _insert(
+            connection,
+            "inbound_invoices",
+            org_id=org,
+            invoice_id=received_invoice,
+            received_at=STAMP,
+            filename="synthetic-retained-email.csv",
+            content_type="text/csv",
+            size=37,
+            sha256="e" * 64,
+            status="confirmed",
+        )
+        _insert(
+            connection,
             "issued_invoices",
             id=issued_invoice,
             org_id=org,
             partner_id=partner,
+            customer_id=customer,
             buyer_name="Synthetic retained buyer",
             seller_json='{"legal_name":"Synthetic retained seller"}',
             issue_date=STAMP.date(),
@@ -388,6 +442,24 @@ def seed(connection):
             subtotal=Decimal("35.07"),
             tax_total=Decimal("0.00"),
             total=Decimal("35.07"),
+        )
+        _insert(
+            connection,
+            "issued_invoices",
+            org_id=org,
+            partner_id=partner,
+            customer_id=customer,
+            corrected_invoice_id=issued_invoice,
+            doc_type="credit_note",
+            buyer_name="Synthetic retained correction buyer",
+            seller_json='{"legal_name":"Synthetic retained seller"}',
+            issue_date=STAMP.date(),
+            currency="EUR",
+            # This is a synthetic preservation fixture, not a financial command.
+            # Preserve the old original's unknown number and unchanged balances.
+            subtotal=Decimal("0.00"),
+            tax_total=Decimal("0.00"),
+            total=Decimal("0.00"),
         )
         _insert(
             connection,
@@ -540,11 +612,12 @@ def _records_before_additive_heads(records):
         # This migration adds exactly one nullable column and infers no past
         # lease identities. Keep every other field/value in the comparison.
         assert job.pop("lease_token") is None
-    for run in expected["extraction_runs"]:
-        # Historical image preparation is deliberately unknown. These tests
-        # may remove only the newly added NULL, never measured provenance.
-        assert run.pop("reading_preparation_json") is None
-        assert run.pop("reading_observation_json") is None
+    for owner in ("extraction_runs", "inbound_invoices"):
+        for run in expected[owner]:
+            # Historical image preparation is deliberately unknown. These tests
+            # may remove only the newly added NULL, never measured provenance.
+            assert run.pop("reading_preparation_json") is None
+            assert run.pop("reading_observation_json") is None
     return expected
 
 
@@ -803,6 +876,238 @@ def _reading_marker_schema(expected, head, marker, backend):
         ]
 
 
+def _residual_parent_marker_schema(head, marker, backend):
+    """Validate only166's four FK deltas, then expose the complete165 shape."""
+    projected = deepcopy(head)
+    for parent, target in (
+        ("customers", "uq_customers_org_id"),
+        ("invoices", "uq_invoices_org_id"),
+        ("issued_invoices", "uq_issued_invoices_org_id"),
+    ):
+        unique = {"name": target, "column_names": ["org_id", "id"]}
+        if backend == "postgresql":
+            unique.update(
+                comment=None,
+                dialect_options={"postgresql_include": [], "postgresql_nulls_not_distinct": False},
+            )
+        for snapshot_schema in (head, marker):
+            assert [
+                entry
+                for entry in snapshot_schema[parent]["unique_constraints"]
+                if entry["name"] == target
+            ] == [unique]
+    for table, column, parent, name, pg_single, sqlite_single in (
+        (
+            "inbound_invoices",
+            "invoice_id",
+            "invoices",
+            "fk_inbound_invoices_invoice_tenant",
+            "inbound_invoices_invoice_id_fkey",
+            None,
+        ),
+        (
+            "issued_invoices",
+            "customer_id",
+            "customers",
+            "fk_issued_invoices_customer_tenant",
+            "fk_issued_invoices_customer",
+            "fk_issued_invoices_customer",
+        ),
+        (
+            "issued_invoices",
+            "corrected_invoice_id",
+            "issued_invoices",
+            "fk_issued_invoices_corrected_tenant",
+            "fk_issued_corrected",
+            "fk_issued_corrected",
+        ),
+    ):
+        single = {
+            "name": pg_single if backend == "postgresql" else sqlite_single,
+            "constrained_columns": [column],
+            "referred_schema": None,
+            "referred_table": parent,
+            "referred_columns": ["id"],
+            "options": {"ondelete": "SET NULL"},
+        }
+        pair = {
+            "name": name,
+            "constrained_columns": ["org_id", column],
+            "referred_schema": None,
+            "referred_table": parent,
+            "referred_columns": ["org_id", "id"],
+            "options": {"ondelete": f"SET NULL ({column})"} if backend == "postgresql" else {},
+        }
+        if backend == "postgresql":
+            single["comment"] = pair["comment"] = None
+        for snapshot_schema in (head, marker):
+            assert [
+                entry
+                for entry in snapshot_schema[table]["foreign_keys"]
+                if entry["constrained_columns"] == [column]
+            ] == [single]
+        assert [
+            entry
+            for entry in head[table]["foreign_keys"]
+            if entry["name"] == name or set(entry["constrained_columns"]) == {"org_id", column}
+        ] == [pair]
+        assert all(
+            entry["name"] != name and set(entry["constrained_columns"]) != {"org_id", column}
+            for entry in marker[table]["foreign_keys"]
+        )
+        projected[table]["foreign_keys"].remove(pair)
+    table, name = "customer_contacts", "fk_customer_contacts_customer"
+    original = {
+        "name": "customer_contacts_customer_id_fkey" if backend == "postgresql" else None,
+        "constrained_columns": ["customer_id"],
+        "referred_schema": None,
+        "referred_table": "customers",
+        "referred_columns": ["id"],
+        "options": {"ondelete": "CASCADE"},
+    }
+    if backend == "postgresql":
+        original["comment"] = None
+    assert [
+        entry
+        for entry in marker[table]["foreign_keys"]
+        if entry["constrained_columns"] == ["customer_id"]
+    ] == [original]
+    assert all(
+        entry["constrained_columns"] != ["customer_id"] for entry in head[table]["foreign_keys"]
+    )
+    pair = deepcopy(original)
+    pair.update(
+        name=name, constrained_columns=["org_id", "customer_id"], referred_columns=["org_id", "id"]
+    )
+    assert [
+        entry
+        for entry in head[table]["foreign_keys"]
+        if entry["name"] == name or set(entry["constrained_columns"]) == {"org_id", "customer_id"}
+    ] == [pair]
+    assert all(
+        entry["name"] != name and set(entry["constrained_columns"]) != {"org_id", "customer_id"}
+        for entry in marker[table]["foreign_keys"]
+    )
+    projected[table]["foreign_keys"].remove(pair)
+    projected[table]["foreign_keys"].append(deepcopy(original))
+    projected[table]["foreign_keys"].sort(key=lambda entry: json.dumps(entry, sort_keys=True))
+    return projected
+
+
+def _residual_parent_native_contract(connection):
+    """Inspect166's UQ ownership and immediate actions independently of ORM helpers."""
+    for parent, target in (
+        ("customers", "uq_customers_org_id"),
+        ("invoices", "uq_invoices_org_id"),
+        ("issued_invoices", "uq_issued_invoices_org_id"),
+    ):
+        row = (
+            connection.execute(
+                text("""
+            SELECT c.contype::text AS kind,c.convalidated,c.condeferrable,c.condeferred,
+                i.indisunique,i.indisvalid,i.indisready,i.indimmediate,i.indnkeyatts,i.indnatts,
+                i.indnullsnotdistinct,i.indpred IS NULL AS unfiltered,i.indexprs IS NULL AS ordinary,
+                ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY n(num,pos)
+                    JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=n.num ORDER BY n.pos) AS columns,
+                ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY n(num,pos)
+                    JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=n.num ORDER BY n.pos) AS index_columns
+            FROM pg_constraint c JOIN pg_index i ON i.indexrelid=c.conindid AND i.indrelid=c.conrelid
+                JOIN pg_class backing ON backing.oid=i.indexrelid
+            WHERE c.conrelid=CAST(:parent AS regclass) AND c.conname=:name AND backing.relname=:name
+                AND c.contype='u'
+        """),
+                {"parent": parent, "name": target},
+            )
+            .mappings()
+            .one()
+        )
+        assert dict(row) == {
+            "kind": "u",
+            "convalidated": True,
+            "condeferrable": False,
+            "condeferred": False,
+            "indisunique": True,
+            "indisvalid": True,
+            "indisready": True,
+            "indimmediate": True,
+            "indnkeyatts": 2,
+            "indnatts": 2,
+            "indnullsnotdistinct": False,
+            "unfiltered": True,
+            "ordinary": True,
+            "columns": ["org_id", "id"],
+            "index_columns": ["org_id", "id"],
+        }
+    for table, column, parent, pair, single, required in (
+        (
+            "customer_contacts",
+            "customer_id",
+            "customers",
+            "fk_customer_contacts_customer",
+            None,
+            True,
+        ),
+        (
+            "inbound_invoices",
+            "invoice_id",
+            "invoices",
+            "fk_inbound_invoices_invoice_tenant",
+            "inbound_invoices_invoice_id_fkey",
+            False,
+        ),
+        (
+            "issued_invoices",
+            "customer_id",
+            "customers",
+            "fk_issued_invoices_customer_tenant",
+            "fk_issued_invoices_customer",
+            False,
+        ),
+        (
+            "issued_invoices",
+            "corrected_invoice_id",
+            "issued_invoices",
+            "fk_issued_invoices_corrected_tenant",
+            "fk_issued_corrected",
+            False,
+        ),
+    ):
+        for name, is_pair in ((pair, True),) + (((single, False),) if single else ()):
+            row = (
+                connection.execute(
+                    text("""
+                SELECT c.confrelid::regclass::text AS parent,c.confdeltype::text AS delete_action,
+                    c.confupdtype::text AS update_action,c.confmatchtype::text AS match_type,
+                    c.convalidated AS validated,c.condeferrable AS deferrable,c.condeferred AS deferred,
+                    ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY n(num,pos)
+                        JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=n.num ORDER BY n.pos) AS local_columns,
+                    ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY n(num,pos)
+                        JOIN pg_attribute a ON a.attrelid=c.confrelid AND a.attnum=n.num ORDER BY n.pos) AS target_columns,
+                    c.confdelsetcols::int[] AS set_columns,
+                    (SELECT a.attnum FROM pg_attribute a WHERE a.attrelid=c.conrelid
+                        AND a.attname=:column AND NOT a.attisdropped) AS optional_column
+                FROM pg_constraint c WHERE c.conrelid=CAST(:table AS regclass) AND c.conname=:name AND c.contype='f'
+            """),
+                    {"table": table, "column": column, "name": name},
+                )
+                .mappings()
+                .one()
+            )
+            assert dict(row) == {
+                "parent": parent,
+                "delete_action": "c" if required else "n",
+                "update_action": "a",
+                "match_type": "s",
+                "validated": True,
+                "deferrable": False,
+                "deferred": False,
+                "local_columns": ["org_id", column] if is_pair else [column],
+                "target_columns": ["org_id", "id"] if is_pair else ["id"],
+                "set_columns": [row["optional_column"]] if is_pair and not required else None,
+                "optional_column": row["optional_column"],
+            }
+
+
 def _reconciliation_marker_schema(head, marker, backend):
     """Validate165 completely before projecting its exact additive164 shape.
 
@@ -1036,7 +1341,8 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     config = Config()
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     graph = ScriptDirectory.from_config(config)
-    assert EXPECTED_HEAD == RECONCILIATION_COMMANDS
+    assert EXPECTED_HEAD == RESIDUAL_PARENTS
+    assert graph.get_revision(RESIDUAL_PARENTS).down_revision == RECONCILIATION_COMMANDS
     assert graph.get_revision(RECONCILIATION_COMMANDS).down_revision == OPTIONAL_PARENTS
     assert graph.get_revision(OPTIONAL_PARENTS).down_revision == READING_OBSERVATIONS
     assert graph.get_revision(READING_OBSERVATIONS).down_revision == WEBHOOK_DELIVERIES
@@ -1052,7 +1358,7 @@ def test_complete_graph_has_one_merge_head_and_no_missing_dependencies():
     assert set(graph.get_revision(OLD_MERGE).down_revision) == {PLANNING, OCR}
     assert graph.get_revision(PAYMENT).down_revision == OCR
     revisions = list(graph.walk_revisions())
-    assert len(revisions) == 165
+    assert len(revisions) == 166
     assert len({r.revision for r in revisions}) == len(revisions)
     assert graph.get_revision(MAIN)
     # walk_revisions resolves all down_revision and depends_on edges, not just
@@ -1096,7 +1402,9 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     database(migration_url, lambda c: seed_feature_evidence(c, identities))
     after = database(migration_url, snapshot)
     assert set(after) == set(PRESERVED_TABLES)
-    assert all(len(rows) == 2 for rows in after.values())
+    expected_sizes = dict.fromkeys(PRESERVED_TABLES, 2)
+    expected_sizes["issued_invoices"] = 4
+    assert {table: len(rows) for table, rows in after.items()} == expected_sizes
     migrate(migration_url, "check")
 
     def index_contract(connection):
@@ -1105,6 +1413,7 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         assert index["column_names"] == ["org_id", "operation", "target_id"]
         assert not index["unique"]
         if connection.dialect.name == "postgresql":
+            _residual_parent_native_contract(connection)
             _optional_parent_native_contract(connection)
             _reconciliation_native_contract(connection)
             assert connection.scalar(
@@ -1128,7 +1437,8 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
     # Later additive heads introduce an empty planning receipt table, the
     # unused nullable job token, two unknown image-preparation fields, and
     # report/partner/webhook-parent constraints, empty reading facts and four
-    # optional-parent guards and unused bank-line command/version objects.
+    # optional-parent guards, unused bank-line command/version objects, and
+    # the four reviewed residual tenant-parent corrections.
     # Populated reading-facts downgrade refusal remains
     # independently qualified; this marker roundtrip creates no such evidence.
     # Compare only these exact deltas, then test
@@ -1154,8 +1464,11 @@ def test_upgrade_and_marker_roundtrip_preserve_records(migration_url, start):
         "capture_reading_observations",
         "reconciliation_commands",
     }
-    projected_164_head = _reconciliation_marker_schema(
+    projected_165_head = _residual_parent_marker_schema(
         head_schema, schema_before, make_url(migration_url).get_backend_name()
+    )
+    projected_164_head = _reconciliation_marker_schema(
+        projected_165_head, schema_before, make_url(migration_url).get_backend_name()
     )
     projected_163_head = _optional_parent_marker_schema(
         projected_164_head, schema_before, make_url(migration_url).get_backend_name()
@@ -1291,6 +1604,11 @@ def test_postgres_new_and_financial_tables_keep_force_rls(migration_url):
             "partners",
             "partner_documents",
             "issued_invoices",
+            "customers",
+            "customer_contacts",
+            "vendors",
+            "invoices",
+            "inbound_invoices",
             "recurring_invoices",
             "webhook_endpoints",
             "webhook_deliveries",
@@ -1313,7 +1631,9 @@ def test_postgres_new_and_financial_tables_keep_force_rls(migration_url):
             text("SELECT set_config('app.current_org', :org, true)"), {"org": identities[0]["org"]}
         )
         for table in guarded:
-            assert connection.scalar(text(f"SELECT count(*) FROM {table}")) == 1
+            assert connection.scalar(text(f"SELECT count(*) FROM {table}")) == (
+                2 if table == "issued_invoices" else 1
+            )
         with pytest.raises(DBAPIError, match="row-level security"):
             with connection.begin_nested():
                 _insert(

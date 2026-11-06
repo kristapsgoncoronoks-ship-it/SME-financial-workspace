@@ -194,6 +194,8 @@ jobs:
           tests/test_optional_parent_tenant_pg.py
           tests/test_reconciliation_command_migration_pg.py
           tests/test_reconciliation_command_schema_pg.py
+          tests/test_residual_parent_tenant_pg.py
+          tests/test_residual_parent_migration_pg.py
           tests/test_capture_reading_migration.py
       - name: Development PostgreSQL bootstrap contracts
         env:
