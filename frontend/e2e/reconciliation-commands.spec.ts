@@ -441,3 +441,37 @@ test("numeric receipt recording time cannot be coerced into a confirmed outcome"
   await expect(row).toContainText("Ignore recorded at version 2");
   expect(wire.writes).toHaveLength(1);
 });
+
+for (const key of [123, null]) test(`corrupt stored ${key === null ? "null" : "numeric"} command key is refused before replay`, async ({ page }) => {
+  const saved = JSON.stringify({ contract: 1, key, lineId: LINE, statementId: STATEMENT,
+    payload: { operation: "ignore", expected_version: 1, expected: EMPTY, target: null, reason: "Stored reviewed reason" } });
+  const { wire, row } = await setup(page, { saved });
+  const replay = row.getByRole("button", { name: "Retry same request", exact: true });
+  // If the corrupt reference is offered for replay, exercise that real UI path
+  // before asserting the no-POST boundary. Never infer safety from a hidden row.
+  if (await replay.count()) {
+    await replay.click();
+    await expect.poll(() => wire.writes.length).toBeGreaterThan(0);
+  }
+  expect(wire.writes).toEqual([]);
+  await expect(row.getByRole("alert")).toContainText("saved bank-line request cannot be read");
+  await expect(replay).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Ignore", exact: true })).toBeDisabled();
+});
+
+test("precommit current version cannot clear a confirmed request or start another command", async ({ page }) => {
+  const { wire, row } = await setup(page);
+  let stale = true;
+  await page.route(`**/api/v1/reconciliation/lines/${LINE}`, async (route) => route.fulfill(json(stale ? initial() : wire.line)));
+  await ignore(page);
+  await expect(row.getByRole("alert")).toContainText("current line has not been verified");
+  await expect(row).toContainText("Recorded action needs current readback");
+  await expect(row).toContainText(wire.writes[0].key);
+  await expect(row.getByRole("button", { name: "Ignore", exact: true })).toBeDisabled();
+  await expect(row.getByRole("button", { name: "Retry same request", exact: true })).toHaveCount(0);
+  expect(wire.writes).toHaveLength(1);
+  stale = false;
+  await row.getByRole("button", { name: "Check saved outcome", exact: true }).click();
+  await expect(row).toContainText("Ignore recorded at version 2. Current line: version 2, ignored.");
+  expect(wire.writes).toHaveLength(1);
+});

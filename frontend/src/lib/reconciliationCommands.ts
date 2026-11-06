@@ -78,7 +78,7 @@ export function loadReconciliationCommand(scope: ReconciliationScope, lineId: st
     const saved = JSON.parse(raw) as SavedReconciliationCommand;
     const p = saved.payload;
     const required = { match: "unmatched", ignore: "unmatched", unmatch: "matched", restore: "ignored" };
-    if (saved.contract !== 1 || !KEY.test(saved.key) || saved.lineId !== lineId || typeof saved.statementId !== "string" ||
+    if (saved.contract !== 1 || typeof saved.key !== "string" || !KEY.test(saved.key) || saved.lineId !== lineId || typeof saved.statementId !== "string" ||
         !p || !Object.prototype.hasOwnProperty.call(required, p.operation) || !validReconciliationVersion(p.expected_version) || !validState(p.expected) ||
         required[p.operation] !== p.expected.status ||
         (p.operation === "match" ? !p.target || !kinds.includes(p.target.kind) || typeof p.target.id !== "string" : p.target !== null) ||
