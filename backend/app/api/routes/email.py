@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy import func, select
@@ -15,7 +16,7 @@ from app.core.errors import AppError
 from app.core.security_headers import content_disposition
 from app.core.tenant import reset_current_org, set_current_org
 from app.models.email_intake import InboundInvoice
-from app.schemas.capture_reading import ReadingObservationHistory
+from app.schemas.capture_reading import ReadingObservationFacts, ReadingObservationHistory
 from app.schemas.email_intake import (
     MAX_INBOUND_ATTACHMENTS,
     ChannelCadenceIn,
@@ -509,10 +510,63 @@ async def inbound_reading_history(
     cursor: str | None = Query(default=None, max_length=128),
 ):
     await _guard(db, current.org_id)
-    row = await _load(db, current.org_id, inbound_id)
+    try:
+        inbound_id = str(UUID(inbound_id))
+    except ValueError:
+        raise HTTPException(404, "Inbound invoice not found") from None
+    row = await capture_reading.inspection_owner(
+        db, current.org_id, inbound_id, channel="inbound", include_current=False
+    )
+    if row is None:
+        raise HTTPException(404, "Inbound invoice not found")
     return await capture_reading.history(
         db, current.org_id, row.id, channel="inbound", cursor=cursor
     )
+
+
+@router.get(
+    "/inbox/{inbound_id}/reading-observations/current",
+    response_model=ReadingObservationFacts | None,
+    dependencies=_CAPTURE,
+)
+async def inbound_current_reading(inbound_id: str, current: CurrentUser, db: DbSession):
+    await _guard(db, current.org_id)
+    try:
+        inbound_id = str(UUID(inbound_id))
+    except ValueError:
+        raise HTTPException(404, "Inbound invoice not found") from None
+    row = await capture_reading.inspection_owner(
+        db, current.org_id, inbound_id, channel="inbound", include_current=True
+    )
+    if row is None:
+        raise HTTPException(404, "Inbound invoice not found")
+    return await capture_reading.current_observation(db, row, channel="inbound")
+
+
+@router.get(
+    "/inbox/{inbound_id}/reading-observations/{observation_id}",
+    response_model=ReadingObservationFacts,
+    dependencies=_CAPTURE,
+)
+async def inbound_recorded_reading(
+    inbound_id: str, observation_id: str, current: CurrentUser, db: DbSession
+):
+    await _guard(db, current.org_id)
+    try:
+        inbound_id, observation_id = str(UUID(inbound_id)), str(UUID(observation_id))
+    except ValueError:
+        raise HTTPException(404, "Reading observation not found") from None
+    row = await capture_reading.inspection_owner(
+        db, current.org_id, inbound_id, channel="inbound", include_current=False
+    )
+    if row is None:
+        raise HTTPException(404, "Reading observation not found")
+    facts = await capture_reading.observation(
+        db, current.org_id, row.id, observation_id, channel="inbound"
+    )
+    if facts is None:
+        raise HTTPException(404, "Reading observation not found")
+    return facts
 
 
 @router.post(
