@@ -9,6 +9,8 @@ import io
 
 import pytest
 
+from tests.reconciliation_command_client import transition
+
 
 def _h(token):
     return {"Authorization": f"Bearer {token}"}
@@ -157,9 +159,8 @@ async def test_paid_run_reconciles_bank_debit(auth_client, client):
 
     cands = (await auth_client.get(f"/api/v1/reconciliation/lines/{line['id']}/candidates")).json()
     assert any(c["kind"] == "payment_run" and c["id"] == run["id"] for c in cands)
-    m = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{line['id']}/match",
-        json={"kind": "payment_run", "target_id": run["id"]},
+    m = await transition(
+        auth_client, line["id"], "match", target={"kind": "payment_run", "id": run["id"]}
     )
     assert m.status_code == 200 and m.json()["status"] == "matched"
 

@@ -1,0 +1,265 @@
+{
+  "bank_lines": {
+    "check_constraints": [
+      {
+        "name": "ck_bank_lines_version",
+        "sqltext": "version = CAST(version AS INTEGER) AND version >= 1 AND version <= 2147483647"
+      }
+    ],
+    "columns": [
+      [
+        "version",
+        "INTEGER",
+        false,
+        "'1'"
+      ]
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "org_id",
+          "id"
+        ],
+        "dialect_options": {},
+        "name": "uq_bank_lines_org_id",
+        "unique": 1
+      }
+    ]
+  },
+  "table": {
+    "check_constraints": [
+      {
+        "name": "ck_reconciliation_commands_after_version",
+        "sqltext": "after_version = CAST(after_version AS INTEGER) AND after_version >= 1 AND after_version <= 2147483647"
+      },
+      {
+        "name": "ck_reconciliation_commands_before_version",
+        "sqltext": "before_version = CAST(before_version AS INTEGER) AND before_version >= 1 AND before_version <= 2147483647"
+      },
+      {
+        "name": "ck_reconciliation_commands_contract",
+        "sqltext": "contract_version = 1"
+      },
+      {
+        "name": "ck_reconciliation_commands_expected_version",
+        "sqltext": "expected_version = CAST(expected_version AS INTEGER) AND expected_version >= 1 AND expected_version <= 2147483647"
+      },
+      {
+        "name": "ck_reconciliation_commands_hashes",
+        "sqltext": "length(payload_hash) = 64 AND length(result_hash) = 64"
+      },
+      {
+        "name": "ck_reconciliation_commands_ignore_reason",
+        "sqltext": "operation <> 'ignore' OR (reason IS NOT NULL AND length(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(reason, ' ', ''), '\t', ''), '\n', ''), '\r', ''), '\u000b', ''), '\f', ''), '\u001c', ''), '\u001d', ''), '\u001e', ''), '\u001f', ''), '\u0085', ''), '\u00a0', ''), '\u1680', ''), '\u2000', ''), '\u2001', ''), '\u2002', ''), '\u2003', ''), '\u2004', ''), '\u2005', ''), '\u2006', ''), '\u2007', ''), '\u2008', ''), '\u2009', ''), '\u200a', ''), '\u2028', ''), '\u2029', ''), '\u202f', ''), '\u205f', ''), '\u3000', '')) > 0)"
+      },
+      {
+        "name": "ck_reconciliation_commands_key",
+        "sqltext": "length(command_key) >= 1 AND length(command_key) <= 120 AND length(trim(command_key)) > 0"
+      },
+      {
+        "name": "ck_reconciliation_commands_operation",
+        "sqltext": "operation IN ('match', 'ignore', 'unmatch', 'restore')"
+      },
+      {
+        "name": "ck_reconciliation_commands_reason",
+        "sqltext": "reason IS NULL OR length(reason) <= 1000"
+      },
+      {
+        "name": "ck_reconciliation_commands_transition",
+        "sqltext": "expected_version = before_version AND after_version = CAST(before_version AS BIGINT) + 1"
+      }
+    ],
+    "columns": [
+      [
+        "id",
+        "CHAR(36)",
+        false,
+        null
+      ],
+      [
+        "org_id",
+        "CHAR(36)",
+        false,
+        null
+      ],
+      [
+        "actor_user_id",
+        "CHAR(36)",
+        false,
+        null
+      ],
+      [
+        "line_id",
+        "CHAR(36)",
+        false,
+        null
+      ],
+      [
+        "command_key",
+        "VARCHAR(120)",
+        false,
+        null
+      ],
+      [
+        "contract_version",
+        "INTEGER",
+        false,
+        "'1'"
+      ],
+      [
+        "operation",
+        "VARCHAR(16)",
+        false,
+        null
+      ],
+      [
+        "payload_json",
+        "TEXT",
+        false,
+        null
+      ],
+      [
+        "payload_hash",
+        "VARCHAR(64)",
+        false,
+        null
+      ],
+      [
+        "result_json",
+        "TEXT",
+        false,
+        null
+      ],
+      [
+        "result_hash",
+        "VARCHAR(64)",
+        false,
+        null
+      ],
+      [
+        "before_state_json",
+        "TEXT",
+        false,
+        null
+      ],
+      [
+        "after_state_json",
+        "TEXT",
+        false,
+        null
+      ],
+      [
+        "expected_version",
+        "INTEGER",
+        false,
+        null
+      ],
+      [
+        "before_version",
+        "INTEGER",
+        false,
+        null
+      ],
+      [
+        "after_version",
+        "INTEGER",
+        false,
+        null
+      ],
+      [
+        "reason",
+        "TEXT",
+        true,
+        null
+      ],
+      [
+        "recorded_at",
+        "DATETIME",
+        false,
+        "CURRENT_TIMESTAMP"
+      ]
+    ],
+    "foreign_keys": [
+      {
+        "constrained_columns": [
+          "actor_user_id"
+        ],
+        "name": null,
+        "options": {
+          "ondelete": "RESTRICT"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": null,
+        "referred_table": "users"
+      },
+      {
+        "constrained_columns": [
+          "org_id",
+          "line_id"
+        ],
+        "name": "fk_reconciliation_commands_line",
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "org_id",
+          "id"
+        ],
+        "referred_schema": null,
+        "referred_table": "bank_lines"
+      },
+      {
+        "constrained_columns": [
+          "org_id"
+        ],
+        "name": null,
+        "options": {
+          "ondelete": "CASCADE"
+        },
+        "referred_columns": [
+          "id"
+        ],
+        "referred_schema": null,
+        "referred_table": "organizations"
+      }
+    ],
+    "indexes": [
+      {
+        "column_names": [
+          "org_id",
+          "line_id",
+          "after_version"
+        ],
+        "dialect_options": {},
+        "name": "ix_reconciliation_commands_org_line_version",
+        "unique": 0
+      }
+    ],
+    "primary_key": {
+      "constrained_columns": [
+        "id"
+      ],
+      "name": null
+    },
+    "unique_constraints": [
+      {
+        "column_names": [
+          "org_id",
+          "actor_user_id",
+          "command_key"
+        ],
+        "name": "uq_reconciliation_command_identity"
+      },
+      {
+        "column_names": [
+          "org_id",
+          "line_id",
+          "after_version"
+        ],
+        "name": "uq_reconciliation_command_line_version"
+      }
+    ]
+  }
+}

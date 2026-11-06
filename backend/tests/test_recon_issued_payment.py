@@ -5,6 +5,8 @@ import io
 
 import pytest
 
+from tests.reconciliation_command_client import transition
+
 ISSUER = {
     "legal_name": "InvoiceIQ Demo BV",
     "vat_number": "NL123456789B01",
@@ -58,9 +60,8 @@ async def test_credit_matches_direct_issued_payment(auth_client):
     ip = [c for c in cands if c["kind"] == "issued_payment"]
     assert len(ip) == 1 and ip[0]["amount"] == "500.00"
 
-    m = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{line['id']}/match",
-        json={"kind": "issued_payment", "target_id": ip[0]["id"]},
+    m = await transition(
+        auth_client, line["id"], "match", target={"kind": "issued_payment", "id": ip[0]["id"]}
     )
     assert m.status_code == 200 and m.json()["status"] == "matched"
 
@@ -71,8 +72,7 @@ async def test_credit_matches_direct_issued_payment(auth_client):
     stmts = (await auth_client.get("/api/v1/reconciliation/statements")).json()
     sid2 = next(s["id"] for s in stmts if s["id"] != sid)
     debit = (await auth_client.get(f"/api/v1/reconciliation/statements/{sid2}/lines")).json()[0]
-    bad = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{debit['id']}/match",
-        json={"kind": "issued_payment", "target_id": ip[0]["id"]},
+    bad = await transition(
+        auth_client, debit["id"], "match", target={"kind": "issued_payment", "id": ip[0]["id"]}
     )
     assert bad.status_code == 400 and "debit" in bad.json()["detail"]

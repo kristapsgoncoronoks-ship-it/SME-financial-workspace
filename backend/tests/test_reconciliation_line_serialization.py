@@ -1,7 +1,7 @@
 """Portable HTTP checks for current-line reconciliation state and no-write replays.
 
-Native lock schedules live separately. These checks do not imply client-version
-fencing, reconciliation history, or any change to the cash movement itself.
+Native lock schedules live separately. Reviewed commands now fence versions and
+record history; the cash movements themselves remain unchanged.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from app.models.bank_import import BankLine
 from app.models.expense import ReimbursementBatch
 from app.models.payment_run import PaymentRun
 from app.models.receipt import Receipt
+from tests.reconciliation_command_client import intention, submit, transition
 from tests.test_reconciliation import _enable, _h, _member, _upload
 
 BASE = "/api/v1/reconciliation/lines"
@@ -34,6 +35,7 @@ TABLES = (
     "jobs",
     "webhook_deliveries",
     "org_modules",
+    "reconciliation_commands",
 )
 
 
@@ -102,17 +104,29 @@ async def _setup(client):
 
 
 async def _match(client, line_id, target_id, kind="receipt", **kwargs):
-    return await client.post(
-        f"{BASE}/{line_id}/match", json={"kind": kind, "target_id": target_id}, **kwargs
+    return await transition(
+        client, line_id, "match", target={"kind": kind, "id": target_id}, **kwargs
     )
 
 
 async def _action(client, action, line_id, target_id, **kwargs):
     if action == "match":
         return await _match(client, line_id, target_id, **kwargs)
-    if action == "unmatch":
-        return await client.delete(f"{BASE}/{line_id}/match", **kwargs)
-    return await client.post(f"{BASE}/{line_id}/ignore", **kwargs)
+    return await transition(client, line_id, action, **kwargs)
+
+
+async def _frozen(client, line_id, operation, target_id=None, kind="receipt"):
+    reviewed = (await client.get(f"{BASE}/{line_id}")).json()
+    body = intention(
+        reviewed,
+        operation,
+        target={"kind": kind, "id": target_id} if operation == "match" else None,
+    )
+
+    async def send():
+        return await submit(client, line_id, body, "frozen-intention")
+
+    return send
 
 
 async def test_a_second_target_cannot_replace_a_confirmed_line(auth_client, db_session):
@@ -125,8 +139,8 @@ async def test_a_second_target_cannot_replace_a_confirmed_line(auth_client, db_s
     refused = await _without_writes(
         db_session, [org_id], lambda: _match(auth_client, line_id, second["id"])
     )
-    assert refused.status_code == 400
-    assert "unmatch" in refused.json()["detail"]
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "reconciliation_line_stale"
     stored = await db_session.scalar(select(BankLine).where(BankLine.id == line_id))
     assert (stored.status, stored.matched_kind, stored.matched_id) == (
         "matched",
@@ -138,14 +152,14 @@ async def test_a_second_target_cannot_replace_a_confirmed_line(auth_client, db_s
 async def test_an_ignored_line_requires_restore_before_confirm(auth_client, db_session):
     org_id, lines, receipt = await _setup(auth_client)
     line_id = lines["credit"]["id"]
-    ignored = await auth_client.post(f"{BASE}/{line_id}/ignore")
+    ignored = await transition(auth_client, line_id, "ignore")
     assert ignored.status_code == 200 and ignored.json()["status"] == "ignored"
     refused = await _without_writes(
         db_session, [org_id], lambda: _match(auth_client, line_id, receipt["id"])
     )
-    assert refused.status_code == 400 and "restore" in refused.json()["detail"]
+    assert refused.status_code == 409 and refused.json()["code"] == "reconciliation_line_stale"
 
-    restored = await auth_client.delete(f"{BASE}/{line_id}/match")
+    restored = await transition(auth_client, line_id, "restore")
     assert restored.status_code == 200 and restored.json()["status"] == "unmatched"
     assert restored.json()["matched_kind"] is None and restored.json()["matched_id"] is None
     confirmed = await _match(auth_client, line_id, receipt["id"])
@@ -158,44 +172,63 @@ async def test_a_matched_line_cannot_be_ignored(auth_client, db_session):
     confirmed = await _match(auth_client, line_id, receipt["id"])
     assert confirmed.status_code == 200, confirmed.text
     refused = await _without_writes(
-        db_session, [org_id], lambda: auth_client.post(f"{BASE}/{line_id}/ignore")
+        db_session, [org_id], lambda: transition(auth_client, line_id, "ignore")
     )
-    assert refused.status_code == 400 and "unmatch" in refused.json()["detail"]
+    assert refused.status_code == 409 and refused.json()["code"] == "reconciliation_line_stale"
 
 
 async def test_exact_match_replay_returns_same_line_without_dml(auth_client, db_session):
     org_id, lines, receipt = await _setup(auth_client)
     line_id = lines["credit"]["id"]
-    confirmed = await _match(auth_client, line_id, receipt["id"])
+    request = await _frozen(auth_client, line_id, "match", receipt["id"])
+    confirmed = await request()
     assert confirmed.status_code == 200, confirmed.text
-    replay = await _without_writes(
-        db_session, [org_id], lambda: _match(auth_client, line_id, receipt["id"])
-    )
-    assert replay.status_code == 200 and replay.json() == confirmed.json()
+    replay = await _without_writes(db_session, [org_id], request)
+    assert replay.status_code == 200 and replay.content == confirmed.content
 
 
 @pytest.mark.parametrize("action", ["ignore", "unmatch"])
 async def test_repeated_ignore_and_already_unmatched_restore_do_not_write(
     auth_client, db_session, action
 ):
+    """A saved key replays; a new key cannot manufacture a no-op transition."""
     org_id, lines, receipt = await _setup(auth_client)
     line_id = lines["credit"]["id"]
-    first = await _action(auth_client, action, line_id, receipt["id"])
+    if action == "unmatch":
+        assert (await _match(auth_client, line_id, receipt["id"])).status_code == 200
+    request = await _frozen(auth_client, line_id, action)
+    first = await request()
     assert first.status_code == 200, first.text
-    replay = await _without_writes(
-        db_session, [org_id], lambda: _action(auth_client, action, line_id, receipt["id"])
+    replay = await _without_writes(db_session, [org_id], request)
+    assert replay.status_code == 200 and replay.content == first.content
+    # Reviewed before-state from the first command is now stale under a new key.
+    old = first.json()
+    body = {
+        "operation": action,
+        "expected_version": old["before_version"],
+        "expected": old["before"],
+        "target": None,
+        "reason": old["reason"],
+    }
+    refused = await _without_writes(
+        db_session, [org_id], lambda: submit(auth_client, line_id, body, "new-noop-intention")
     )
-    assert replay.status_code == 200 and replay.json() == first.json()
+    assert refused.status_code == 409 and refused.json()["code"] == "reconciliation_line_stale"
 
 
 async def test_exact_match_replay_still_revalidates_target_amount(auth_client, db_session):
     org_id, lines, receipt = await _setup(auth_client)
     line_id = lines["credit"]["id"]
-    assert (await _match(auth_client, line_id, receipt["id"])).status_code == 200
+    request = await _frozen(auth_client, line_id, "match", receipt["id"])
+    first = await request()
+    assert first.status_code == 200
     await db_session.execute(
         update(Receipt).where(Receipt.id == receipt["id"]).values(amount=Decimal("1210.03"))
     )
     await db_session.commit()
+    replay = await _without_writes(db_session, [org_id], request)
+    assert replay.status_code == 200 and replay.content == first.content
+    assert (await transition(auth_client, line_id, "unmatch")).status_code == 200
     refused = await _without_writes(
         db_session, [org_id], lambda: _match(auth_client, line_id, receipt["id"])
     )
@@ -205,9 +238,14 @@ async def test_exact_match_replay_still_revalidates_target_amount(auth_client, d
 async def test_exact_match_replay_still_revalidates_source_currency(auth_client, db_session):
     org_id, lines, receipt = await _setup(auth_client)
     line_id = lines["credit"]["id"]
-    assert (await _match(auth_client, line_id, receipt["id"])).status_code == 200
+    request = await _frozen(auth_client, line_id, "match", receipt["id"])
+    first = await request()
+    assert first.status_code == 200
     await db_session.execute(update(BankLine).where(BankLine.id == line_id).values(currency="USD"))
     await db_session.commit()
+    replay = await _without_writes(db_session, [org_id], request)
+    assert replay.status_code == 200 and replay.content == first.content
+    assert (await transition(auth_client, line_id, "unmatch")).status_code == 200
     refused = await _without_writes(
         db_session, [org_id], lambda: _match(auth_client, line_id, receipt["id"])
     )
@@ -232,16 +270,18 @@ async def test_exact_payout_replay_still_requires_a_paid_target(
     db_session.add(target)
     await db_session.commit()
     line_id = lines["debit"]["id"]
-    confirmed = await _match(auth_client, line_id, target.id, kind)
+    request = await _frozen(auth_client, line_id, "match", target.id, kind)
+    confirmed = await request()
     assert confirmed.status_code == 200, confirmed.text
-    replay = await _without_writes(
-        db_session, [org_id], lambda: _match(auth_client, line_id, target.id, kind)
-    )
+    replay = await _without_writes(db_session, [org_id], request)
     assert replay.status_code == 200 and replay.json() == confirmed.json()
 
-    # Explicit stored-state fixture: replay cannot bypass the existing paid gate.
+    # The historical receipt remains true; a new Match still needs a paid target.
     target.status = "open"
     await db_session.commit()
+    historical = await _without_writes(db_session, [org_id], request)
+    assert historical.status_code == 200 and historical.content == confirmed.content
+    assert (await transition(auth_client, line_id, "unmatch")).status_code == 200
     refused = await _without_writes(
         db_session, [org_id], lambda: _match(auth_client, line_id, target.id, kind)
     )
