@@ -1,5 +1,11 @@
 # TODO — Task Board
 
+**6 November backend CI repairs:** [Reading facts qualification](docs/plan/OCR-READING-FACTS-2026-11-05.md)
+now includes native fixture opt-in, real reading-history tenant parity and a
+bounded PDF raster-rounding repair. The original failed hosted runs remain
+recorded. Local checks pass; fresh delivered-source CI is required. No gate,
+limit, timeout or visual baseline was weakened.
+
 **Current163 reading facts:** [Per-page selection and fenced publication](docs/plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native
 authority/cache,40 boxed runtime and658 broader portable controls pass; those
