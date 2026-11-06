@@ -3,6 +3,7 @@
 import pytest
 
 from app.services import bank_statement
+from tests.reconciliation_command_client import transition
 
 
 @pytest.mark.parametrize("column", ["currency", "Ccy", "Transaction Currency"])
@@ -72,9 +73,8 @@ async def test_import_currency_reaches_api_and_foreign_line_cannot_settle_eur(
     assert (
         await auth_client.get(f"/api/v1/reconciliation/lines/{foreign['id']}/candidates")
     ).json() == []
-    refused = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{foreign['id']}/match",
-        json={"kind": "receipt", "target_id": receipt.json()["id"]},
+    refused = await transition(
+        auth_client, foreign["id"], "match", target={"kind": "receipt", "id": receipt.json()["id"]}
     )
     assert refused.status_code == 400
     assert "USD" in refused.json()["detail"]
@@ -83,14 +83,13 @@ async def test_import_currency_reaches_api_and_foreign_line_cannot_settle_eur(
         await auth_client.get(f"/api/v1/reconciliation/lines/{base['id']}/candidates")
     ).json()
     assert candidates[0]["currency"] == "EUR"
-    matched = await auth_client.post(
-        f"/api/v1/reconciliation/lines/{base['id']}/match",
-        json={"kind": "receipt", "target_id": receipt.json()["id"]},
+    matched = await transition(
+        auth_client, base["id"], "match", target={"kind": "receipt", "id": receipt.json()["id"]}
     )
     assert matched.status_code == 200, matched.text
     assert matched.json()["currency"] == "EUR"
     # A status mutation must also retain an unknown unit, never default to EUR.
-    ignored = await auth_client.post(f"/api/v1/reconciliation/lines/{by_unit[None]['id']}/ignore")
+    ignored = await transition(auth_client, by_unit[None]["id"], "ignore")
     assert ignored.status_code == 200 and ignored.json()["currency"] is None
 
 

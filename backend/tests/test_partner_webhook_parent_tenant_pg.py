@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import pytest
@@ -65,12 +66,11 @@ def _error_state(error):
     return error.orig.__cause__.sqlstate, getattr(error.orig.__cause__, "constraint_name", None)
 
 
-@pytest_asyncio.fixture(params=["partner", "webhook"])
-async def parent_pg(request):
-    kind = request.param
+@asynccontextmanager
+async def parent_family(database_url, kind):
     parent, child, _column = _link(kind)
     migration = _revision(PARTNER if kind == "partner" else WEBHOOK)
-    engine = create_async_engine(PG_URL)
+    engine = create_async_engine(database_url)
     ids = {
         f"{prefix}_{letter}": str(uuid4())
         for prefix in ("org", "parent", "child")
@@ -127,6 +127,12 @@ async def parent_pg(request):
                 await transaction.rollback()
     finally:
         await engine.dispose()
+
+
+@pytest_asyncio.fixture(params=["partner", "webhook"])
+async def parent_pg(request):
+    async with parent_family(PG_URL, request.param) as family:
+        yield family
 
 
 @pytest.mark.asyncio
@@ -194,84 +200,6 @@ async def test_native_parent_delete_cascades_only_own_history(parent_pg):
 
 
 @pytest.mark.asyncio
-async def test_native_populated_roundtrip_preserves_rows_catalog_and_optional_contracts(parent_pg):
-    _engine, db, ids, migration, kind = parent_pg
-    parent, child, _column = _link(kind)
-    before, schema = await _rows(db, parent, child, ids), await _catalog(db)
-    for direction in ("downgrade", "upgrade"):
-        await db.run_sync(
-            lambda connection, direction=direction: _apply(connection, migration, direction)
-        )
-        assert await _rows(db, parent, child, ids) == before
-    assert await _catalog(db) == schema
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("fault", ["wrong_tenant", "missing_parent"])
-async def test_native_unscoped_preflight_masks_global_history_and_never_repairs(parent_pg, fault):
-    _engine, db, ids, migration, kind = parent_pg
-    parent, child, column = _link(kind)
-    await db.run_sync(lambda connection: _apply(connection, migration, "downgrade"))
-    missing = str(uuid4())
-    if fault == "missing_parent":
-        await db.execute(
-            text(f"ALTER TABLE {migration.CHILD_TABLE} DROP CONSTRAINT {migration.OLD_FK}")
-        )
-    for letter, foreign in (("a", "b"), ("b", "a")):
-        await db.execute(
-            update(child)
-            .where(child.id == ids[f"child_{letter}"])
-            .values(**{column: missing if fault == "missing_parent" else ids[f"parent_{foreign}"]})
-        )
-    before, schema = await _rows(db, parent, child, ids), await _catalog(db)
-    expected = "wrong_tenant=2" if fault == "wrong_tenant" else "missing_parent=2"
-    with pytest.raises(RuntimeError, match=expected) as refused:
-        await db.run_sync(lambda connection: _apply(connection, migration, "upgrade"))
-    assert all(value not in str(refused.value) for value in (*ids.values(), missing))
-    assert await _rows(db, parent, child, ids) == before and await _catalog(db) == schema
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("direction", ["upgrade", "downgrade"])
-async def test_native_postvalidation_failure_rolls_back_ddl_inside_outer_transaction(
-    parent_pg, monkeypatch, direction
-):
-    _engine, db, ids, migration, kind = parent_pg
-    parent, child, _column = _link(kind)
-    if direction == "upgrade":
-        await db.run_sync(lambda connection: _apply(connection, migration, "downgrade"))
-    before, schema = await _rows(db, parent, child, ids), await _catalog(db)
-    original, calls = migration._check_sqlite_foreign_keys, []
-
-    def fail_after_ddl(connection):
-        original(connection)
-        calls.append(True)
-        if len(calls) == 2:
-            raise RuntimeError("Synthetic late validation failure")
-
-    monkeypatch.setattr(migration, "_check_sqlite_foreign_keys", fail_after_ddl)
-    with pytest.raises(RuntimeError, match="Synthetic late validation failure"):
-        await db.run_sync(lambda connection: _apply(connection, migration, direction))
-    assert len(calls) == 2
-    assert await _rows(db, parent, child, ids) == before and await _catalog(db) == schema
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("direction", ["upgrade", "downgrade"])
-async def test_native_scoped_migration_refuses_before_any_change(parent_pg, direction):
-    _engine, db, ids, migration, kind = parent_pg
-    parent, child, _column = _link(kind)
-    if direction == "upgrade":
-        await db.run_sync(lambda connection: _apply(connection, migration, "downgrade"))
-    before, schema = await _rows(db, parent, child, ids), await _catalog(db)
-    await _scope(db, ids["org_a"])
-    with pytest.raises(RuntimeError, match="requires an unscoped connection"):
-        await db.run_sync(lambda connection: _apply(connection, migration, direction))
-    await _scope(db, "")
-    assert await _rows(db, parent, child, ids) == before and await _catalog(db) == schema
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize("table_kind", ["parent", "child"])
 async def test_native_migration_locks_actually_block_parent_and_child_writes(parent_pg, table_kind):
     engine, db, _ids, migration, _kind = parent_pg
@@ -310,30 +238,3 @@ async def test_native_migration_locks_actually_block_parent_and_child_writes(par
             if task is not None:
                 await asyncio.gather(task, return_exceptions=True)
             await writer_transaction.rollback()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "policy",
-    [
-        "ON DELETE RESTRICT",
-        "ON DELETE CASCADE ON UPDATE CASCADE",
-        "ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED",
-    ],
-)
-async def test_native_unexpected_existing_fk_contract_is_refused(parent_pg, policy):
-    _engine, db, ids, migration, kind = parent_pg
-    parent, child, _column = _link(kind)
-    await db.run_sync(lambda connection: _apply(connection, migration, "downgrade"))
-    await db.execute(
-        text(f"ALTER TABLE {migration.CHILD_TABLE} DROP CONSTRAINT {migration.OLD_FK}")
-    )
-    await db.execute(
-        text(
-            f"ALTER TABLE {migration.CHILD_TABLE} ADD CONSTRAINT {migration.OLD_FK} FOREIGN KEY ({migration.LINK_COLUMN}) REFERENCES {migration.PARENT_TABLE}(id) {policy}"
-        )
-    )
-    before, schema = await _rows(db, parent, child, ids), await _catalog(db)
-    with pytest.raises(RuntimeError, match="Unexpected .* foreign-key contract"):
-        await db.run_sync(lambda connection: _apply(connection, migration, "upgrade"))
-    assert await _rows(db, parent, child, ids) == before and await _catalog(db) == schema

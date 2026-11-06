@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.dimensions import DimensionFields
 from app.schemas.image_reading import ImageReadingPreparation
+from app.services.expense_transaction_amounts import read_amount
 
 Category = Literal["travel", "meals", "accommodation", "transport", "supplies", "software", "other"]
 PaymentMethod = Literal["personal", "company_card"]
@@ -178,7 +180,8 @@ class ExpenseTransactionOut(BaseModel):
     txn_date: date
     description: str
     merchant: str | None
-    amount: Decimal
+    amount: Decimal | None
+    amount_status: Literal["valid", "invalid"]
     currency: str
     direction: str
     source: str
@@ -186,6 +189,20 @@ class ExpenseTransactionOut(BaseModel):
     version: int = 1
     import_batch_id: str | None = None
     currency_source: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def read_stored_amount(cls, value: Any) -> dict[str, Any]:
+        # A response copy only: neither ORM fields nor immutable receipt JSON
+        # are assigned to or normalized by this adapter.
+        data = (
+            dict(value)
+            if isinstance(value, Mapping)
+            else {name: getattr(value, name) for name in cls.model_fields if hasattr(value, name)}
+        )
+        data["amount"] = read_amount(data.get("amount"))
+        data["amount_status"] = "valid" if data["amount"] is not None else "invalid"
+        return data
 
 
 class ExpenseCommandOut(BaseModel):

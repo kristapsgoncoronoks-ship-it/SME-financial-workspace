@@ -118,7 +118,7 @@ export default function Expenses() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
         <KpiCard label="Awaiting reimbursement" value={s ? money(s.my_reimbursable) : "—"} accent="emerald" sub="approved · mine" />
         <KpiCard label="Reclaimable VAT" value={s ? money(s.reclaimable_vat) : "—"} accent="amber" sub="on my expenses" />
         <KpiCard label="Submitted" value={s ? String(s.my_submitted) : "—"} sub="mine, awaiting review" />
@@ -160,12 +160,19 @@ type ImportOutcome = {
   warnings: string[]; available: number; assigned: number; binned: number; unavailable: number;
 };
 
-function selectedAmount(rows: ExpenseTransaction[]): string {
-  const cents = rows.reduce((sum, row) => {
-    if (!/^\d+(?:\.\d{1,2})?$/.test(row.amount)) throw new Error("Invalid amount in the inbox.");
-    const [whole, fraction = ""] = row.amount.split(".");
-    return sum + BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
-  }, 0n);
+function transactionAmount(row: ExpenseTransaction): string | null {
+  if (row.amount_status !== undefined && row.amount_status !== "valid") return null;
+  return typeof row.amount === "string" && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(row.amount) && Number.isFinite(Number(row.amount)) ? row.amount : null;
+}
+
+function selectedAmount(rows: ExpenseTransaction[]): string | null {
+  let cents = 0n;
+  for (const row of rows) {
+    const amount = transactionAmount(row);
+    if (amount === null || !/^\d+(?:\.\d{1,2})?$/.test(amount)) return null;
+    const [whole, fraction = ""] = amount.split(".");
+    cents += BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+  }
   return String(cents / 100n) + "." + String(cents % 100n).padStart(2, "0");
 }
 
@@ -260,11 +267,12 @@ function AvailableExpenses({ enabled }: { enabled: boolean }) {
   const mixed = currencies.size > 1;
   const legacy = picked.some((row) => row.source === "bank_statement" && !row.import_batch_id && !row.currency_source);
   const selectedCurrency = picked[0]?.currency ?? "";
-  const total = picked.length && !mixed ? selectedAmount(picked) : "";
+  const total = picked.length && !mixed ? selectedAmount(picked) : null;
+  const unavailable = picked.length > 0 && !mixed && total === null;
   const createFrom = useMutation({
     retry: false,
     mutationFn: async () => {
-      if (!canWrite || !picked.length || mixed || legacy) throw new Error("Select verified transactions in one currency first.");
+      if (!canWrite || !picked.length || mixed || legacy || unavailable) throw new Error("Select verified transactions with available amounts in one currency first.");
       return invoiceCommand<ExpenseReport>("/expenses", {
         title: title.trim() || "New report", currency: selectedCurrency,
         transaction_ids: picked.map((row) => row.id),
@@ -302,7 +310,7 @@ function AvailableExpenses({ enabled }: { enabled: boolean }) {
     [importSlot, "import"], [reportSlot, "report"], [removeSlot, "removal"],
   ].filter(([slot]) => hasSavedInvoiceCommand(slot, scope));
   return (
-    <div className="card space-y-3">
+    <div className="card min-w-0 max-w-full space-y-3">
       {dialog}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -314,10 +322,10 @@ function AvailableExpenses({ enabled }: { enabled: boolean }) {
         </button>
       </div>
       <div className="flex flex-wrap gap-3">
-        <label className="text-sm">Statement account reference
+        <label className="min-w-0 max-w-full text-sm">Statement account reference
           <input className="input" value={account} maxLength={120} disabled={busy} onChange={(e) => setAccount(e.target.value)} placeholder="e.g. operating card" />
         </label>
-        <label className="text-sm">Currency if missing from the statement
+        <label className="min-w-0 max-w-full text-sm">Currency if missing from the statement
           <input className="input" value={currency} maxLength={3} disabled={busy} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="e.g. EUR" />
         </label>
       </div>
@@ -340,22 +348,25 @@ function AvailableExpenses({ enabled }: { enabled: boolean }) {
         <p className="py-4 text-center text-sm text-text-secondary">No available transactions. Import a statement to get started.</p>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div role="region" aria-label="Available expense transactions" tabIndex={0} className="max-w-full overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="px-3 py-2">Select</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Description</th><th className="px-3 py-2 text-right">Amount</th><th className="px-3 py-2 text-right">Action</th></tr></thead>
-              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-slate-100">
-                <td className="px-3 py-2"><input aria-label={"Select " + row.description} type="checkbox" disabled={busy || !canWrite} checked={selected.has(row.id)} onChange={() => toggle(row.id)} /></td>
-                <td className="px-3 py-2 text-slate-500">{shortDate(row.txn_date)}</td><td className="px-3 py-2">{row.description}</td><td className="px-3 py-2 text-right font-medium">{money(row.amount, row.currency)}</td>
+              <tbody>{rows.map((row) => {
+                const amount = transactionAmount(row);
+                return <tr key={row.id} className="border-t border-slate-100">
+                <td className="px-3 py-2"><input aria-label={"Select " + row.description} type="checkbox" disabled={busy || !canWrite || (!selected.has(row.id) && selectedAmount([row]) === null)} checked={selected.has(row.id)} onChange={() => toggle(row.id)} /></td>
+                <td className="px-3 py-2 text-slate-500">{shortDate(row.txn_date)}</td><td className="px-3 py-2">{row.description}{amount === null && <p className="mt-1 text-xs text-text-secondary">Review the original statement before reporting this row.</p>}</td><td className="px-3 py-2 text-right font-medium">{amount === null ? <><span>Amount unavailable</span><span className="block text-xs text-text-secondary">{row.currency}</span></> : money(amount, row.currency)}</td>
                 <td className="px-3 py-2 text-right"><button className="text-rose-500 hover:underline" disabled={!canWrite || busy} onClick={async () => {
                   if (await confirm({ title: "Remove this transaction?", body: "Move this available candidate to Trash. Eligible rows can be restored during the existing retention period; no bank payment is deleted.", confirmLabel: "Remove" })) del.mutate(row);
                 }}>remove</button></td>
-              </tr>)}</tbody>
+              </tr>})}</tbody>
             </table>
           </div>
           {selected.size > 0 && <div className="space-y-2">
             <label className="text-sm" htmlFor="selected-report-title">Report title</label>
             <input id="selected-report-title" className="input" value={title} disabled={busy} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. October card expenses" />
             {(mixed || legacy) && <p role="alert">{mixed ? "Mixed currencies cannot be added together. Select one currency for each report." : "Legacy statement currency is unverified. Review its original source before reporting."}</p>}
-            <button className="btn-primary" disabled={!canWrite || busy || mixed || legacy || !picked.length} onClick={() => createFrom.mutate()}>
+            {unavailable && <p role="alert">A selected statement amount is unavailable for reporting. Deselect that row and review its original statement.</p>}
+            <button className="btn-primary" disabled={!canWrite || busy || mixed || legacy || unavailable || !picked.length} onClick={() => createFrom.mutate()}>
               {createFrom.isPending ? "Creating…" : "Create report from " + picked.length + (total ? " · " + money(total, selectedCurrency) : "")}
             </button>
           </div>}

@@ -590,14 +590,15 @@ async def _p_receipts(ctx: Ctx) -> None:
     _assert_404(await ctx.b.get(f"/api/v1/receipts/{ids[ctx.a.name]}"), "receipt GET by id")
 
 
-@probe("bank_statements", "bank_lines")
+@probe("bank_statements", "bank_lines", "reconciliation_commands")
 async def _p_bank_import(ctx: Ctx) -> None:
     csv = (
         "date,description,credit,debit\n"
         "2026-02-05,Payment from Overlap INV-1,1210.00,\n"
         "2026-02-10,Overlap payout,,250.00\n"
     )
-    st_ids, line_ids = {}, {}
+    st_ids, line_ids, command_ids, command_lines = {}, {}, {}, {}
+    shared_key = "parity-shared-bank-command"
     for org in (ctx.a, ctx.b):
         up = await org.post(
             "/api/v1/reconciliation/import",
@@ -609,6 +610,24 @@ async def _p_bank_import(ctx: Ctx) -> None:
         assert lines.status_code == 200, lines.text
         assert lines.json(), "statement import produced no lines"
         line_ids[org.name] = {ln["id"] for ln in lines.json()}
+        line = lines.json()[0]
+        command_lines[org.name] = line["id"]
+        committed = await org.client.post(
+            f"/api/v1/reconciliation/lines/{line['id']}/commands",
+            headers={**org.headers, "Idempotency-Key": shared_key},
+            json={
+                "operation": "ignore",
+                "expected_version": line["version"],
+                "expected": {
+                    "status": line["status"],
+                    "matched_kind": line["matched_kind"],
+                    "matched_id": line["matched_id"],
+                },
+                "reason": "Overlap synthetic exclusion",
+            },
+        )
+        assert committed.status_code == 200, committed.text
+        command_ids[org.name] = committed.json()["command_id"]
     for me, other in ((ctx.a, ctx.b), (ctx.b, ctx.a)):
         listing = await me.get("/api/v1/reconciliation/statements")
         assert listing.status_code == 200, listing.text
@@ -617,6 +636,29 @@ async def _p_bank_import(ctx: Ctx) -> None:
         lines = await me.get(f"/api/v1/reconciliation/statements/{st_ids[me.name]}/lines")
         seen_lines = {ln["id"] for ln in lines.json()}
         _assert_isolated("bank_lines", line_ids[me.name], line_ids[other.name], seen_lines)
+        outcome = await me.get(
+            f"/api/v1/reconciliation/lines/{command_lines[me.name]}/commands/{shared_key}"
+        )
+        assert outcome.status_code == 200, outcome.text
+        _assert_isolated(
+            "reconciliation_commands own outcome",
+            {command_ids[me.name]},
+            {command_ids[other.name]},
+            {outcome.json()["command_id"]},
+        )
+        history = await me.get(f"/api/v1/reconciliation/lines/{command_lines[me.name]}/history")
+        assert history.status_code == 200, history.text
+        _assert_isolated(
+            "reconciliation_commands history",
+            {command_ids[me.name]},
+            {command_ids[other.name]},
+            {event["command_id"] for event in history.json()["events"]},
+        )
+        for suffix in (f"commands/{shared_key}", "history"):
+            _assert_404(
+                await me.get(f"/api/v1/reconciliation/lines/{command_lines[other.name]}/{suffix}"),
+                "bank command outcome/history through the other tenant's line",
+            )
     _assert_404(
         await ctx.b.get(f"/api/v1/reconciliation/statements/{st_ids[ctx.a.name]}/lines"),
         "statement lines via A's statement",

@@ -10,7 +10,11 @@ from __future__ import annotations
 from sqlalchemy import MetaData
 from sqlalchemy.engine import Dialect
 
-from app.core.migration_schema import POSTGRES_COLUMN_SET_NULL
+from app.core.migration_schema import (
+    POSTGRES_COLUMN_SET_NULL,
+    project_optional_parent_metadata,
+    validate_optional_parent_metadata,
+)
 
 
 def development_metadata(metadata: MetaData, dialect: Dialect) -> MetaData:
@@ -54,6 +58,7 @@ def development_metadata(metadata: MetaData, dialect: Dialect) -> MetaData:
             raise RuntimeError(f"[DB-PG-BOOTSTRAP-01] {table}.{name} portable ORM contract changed")
         source_keys[table, name] = key
 
+    validate_optional_parent_metadata(metadata)
     # Table.to_metadata can normalize inconsistent element options. Validate the
     # originals above first, rather than trusting a normalized clone.
     projected = MetaData(schema=metadata.schema, naming_convention=metadata.naming_convention)
@@ -68,4 +73,5 @@ def development_metadata(metadata: MetaData, dialect: Dialect) -> MetaData:
         copied.ondelete = f"SET NULL ({dialect.identifier_preparer.quote(column)})"
         for element in copied.elements:
             element.ondelete = copied.ondelete
+    project_optional_parent_metadata(projected, dialect)
     return projected

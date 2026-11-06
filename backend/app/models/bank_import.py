@@ -18,6 +18,7 @@ from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
     Date,
     ForeignKey,
     ForeignKeyConstraint,
@@ -64,6 +65,11 @@ class BankStatement(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 class BankLine(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "bank_lines"
     __table_args__ = (
+        CheckConstraint(
+            "version = CAST(version AS INTEGER) AND version >= 1 AND version <= 2147483647",
+            name="ck_bank_lines_version",
+        ),
+        Index("uq_bank_lines_org_id", "org_id", "id", unique=True),
         ForeignKeyConstraint(
             ["org_id", "statement_id"],
             ["bank_statements.org_id", "bank_statements.id"],
@@ -78,6 +84,8 @@ class BankLine(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     statement_id: Mapped[str] = mapped_column(GUID(), nullable=False)
+    # A migration baseline, not a reconstruction of historical decisions.
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1", nullable=False)
     line_date: Mapped[date] = mapped_column(Date, nullable=False)
     description: Mapped[str] = mapped_column(String(300), default="", nullable=False)
     # Signed: credit (money in) positive, debit (money out) negative.
