@@ -140,3 +140,17 @@ updates only existing bounded-view progress and appends the distinct currency
 finding as 216 (197 original plus 19 findings). This is not a completion
 percentage. Complete filtered exports, immutable snapshots and equal-value
 tie order remain separate work; the broader backlog is not declared closed.
+
+## R15 caller follow-up — 6 November 2026
+
+PR118 at `ae3925e` exposed a missed runtime caller: `explore_by_vendor` omitted
+the required currency and received HTTP 422 before emitting `shape.json`.
+The perf seed stores every invoice and its line amount in EUR, so its request
+now explicitly selects `currency=EUR`, retaining the complete seeded population.
+The scenario label, budgets, thresholds, 12 repetitions, two warmups and factor
+four are unchanged. All nine existing perf/seed controls pass, including the
+actual ordinary-role PostgreSQL shape gate at 100 → 400 rows: the result is
+emitted and parsed, and Explore's observed p95 grows 1.78× against its unchanged
+9× ceiling. This local smoke does not replace hosted CI at its larger scale.
+The original failed CI log and before/after evidence remain in the
+[follow-up receipt](/workspace/artifacts/explore-perf-scenario-2026-11-06/FINAL-RECEIPT.json).
