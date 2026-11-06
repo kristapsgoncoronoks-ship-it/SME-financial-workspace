@@ -1,5 +1,20 @@
 # Backlog completion — 5 November 2026
 
+**Current recorded reading inspection — 6 November:** [Full-document facts and bounded history](OCR-FACTS-INSPECTION-2026-11-06.md)
+adds read-only upload/email details with four GETs, canonical current authority
+and explicit historical source/attempt labels. Requested versus observed
+settings, unresolved defaults, installed packs and target DPI remain distinct
+from measured execution/geometry. Manual and region edits remain separate;
+no raw text, reader/profile/default or accuracy claim is added. Component42
+portable/63 mocked-browser evidence stays source-bound; new composed165 proof
+passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
+RLS and unchanged source/business facts. Two separate native input controls
+refuse malformed UUID paths safely. The tree collects7290 cases, not a full-suite
+pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
+paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
+states remain; fresh delivered-source CI, customer corpus and human acceptance
+are open. The earlier164 receipts retain their dated scope.
+
 **Current expense transaction money — 6 November:** [Unavailable historical amounts and safe consumption](EXPENSE-TRANSACTION-MONEY-2026-11-06.md)
 composes expense `9d9b5c6` and registration `ceccf36` with reviewed parent 165
 `3d06b9e` (PR114) at `68cd768`. Invalid amounts stay visible as null plus status;

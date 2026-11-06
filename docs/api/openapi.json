@@ -20407,6 +20407,285 @@
         "title": "PaymentUpdate",
         "type": "object"
       },
+      "PdfPageFact": {
+        "additionalProperties": false,
+        "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "enum": [
+                  "native_text_selected",
+                  "short_native_text",
+                  "engine_timeout",
+                  "supervisor_timeout",
+                  "classified_native_failure",
+                  "resource_or_native_exit",
+                  "result_incomplete",
+                  "processing_stopped",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause"
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms"
+          },
+          "native_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Bytes"
+          },
+          "native_chars": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Chars"
+          },
+          "native_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Sha256"
+          },
+          "ocr_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Bytes"
+          },
+          "ocr_chars": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Chars"
+          },
+          "ocr_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Sha256"
+          },
+          "page": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Page",
+            "type": "integer"
+          },
+          "raster_height": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raster Height"
+          },
+          "raster_width": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raster Width"
+          },
+          "render_dpi": {
+            "anyOf": [
+              {
+                "const": 300,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Dpi"
+          },
+          "render_scale": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Scale"
+          },
+          "selected_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Bytes"
+          },
+          "selected_chars": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Chars"
+          },
+          "selected_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "native",
+                  "ocr"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Kind"
+          },
+          "selected_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Sha256"
+          },
+          "source_height": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Height"
+          },
+          "source_unit": {
+            "anyOf": [
+              {
+                "const": "points",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Unit"
+          },
+          "source_width": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Width"
+          },
+          "status": {
+            "enum": [
+              "native",
+              "ocr_complete",
+              "timed_out",
+              "failed",
+              "outcome_unknown",
+              "not_attempted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page",
+          "status"
+        ],
+        "title": "PdfPageFact",
+        "type": "object"
+      },
       "PenaltyLineOut": {
         "properties": {
           "days_overdue": {
@@ -21607,6 +21886,211 @@
         "title": "ReadinessOut",
         "type": "object"
       },
+      "ReadingObservationFacts": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_seq": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Seq"
+          },
+          "channel": {
+            "enum": [
+              "upload",
+              "inbound"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unsupported_format",
+                  "malformed_document",
+                  "unreadable_scan",
+                  "image_processing_limit",
+                  "image_reading_busy",
+                  "capture_unavailable",
+                  "stored_file_missing",
+                  "stored_file_too_large",
+                  "stored_file_changed",
+                  "security_rejected",
+                  "processing_timeout",
+                  "internal_error",
+                  "unknown_failure"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "observation_id": {
+            "format": "uuid",
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "failure"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "page_observation_state": {
+            "default": "not_observed",
+            "enum": [
+              "observed",
+              "not_observed",
+              "not_applicable"
+            ],
+            "title": "Page Observation State",
+            "type": "string"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PdfPageFact"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingProfileFacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requested_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Profile Id"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "selected_stream_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Stream Bytes"
+          },
+          "selected_stream_complete": {
+            "default": false,
+            "title": "Selected Stream Complete",
+            "type": "boolean"
+          },
+          "selected_stream_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Stream Sha256"
+          },
+          "source_failure_seq": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Failure Seq"
+          },
+          "source_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Sha256"
+          }
+        },
+        "required": [
+          "observation_id",
+          "channel",
+          "owner_id",
+          "outcome",
+          "created_at"
+        ],
+        "title": "ReadingObservationFacts",
+        "type": "object"
+      },
       "ReadingObservationHistory": {
         "additionalProperties": false,
         "properties": {
@@ -21829,6 +22313,301 @@
           "facts_sha256"
         ],
         "title": "ReadingObservationSummary",
+        "type": "object"
+      },
+      "ReadingPolicyFact": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "enum": [
+              "tesseract_timeout",
+              "pdf_wall",
+              "pdf_cpu",
+              "pdf_address_space",
+              "pdf_pages",
+              "pdf_render",
+              "pdf_render_edge",
+              "pdf_render_dpi",
+              "decoded_text",
+              "child_output",
+              "image_source",
+              "image_source_edge",
+              "image_raster",
+              "image_raster_edge",
+              "image_address_space",
+              "image_file",
+              "image_text",
+              "image_output",
+              "image_wall",
+              "image_cpu",
+              "image_preparation_grace"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "per_tesseract_invocation",
+              "per_pdf_operation",
+              "per_native_process",
+              "per_page_raster",
+              "selected_text_aggregate",
+              "per_image_source",
+              "per_image_raster",
+              "per_file",
+              "per_image_operation",
+              "per_image_preparation"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "seconds",
+              "bytes",
+              "pages",
+              "pixels",
+              "dpi"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "unit",
+          "scope"
+        ],
+        "title": "ReadingPolicyFact",
+        "type": "object"
+      },
+      "ReadingProfileFacts": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter": {
+            "enum": [
+              "pdf",
+              "image"
+            ],
+            "title": "Adapter",
+            "type": "string"
+          },
+          "effective_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Profile Id"
+          },
+          "engine_name": {
+            "anyOf": [
+              {
+                "const": "tesseract",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Name"
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "installed_languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Languages"
+          },
+          "inventory_status": {
+            "default": "not_probed",
+            "enum": [
+              "not_probed",
+              "available",
+              "truncated",
+              "unavailable",
+              "unknown"
+            ],
+            "title": "Inventory Status",
+            "type": "string"
+          },
+          "language_mode": {
+            "default": "engine-default",
+            "enum": [
+              "engine-default",
+              "explicit",
+              "unknown"
+            ],
+            "title": "Language Mode",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "ocr_state": {
+            "enum": [
+              "used",
+              "not_needed",
+              "unknown"
+            ],
+            "title": "Ocr State",
+            "type": "string"
+          },
+          "oem_mode": {
+            "default": "engine-default",
+            "enum": [
+              "engine-default",
+              "explicit",
+              "unknown"
+            ],
+            "title": "Oem Mode",
+            "type": "string"
+          },
+          "policies": {
+            "items": {
+              "$ref": "#/components/schemas/ReadingPolicyFact"
+            },
+            "maxItems": 32,
+            "title": "Policies",
+            "type": "array"
+          },
+          "preprocessing_version": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[\\x20-\\x7e]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preprocessing Version"
+          },
+          "psm_mode": {
+            "default": "engine-default",
+            "enum": [
+              "engine-default",
+              "explicit",
+              "unknown"
+            ],
+            "title": "Psm Mode",
+            "type": "string"
+          },
+          "reader_source_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reader Source Sha256"
+          },
+          "requested_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Profile Id"
+          },
+          "resolved_language": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Language"
+          },
+          "resolved_oem": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Oem"
+          },
+          "resolved_psm": {
+            "anyOf": [
+              {
+                "maximum": 13.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Psm"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "adapter",
+          "ocr_state"
+        ],
+        "title": "ReadingProfileFacts",
         "type": "object"
       },
       "RebateAllocationOut": {
@@ -35562,6 +36341,117 @@
         ]
       }
     },
+    "/api/v1/email/inbox/{inbound_id}/reading-observations/current": {
+      "get": {
+        "operationId": "inbound_current_reading_api_v1_email_inbox__inbound_id__reading_observations_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "inbound_id",
+            "required": true,
+            "schema": {
+              "title": "Inbound Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReadingObservationFacts"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Inbound Current Reading Api V1 Email Inbox  Inbound Id  Reading Observations Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inbound Current Reading",
+        "tags": [
+          "email intake"
+        ]
+      }
+    },
+    "/api/v1/email/inbox/{inbound_id}/reading-observations/{observation_id}": {
+      "get": {
+        "operationId": "inbound_recorded_reading_api_v1_email_inbox__inbound_id__reading_observations__observation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "inbound_id",
+            "required": true,
+            "schema": {
+              "title": "Inbound Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "title": "Observation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingObservationFacts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inbound Recorded Reading",
+        "tags": [
+          "email intake"
+        ]
+      }
+    },
     "/api/v1/email/settings": {
       "get": {
         "operationId": "get_settings_api_v1_email_settings_get",
@@ -38884,6 +39774,117 @@
           }
         ],
         "summary": "Capture Reading History",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/captures/{run_id}/reading-observations/current": {
+      "get": {
+        "operationId": "capture_current_reading_api_v1_invoices_captures__run_id__reading_observations_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReadingObservationFacts"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Capture Current Reading Api V1 Invoices Captures  Run Id  Reading Observations Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capture Current Reading",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/captures/{run_id}/reading-observations/{observation_id}": {
+      "get": {
+        "operationId": "capture_recorded_reading_api_v1_invoices_captures__run_id__reading_observations__observation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "title": "Observation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingObservationFacts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capture Recorded Reading",
         "tags": [
           "invoices"
         ]

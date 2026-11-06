@@ -8,7 +8,7 @@
     "Historical locally/CI-qualified source is not human review, production deployment, accountant/provider acceptance or external setting proof.",
     "Original inventory-phase boundary: No repo mutations, tests, commits, PR, merge, deploy, provider/credential/settings actions were performed by inventory lane."
   ],
-  "qualification": "6 November expense-money composition at 68cd768 follows reviewed parent1653d06b9e (PR114), retaining component9d9b5c6 and registrationceccf36. ExpenseTransactionOut exposes amount Decimal|null plus valid|invalid status; candidates skip invalid money and financial consumption refuses typed409 expense_transaction_amount_invalid before writes. Owner/currency/version/receipt precedence, finite signed values, raw as-of receipts and authorized bin remain unchanged. The original source receipt SHA291cbb590c7e410645c13b04afbd4df3b00df83b397aa3066598f3a0de5fada6 records184portable(34new+150inc),20native163(12new+8R010),80mockbrowser(6new+74inc), all0fail/error/skips. Nine other owned files remain exact; shared types add onlyBankLine.version, with ExpenseTransaction and every other byte projecting exactly. No redundant184/80 rerun. New native165 expense/R010 proof passes20cases(12new+8inc) in19.85s with0fail/error/skips and115tenant-table snapshots; ordinary non-super/non-bypass DB upgraded163→164→165, strictAlembiccheck0diffs. Current7260backendcases collect(notfullsuitepass),122tables/165revisions/70models/136services/50backendroute-modules/69pages; fullRuff/format1007files,Mypy452appfiles,frontendlint/build pass;4assets442.7kBraw/129.9gzip within460/135. OpenAPI429paths unchangedfromparent,onlyExpenseTransactionOutdelta;ERDparent-byte-identical. All51docs/generated/CI-discoverycontrols pass15.41s with0failures/errors/skips. Correctadmincommandmigration/schema andordinarycommands/expense native registrations arepreserved exactlyonce; noportablemigrationadminregistration. Freshnew-headhostedCIpending. Exactly1distinct expense finding appended afterall214complete parent rows:215=197original+18findings. Newfinding remains partiallocalchecksCIpending; sourceverification/remediation open, separatefromBank; noproductionprevalence,zero/normalization or asofrewrite claim. Dated parent165 and earlier qualification follows verbatim and doesnotautomatically qualifythiscomposition: 6 November durable reconciliation165 is locally qualified in source-scoped components: 220 distinct pytest nodes with an exact inventory; separate graph cohort of 31 (28 pass, 3 explicit SQLite-only skips, all 12 native executed), three tenant route probes and36 mocked-browser controls overlap that scope and are not added as a larger unique total. Actual Chromium/HTTP/restricted PostgreSQL with labelled transport faults proves one command, version 1 to 2 and one new command audit, unchanged financial/source rows and GET-only recovery. A later saved-key string-type guard has separate mock/static qualification. Backend a568aa4c and native proof e0d50093 precede root composition; the subsequent deprecated=True/428 decorator documentation changes metadata only. Current source collects 7,214 cases (not a full-suite pass), with 122 application tables, 165 revisions, 70 model and 135 service modules. Final composed-source checks pass 432 portable cases in 254.58s (including all 110 tenant-parity, 38 schema and 51 docs/generated/CI-discovery controls) and a 43-case RLS cohort in 48.35s (42 database cases plus one registry control, including all 20 command-native cases together). Full Ruff/format checks 1,004 files, Mypy checks 451 app files, and frontend lint/build passes at 442.7 kB raw/129.9 kB gzip within 460/135 kB budgets. OpenAPI is regenerated with 429 paths and ERD has 122 application tables. These checks overlap the component evidence and do not imply a larger unique total or full-suite execution. Fresh delivered-source hosted CI remains pending. All 214 identities, order, titles, sources and original inventory classifications remain; only RN06–RN09 progress/status changes. RN03/account attribution, historical source remediation and unrelated policy/release boundaries remain open.",
+  "qualification": "6 November read-only facts inspection composition f35dc59 follows corrected Expense1158719dead and retains bootstrap1998377. Four new GETs reuse existing facts DTOs; current canonical authority and explicit historical source/attempt are retained. SQL-bounded owner hints4096 and raw profile/page128KiB each precede decoding; canonical profile16KiB and total facts128KiB remain. Existing history remains20 summaries/96KiB; newfacts/history owner loaders are metadata-only, broader old source getters unchanged. Malformed facts are unavailable without repair, trueNULL legacy unknown preserved. Source-bound42portable/63mockbrowser are reused, not rerun or added as new165 proof;32composed native165 pass20.34s with ordinaryrole/FORCERLS and unchanged source/business facts. Two separate native malformed-ID controls refuse404. Current7290cases collect, not fullsuitepass;122tables/165revisions/70models/136services/50routes/69pages/10CIjobs; fullRuff/format1009,Mypy452,frontendlint/build,442.8raw/129.9gzip bundle pass within460/135. OpenAPI433paths/ERDparentidentical. All215identities/order/title/provenance/inventory and unrelated states preserved, only3existingOCR progress rows extended. No rawtext/newengine/profile/default/retention/accuracy or completebacklog claim; delivered-sourceCI/human/customer-corpus acceptance open. Prior dated evidence follows verbatim and does not automatically qualify thiscomposition: 6 November expense-money composition at 68cd768 follows reviewed parent1653d06b9e (PR114), retaining component9d9b5c6 and registrationceccf36. ExpenseTransactionOut exposes amount Decimal|null plus valid|invalid status; candidates skip invalid money and financial consumption refuses typed409 expense_transaction_amount_invalid before writes. Owner/currency/version/receipt precedence, finite signed values, raw as-of receipts and authorized bin remain unchanged. The original source receipt SHA291cbb590c7e410645c13b04afbd4df3b00df83b397aa3066598f3a0de5fada6 records184portable(34new+150inc),20native163(12new+8R010),80mockbrowser(6new+74inc), all0fail/error/skips. Nine other owned files remain exact; shared types add onlyBankLine.version, with ExpenseTransaction and every other byte projecting exactly. No redundant184/80 rerun. New native165 expense/R010 proof passes20cases(12new+8inc) in19.85s with0fail/error/skips and115tenant-table snapshots; ordinary non-super/non-bypass DB upgraded163→164→165, strictAlembiccheck0diffs. Current7260backendcases collect(notfullsuitepass),122tables/165revisions/70models/136services/50backendroute-modules/69pages; fullRuff/format1007files,Mypy452appfiles,frontendlint/build pass;4assets442.7kBraw/129.9gzip within460/135. OpenAPI429paths unchangedfromparent,onlyExpenseTransactionOutdelta;ERDparent-byte-identical. All51docs/generated/CI-discoverycontrols pass15.41s with0failures/errors/skips. Correctadmincommandmigration/schema andordinarycommands/expense native registrations arepreserved exactlyonce; noportablemigrationadminregistration. Freshnew-headhostedCIpending. Exactly1distinct expense finding appended afterall214complete parent rows:215=197original+18findings. Newfinding remains partiallocalchecksCIpending; sourceverification/remediation open, separatefromBank; noproductionprevalence,zero/normalization or asofrewrite claim. Dated parent165 and earlier qualification follows verbatim and doesnotautomatically qualifythiscomposition: 6 November durable reconciliation165 is locally qualified in source-scoped components: 220 distinct pytest nodes with an exact inventory; separate graph cohort of 31 (28 pass, 3 explicit SQLite-only skips, all 12 native executed), three tenant route probes and36 mocked-browser controls overlap that scope and are not added as a larger unique total. Actual Chromium/HTTP/restricted PostgreSQL with labelled transport faults proves one command, version 1 to 2 and one new command audit, unchanged financial/source rows and GET-only recovery. A later saved-key string-type guard has separate mock/static qualification. Backend a568aa4c and native proof e0d50093 precede root composition; the subsequent deprecated=True/428 decorator documentation changes metadata only. Current source collects 7,214 cases (not a full-suite pass), with 122 application tables, 165 revisions, 70 model and 135 service modules. Final composed-source checks pass 432 portable cases in 254.58s (including all 110 tenant-parity, 38 schema and 51 docs/generated/CI-discovery controls) and a 43-case RLS cohort in 48.35s (42 database cases plus one registry control, including all 20 command-native cases together). Full Ruff/format checks 1,004 files, Mypy checks 451 app files, and frontend lint/build passes at 442.7 kB raw/129.9 kB gzip within 460/135 kB budgets. OpenAPI is regenerated with 429 paths and ERD has 122 application tables. These checks overlap the component evidence and do not imply a larger unique total or full-suite execution. Fresh delivered-source hosted CI remains pending. All 214 identities, order, titles, sources and original inventory classifications remain; only RN06–RN09 progress/status changes. RN03/account attribution, historical source remediation and unrelated policy/release boundaries remain open.",
   "items": [
     {
       "id": "CI-IMAGE-CACHE-01",
@@ -781,11 +781,35 @@
         "backend/app/services/pdf_ocr.py",
         "backend/app/models/extraction_run.py"
       ],
-      "next": "Committed163 persists actual requested default and observed effective local facts, bounded128KiB; legacy missing requests/settings remain unknown. The supervised installation-only CLI reads no document and claims no fleet.73focused/40nativebox profiles/15native authority cases pass with source scopes preserved. Operator per-page/profile UI and bounded full-facts detail reads, live fleet and new-language/artifact/corpus acceptance remain separate.",
+      "next": "Read-only full-document profile/page facts are now available in upload/email current and historical details, using existing bounded DTOs and canonical owner/source/attempt/failure/cache checks. Requested versus observed profiles, unresolved defaults and installed packs remain distinct. Configurable settings, live fleet, new language/model/artifact and customer corpus acceptance remain open.",
       "dependencies": [
         "Approved available profile vocabulary",
         "Actual worker evidence"
-      ]
+      ],
+      "qualification": {
+        "facts_inspection_20261106": {
+          "component": "0c5c07d",
+          "composition": "f35dc59",
+          "parent": "8719dead",
+          "plan": "docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md",
+          "prior_next_163_scope": "Committed163 persists actual requested default and observed effective local facts, bounded128KiB; legacy missing requests/settings remain unknown. The supervised installation-only CLI reads no document and claims no fleet.73focused/40nativebox profiles/15native authority cases pass with source scopes preserved. Operator per-page/profile UI and bounded full-facts detail reads, live fleet and new-language/artifact/corpus acceptance remain separate.",
+          "portable_browser_reused_source_scope": {
+            "portable": 42,
+            "mocked_browser": 63,
+            "boundary": "Owned sources retained; shared types differ only by explicit parent expense/bank hunks. No new165 browser/recognizer accuracy claim."
+          },
+          "native_composed165": {
+            "passed": 32,
+            "seconds": 20.34,
+            "failures_errors_skips": 0,
+            "head": "d1e3f5a7c9b2",
+            "role": "ordinary non-superuser/non-bypass, FORCE RLS verified",
+            "scope": "Stored synthetic facts read paths; source/financial snapshots unchanged. Earlier164 receipt retained separately."
+          },
+          "delivered_CI": "pending",
+          "remaining": "Customer corpus, raw-text comparison/highlights/candidate application, configurable profiles and fleet/provider/hardware acceptance remain separate."
+        }
+      }
     },
     {
       "id": "OCR-PAGES",
@@ -796,10 +820,34 @@
         "docs/plan/OCR-CONTROL-PANEL-2026-10-21.md:82",
         "backend/app/services/pdf_ocr.py"
       ],
-      "next": "Committed per-page native/short-pageOCR selection preserves source order, bounded text/geometry/hash facts and failure without partial drafts.40native profiles at768MiB/1GiB include mixed/native/scanned/blank/51page refusal and truthful timeout/native-exit causes. Configured target DPI is distinct from actual bounded render_scale. No retained raw page text, highlights or customer-corpus accuracy claim; real combined browser/native-worker/PG163 publication passes; fresh composite CI remains pending.",
+      "next": "Upload/email inspection now presents persisted per-page native/OCR/failure/timeout/unknown/not-attempted facts and actual raster dimensions separately from target DPI. Manual/ROI corrections do not imply a new full-document read. No raw-text/highlight or recognition-accuracy claim; customer corpus acceptance stays open.",
       "dependencies": [
         "OCR-PROFILE immutable settings"
-      ]
+      ],
+      "qualification": {
+        "facts_inspection_20261106": {
+          "component": "0c5c07d",
+          "composition": "f35dc59",
+          "parent": "8719dead",
+          "plan": "docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md",
+          "prior_next_163_scope": "Committed per-page native/short-pageOCR selection preserves source order, bounded text/geometry/hash facts and failure without partial drafts.40native profiles at768MiB/1GiB include mixed/native/scanned/blank/51page refusal and truthful timeout/native-exit causes. Configured target DPI is distinct from actual bounded render_scale. No retained raw page text, highlights or customer-corpus accuracy claim; real combined browser/native-worker/PG163 publication passes; fresh composite CI remains pending.",
+          "portable_browser_reused_source_scope": {
+            "portable": 42,
+            "mocked_browser": 63,
+            "boundary": "Owned sources retained; shared types differ only by explicit parent expense/bank hunks. No new165 browser/recognizer accuracy claim."
+          },
+          "native_composed165": {
+            "passed": 32,
+            "seconds": 20.34,
+            "failures_errors_skips": 0,
+            "head": "d1e3f5a7c9b2",
+            "role": "ordinary non-superuser/non-bypass, FORCE RLS verified",
+            "scope": "Stored synthetic facts read paths; source/financial snapshots unchanged. Earlier164 receipt retained separately."
+          },
+          "delivered_CI": "pending",
+          "remaining": "Customer corpus, raw-text comparison/highlights/candidate application, configurable profiles and fleet/provider/hardware acceptance remain separate."
+        }
+      }
     },
     {
       "id": "OCR-RETRY",
@@ -811,12 +859,36 @@
         "backend/app/services/extraction.py",
         "backend/app/services/capture_region.py"
       ],
-      "next": "20-record cursor summary history and canonical current owner/source/generation/failure guards now persist accepted readings under fresh immutable job-claim then owner locks; stale workers/progress cannot publish. Whole retry retires current-client review epochs while keeping manual/region review workflows. Full old/new reading-text comparison and deliberate candidate application are not implemented; published hashes cannot reconstruct old text.",
+      "next": "Current and explicitly historical full-document details now use four bounded GETs alongside the existing20-summary/96KiB cursor history. Canonical source/generation/failure/cache authority prevents newest-by-time/UUID inference; historical source/attempt stays separate. Malformed facts return current null or historical409 without repair. Whole old/new text comparison and deliberate candidate application remain unimplemented; hashes cannot reconstruct old text.",
       "dependencies": [
         "OCR-PROFILE",
         "OCR-PAGES",
         "Existing CAP-RETRY/CAP-COMMAND/region receipts"
-      ]
+      ],
+      "qualification": {
+        "facts_inspection_20261106": {
+          "component": "0c5c07d",
+          "composition": "f35dc59",
+          "parent": "8719dead",
+          "plan": "docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md",
+          "prior_next_163_scope": "20-record cursor summary history and canonical current owner/source/generation/failure guards now persist accepted readings under fresh immutable job-claim then owner locks; stale workers/progress cannot publish. Whole retry retires current-client review epochs while keeping manual/region review workflows. Full old/new reading-text comparison and deliberate candidate application are not implemented; published hashes cannot reconstruct old text.",
+          "portable_browser_reused_source_scope": {
+            "portable": 42,
+            "mocked_browser": 63,
+            "boundary": "Owned sources retained; shared types differ only by explicit parent expense/bank hunks. No new165 browser/recognizer accuracy claim."
+          },
+          "native_composed165": {
+            "passed": 32,
+            "seconds": 20.34,
+            "failures_errors_skips": 0,
+            "head": "d1e3f5a7c9b2",
+            "role": "ordinary non-superuser/non-bypass, FORCE RLS verified",
+            "scope": "Stored synthetic facts read paths; source/financial snapshots unchanged. Earlier164 receipt retained separately."
+          },
+          "delivered_CI": "pending",
+          "remaining": "Customer corpus, raw-text comparison/highlights/candidate application, configurable profiles and fleet/provider/hardware acceptance remain separate."
+        }
+      }
     },
     {
       "id": "OCR-ACCEPT",
