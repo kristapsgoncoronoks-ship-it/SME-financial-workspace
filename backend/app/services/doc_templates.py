@@ -25,13 +25,18 @@ project's papers live, however they came to exist.
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import io
 import re
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError
 from app.models.customer import Customer
 from app.models.document_template import (
     TEMPLATE_KINDS,
@@ -42,6 +47,76 @@ from app.models.issuer import IssuerProfile
 from app.services.project_profit import NotFoundError, ProjectProfitError, _project
 
 _TOKEN = re.compile(r"\{\{\s*([a-z_.]+)\s*\}\}")
+_DOCUMENT_RENDER_SLOT = threading.BoundedSemaphore(1)
+_DOCUMENT_RENDER_EXECUTOR: ThreadPoolExecutor | None = None
+
+
+class ProjectDocumentRenderingBusy(AppError):
+    status = 503
+    code = "project_document_render_busy"
+
+    def __init__(self):
+        super().__init__(
+            "Project document rendering is busy. No document was saved by this attempt. "
+            "Wait for the current rendering to finish, then try again."
+        )
+
+
+def _render_document(title: str, body: str, ctx: dict[str, str]) -> tuple[str, bytes]:
+    text = render(body, ctx)
+    return text, to_pdf(title, text)
+
+
+async def _render_document_async(title: str, body: str, ctx: dict[str, str]) -> tuple[str, bytes]:
+    """Render detached values off loop, admitting one physical job per process.
+
+    Once submitted, even pending work finishes after request cancellation. No
+    session/context object enters the worker, and the cancelled caller cannot
+    proceed to attachment. Admission follows the physical future, not its
+    cancelable asyncio bridge. This is neither a CPU timeout nor a hard kill.
+    """
+    global _DOCUMENT_RENDER_EXECUTOR
+    physical: Future[tuple[str, bytes]] = Future()
+    inputs = [(title, body, dict(ctx))]
+    slot = _DOCUMENT_RENDER_SLOT
+    if not slot.acquire(blocking=False):
+        raise ProjectDocumentRenderingBusy()
+
+    def execute() -> None:
+        if not physical.set_running_or_notify_cancel():
+            return
+        try:
+            name, source, snapshot = inputs.pop()
+            result = _render_document(name, source, snapshot)
+        except BaseException as exc:
+            physical.set_exception(exc)
+        else:
+            physical.set_result(result)
+
+    executor = _DOCUMENT_RENDER_EXECUTOR
+    try:
+        if executor is None:
+            executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="project-document")
+            _DOCUMENT_RENDER_EXECUTOR = executor
+        executor.submit(contextvars.Context().run, execute)
+    except BaseException:
+        # submit() can enqueue and THEN fail starting its worker. Cancel our
+        # proxy before any delayed entry, drop pending source values, and drain
+        # the retired executor rather than retaining unowned input/tombstone jobs.
+        if physical.cancel():
+            inputs.clear()
+        _DOCUMENT_RENDER_EXECUTOR = None
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
+        raise
+    finally:
+        # Install after submission/retirement bookkeeping: an instantly finished
+        # job must not release admission while that bookkeeping is incomplete.
+        physical.add_done_callback(lambda _: slot.release())
+    bridge = asyncio.wrap_future(physical)
+    bridge.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+    return await asyncio.shield(bridge)
+
 
 DEMO_DISCLAIMER = (
     "DEMO TEMPLATE — an EXAMPLE, not legal advice. Review with your own "
@@ -451,8 +526,7 @@ async def generate_project_document(
         raise ProjectProfitError("template_scope must be 'own' or 'platform'")
 
     ctx = await build_context(db, org_id, project_id, customer_id=customer_id)
-    text = render(body, ctx)
-    pdf = to_pdf(name, text)
+    text, pdf = await _render_document_async(name, body, ctx)
     filename = f"{ctx.get('project.code', 'project')}-{kind}.pdf"
     row = await project_profit.attach_document(
         db,
