@@ -40,6 +40,10 @@ async def scoped(factory, org_id):
 
 @pytest_asyncio.fixture
 async def reading_pg(monkeypatch):
+    # Imported fixtures do not inherit this module's skip marker. Keep every
+    # importing native cohort opt-in, including ordinary SQLite collection.
+    if not PG_URL:
+        pytest.skip("requires migrated non-superuser PostgreSQL")
     monkeypatch.setattr(settings, "smtp_host", None)
     engine = create_async_engine(PG_URL, pool_size=6, max_overflow=0)
     factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
