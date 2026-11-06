@@ -20,20 +20,25 @@ and unrelated row statuses are preserved. Bank555 and prior records below
 retain their dated source scope.
 
 **Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
-combines phase3 `c9e63db` and legacy `f847e3d` at `fee1042`, following initial
-PR112 delivery `ebf0a84`. Invalid imported amount/balance returns existing HTTP
-422 before writes; bank reads expose unavailable money as null plus status.
-Suggestions/Confirm refuse bad bank/cash-target money with existing HTTP 409;
-the UI marks manual review and withholds Match/Suggest. Stored facts stay unchanged.
-Combined 230 portable, 34 native and 51 docs/generated/CI-discovery checks pass
-with zero failures/errors/skips; full Ruff/format (986 files), Mypy (448 app
-files), frontend lint and build pass. The tree collects 6,724 backend cases;
-collection is not a full-suite pass. Eight source-scoped mocked-data browser
-checks are reused against unchanged frontend hashes; fresh new-head hosted CI
-remains pending. RN03/RN06 and historical remediation/source verification remain
-partial; RN07–RN09 durable intent/reason/versioned history remain open. All 214
-ledger identities are preserved. Separate ExpenseTransaction NaN candidate-read
-failure remains open; no production-data repair, deployment or complete-backlog claim.
+combines shared numeric validation, safe historical bank reads, line locking,
+the Projects layout/fixture correction and the backend CI repairs. Invalid
+imported amounts return 422 before writes; historical unavailable money remains
+visible without zero substitution. Combined 350 portable checks (including 51
+docs controls) and 49 PostgreSQL checks pass, with full Ruff/format 987,
+Mypy 448, frontend lint/build and the 442.5/129.8kB bundle gate. The tree
+collects 6,732 cases; this is not a full-suite pass. The 64 Projects and 8 bank
+browser checks retain their own source-bound mocked-browser scope.
+Fresh hosted CI remains required. RN03/RN06 and historical source remediation
+remain partial; RN07–RN09 durable versioned commands are a separate active
+slice. All 214 ledger identities remain preserved. The separately reproduced
+expense-transaction invalid-money failure is under repair in its own branch.
+No production-data repair, deployment or complete-backlog claim.
+
+**6 November backend CI repairs:** [Reading facts qualification](docs/plan/OCR-READING-FACTS-2026-11-05.md)
+now includes native fixture opt-in, real reading-history tenant parity and a
+bounded PDF raster-rounding repair. The original failed hosted runs remain
+recorded. Local checks pass; fresh delivered-source CI is required. No gate,
+limit, timeout or visual baseline was weakened.
 
 **Current163 reading facts:** [Per-page selection and fenced publication](docs/plan/OCR-READING-FACTS-2026-11-05.md)
 adds bounded provenance without retained raw page text.73 focused,15 native

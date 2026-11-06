@@ -56,6 +56,25 @@ and ERD remain unchanged. There are 134 service modules.
 
 ## Combined local qualification
 
+### Projects navigation correction from the initial CI run
+
+The initial `ebf0a84` browser run failed after navigation from project photos
+to Projects. Its mock returned a paginated object for the PnL summary endpoint,
+whose actual contract is an array. The corrected fixture supplies the array and
+waits for the loaded destination before the original checks. Independently,
+the valid destination overflowed to 725px at a 390px viewport with a 32px root
+font. Wrapping its local tabs/filter and adding a labelled, keyboard-scrollable
+table region keeps every column available and the document at 390px.
+
+Qualified source `3685125a36e55433191c2ebbe20460d8e7d20e04` passes all 64
+photo, project PnL, context and reflow browser cases without retries, plus lint,
+build and bundle checks. The two merged file hashes match that source receipt.
+Original photo assertions, geometry thresholds, timeouts and visual baselines
+are unchanged. This local mocked-browser evidence does not establish the exact
+cause of the 686px width in CI's error state or qualify a fresh hosted run.
+[Sealed receipt](/workspace/artifacts/backlog-project-photos-2026-11-06/TEST-RECEIPT.json),
+SHA256 `9648235c990160183bc8dfe0b1c862beaa136fc7a52691d9beabd4cc017b9655`.
+
 At merged source `fee1042`, the combined bank cohorts pass **230 portable
 cases (91.81s)** and **34 actual PostgreSQL cases (22.52s)**. The **51
 docs/generated/CI-discovery controls pass (14.60s)**. All three cohorts have
@@ -67,6 +86,25 @@ The eight source-scoped mocked-data browser checks above are reused because
 the merged frontend hashes match; no new live browser/API proof is claimed.
 Fresh new-head hosted CI remains pending.
 [Final follow-up receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/FINAL-RECEIPT.json).
+
+### Final composition with the backend CI repairs
+
+Source `9743583ecb31f363061df649500106124e13d887` combines the bank fixes,
+the qualified Projects correction and PR111's `81a39de` backend corrections.
+The combined run passes **350 portable checks** (including the 51 documentation
+controls) in 116.30s and **49 actual PostgreSQL checks** in 31.30s, with no
+failures, errors or skips. Full Ruff/format checks 987 files; Mypy checks 448
+app files. Frontend lint/build and the unchanged 460/135 bundle gate pass at
+442.5kB raw/129.8kB gzip. The tree collects 6,732 backend cases, rather than
+claiming a full-suite execution. The 15 source-bound native reading checks are
+included in 49, not an additional cohort.
+
+The 64 Projects browser cases and 8 bank legacy/currency cases remain separate,
+source-bound mocked-browser receipts; their relevant file hashes are unchanged
+by this composition. They are not new live browser/backend acceptance.
+Initial `ebf0a84` qualification failed both backend and browser jobs; those logs
+remain retained. Fresh delivered-head hosted CI is required.
+[Composition receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/final-composition/FINAL-RECEIPT.json).
 
 ## Initial delivered behavior
 
