@@ -46,9 +46,17 @@ export type SavedReconciliationCommand = {
 const MAX_VERSION = 2147483647;
 const KEY = /^[A-Za-z0-9:_-]{1,120}$/;
 const HASH = /^[a-f0-9]{64}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const kinds = ["receipt", "reimbursement", "payment_run", "issued_payment"];
 export const validReconciliationVersion = (value: unknown): value is number =>
   Number.isSafeInteger(value) && Number(value) >= 1 && Number(value) <= MAX_VERSION;
+
+/** Match the server's frozen Python str.strip whitespace set. JS trim omits
+ * NEL and the four information separators, changing committed reason identity.
+ */
+export function normalizeReconciliationReason(value: string): string {
+  return value.replace(/^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g, "");
+}
 
 function validState(value: unknown): value is ReconciliationState {
   if (!value || typeof value !== "object") return false;
@@ -75,7 +83,7 @@ export function loadReconciliationCommand(scope: ReconciliationScope, lineId: st
         required[p.operation] !== p.expected.status ||
         (p.operation === "match" ? !p.target || !kinds.includes(p.target.kind) || typeof p.target.id !== "string" : p.target !== null) ||
         (p.reason !== null && (typeof p.reason !== "string" || p.reason.length > 1000 || p.reason.includes("\0"))) ||
-        (p.operation === "ignore" && !p.reason?.trim())) throw new Error();
+        (p.operation === "ignore" && (!p.reason || !normalizeReconciliationReason(p.reason)))) throw new Error();
     return saved;
   } catch {
     throw new Error("The saved bank-line request cannot be read. Keep its reference and ask an administrator before starting another action on this line.");
@@ -93,7 +101,7 @@ export function startReconciliationCommand(
   }
   const saved: SavedReconciliationCommand = {
     contract: 1, key: crypto.randomUUID(), lineId: line.id, statementId: line.statement_id,
-    payload: { operation, expected_version: line.version, expected, target, reason: reason?.trim() || null },
+    payload: { operation, expected_version: line.version, expected, target, reason: reason ? normalizeReconciliationReason(reason) || null : null },
   };
   sessionStorage.setItem(slot(scope, line.id), JSON.stringify(saved));
   return saved;
@@ -119,14 +127,14 @@ function readReceipt(value: unknown, saved: SavedReconciliationCommand, scope: R
   const after: ReconciliationState = p.operation === "match"
     ? { status: "matched", matched_kind: p.target!.kind, matched_id: p.target!.id }
     : { status: p.operation === "ignore" ? "ignored" : "unmatched", matched_kind: null, matched_id: null };
-  if (!r || r.contract_version !== 1 || r.status !== "committed" || typeof r.command_id !== "string" ||
+  if (!r || r.contract_version !== 1 || r.status !== "committed" || typeof r.command_id !== "string" || !UUID.test(r.command_id) ||
       r.command_key !== saved.key || r.org_id !== scope.orgId || r.actor_user_id !== scope.userId ||
       r.line_id !== saved.lineId || r.operation !== p.operation || r.before_version !== p.expected_version ||
       r.after_version !== p.expected_version + 1 || !validReconciliationVersion(r.after_version) ||
       !validState(r.before) || !sameState(r.before, p.expected) || !validState(r.after) || !sameState(r.after, after) ||
       !r.line || r.line.id !== saved.lineId || r.line.statement_id !== saved.statementId || r.line.version !== r.after_version ||
       !validState(r.line) || !sameState(r.line, after) || r.reason !== p.reason ||
-      !HASH.test(r.payload_hash) || !HASH.test(r.result_hash) || !Number.isFinite(Date.parse(r.recorded_at))) {
+      !HASH.test(r.payload_hash) || !HASH.test(r.result_hash) || typeof r.recorded_at !== "string" || !Number.isFinite(Date.parse(r.recorded_at))) {
     throw new Error("The bank-line outcome could not be verified. Keep this request reference and check its saved outcome again.");
   }
   return r;
@@ -169,7 +177,7 @@ export async function readCurrentReconciliationLine(saved: SavedReconciliationCo
   const finiteMoney = (amount: unknown) => typeof amount === "string" && amount.trim() !== "" && Number.isFinite(Number(amount));
   if (!line || line.id !== saved.lineId || line.statement_id !== saved.statementId || !validReconciliationVersion(line.version) ||
       line.version < saved.payload.expected_version || !validState(line) || typeof line.description !== "string" ||
-      !Number.isFinite(Date.parse(line.line_date)) || !["credit", "debit"].includes(line.direction) ||
+      typeof line.line_date !== "string" || !Number.isFinite(Date.parse(line.line_date)) || !["credit", "debit"].includes(line.direction) ||
       !(line.currency === null || typeof line.currency === "string") ||
       !(line.amount_status === "valid" ? finiteMoney(line.amount) : line.amount_status === "invalid" && line.amount === null) ||
       !(line.balance_status === "valid" ? finiteMoney(line.balance) : ["invalid", "unprovided"].includes(line.balance_status) && line.balance === null)) {
@@ -185,14 +193,14 @@ export function readReconciliationHistory(value: unknown, before: number | null)
   let previous = before ?? MAX_VERSION + 1;
   const identities = new Set<string>();
   for (const event of page.events) {
-    if (!event || typeof event.command_id !== "string" || !event.command_id || identities.has(event.command_id) ||
+    if (!event || typeof event.command_id !== "string" || !UUID.test(event.command_id) || identities.has(event.command_id) ||
         typeof event.actor_user_id !== "string" || !event.actor_user_id ||
         !Object.prototype.hasOwnProperty.call({ match: 1, ignore: 1, unmatch: 1, restore: 1 }, event.operation) ||
         !validReconciliationVersion(event.before_version) || !validReconciliationVersion(event.after_version) ||
         event.after_version !== event.before_version + 1 || event.after_version >= previous ||
         !validState(event.before) || !validState(event.after) ||
         !(event.reason === null || (typeof event.reason === "string" && event.reason.length <= 1000)) ||
-        !Number.isFinite(Date.parse(event.recorded_at))) throw invalid();
+        typeof event.recorded_at !== "string" || !Number.isFinite(Date.parse(event.recorded_at))) throw invalid();
     identities.add(event.command_id);
     previous = event.after_version;
   }

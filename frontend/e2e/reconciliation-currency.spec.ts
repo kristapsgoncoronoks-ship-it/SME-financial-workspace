@@ -31,7 +31,7 @@ async function setup(page: Page) {
       matched = true;
       const before = { status: "unmatched", matched_kind: null, matched_id: null };
       const after = { status: "matched", matched_kind: "payment_run", matched_id: "run" };
-      return route.fulfill(json({ contract_version: 1, status: "committed", command_id: "currency-match", command_key: key,
+      return route.fulfill(json({ contract_version: 1, status: "committed", command_id: "20000000-0000-4000-8000-000000000001", command_key: key,
         org_id: "org", actor_user_id: "owner", line_id: "eur", operation: "match", before_version: 1, after_version: 2,
         before, after, line: { ...after, id: "eur", statement_id: "statement", version: 2 }, reason: null,
         payload_hash: "a".repeat(64), result_hash: "b".repeat(64), recorded_at: "2026-11-06T01:00:00Z" }));

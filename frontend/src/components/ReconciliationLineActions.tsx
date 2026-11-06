@@ -7,6 +7,7 @@ import { money, shortDate } from "../lib/format";
 import type { BankLine, MatchCandidate } from "../lib/types";
 import {
   clearReconciliationCommand, loadReconciliationCommand, lookupReconciliationCommand,
+  normalizeReconciliationReason,
   postReconciliationCommand, readCurrentReconciliationLine, readReconciliationHistory, reconciliationContinuation,
   startReconciliationCommand, validReconciliationVersion,
   type ReconciliationHistory, type ReconciliationOperation, type ReconciliationReceipt,
@@ -67,7 +68,7 @@ export function ReconciliationLineActions({ line, scope, cacheIdentity, canWrite
     try {
       if (action.kind === "new") {
         if (locked) return;
-        if (action.operation === "ignore" && (!reason.trim() || reason.includes("\0") || reason.length > 1000)) throw new Error("Explain why this line is ignored, using up to 1,000 characters.");
+        if (action.operation === "ignore" && (!normalizeReconciliationReason(reason) || reason.includes("\0") || reason.length > 1000)) throw new Error("Explain why this line is ignored, using up to 1,000 characters.");
         request = startReconciliationCommand(scope, action.operation === "match" || action.operation === "ignore" ? reviewed ?? line : line, action.operation,
           action.candidate ? { kind: action.candidate.kind, id: action.candidate.id } : null,
           action.operation === "ignore" ? reason : null);
@@ -131,7 +132,7 @@ export function ReconciliationLineActions({ line, scope, cacheIdentity, canWrite
     {editor === "ignore" && !saved && <div className="space-y-2">
       <Textarea label="Reason for ignoring" required maxLength={1000} value={reason} disabled={!!busy} onChange={(event) => setReason(event.target.value)} hint="Explain why this bank line should be excluded from matching. The reason is kept in its history." />
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={locked || !reason.trim()} onClick={() => { void run({ kind: "new", operation: "ignore" }); }}>Confirm ignore</Button>
+        <Button size="sm" disabled={locked || !normalizeReconciliationReason(reason)} onClick={() => { void run({ kind: "new", operation: "ignore" }); }}>Confirm ignore</Button>
         <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => setEditor(null)}>Cancel</Button>
       </div>
     </div>}

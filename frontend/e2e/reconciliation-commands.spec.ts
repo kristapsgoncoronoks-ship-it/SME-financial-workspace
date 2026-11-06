@@ -23,14 +23,14 @@ type Wire = {
   lookups: string[]; legacy: string[]; currentReads: number; historyReads: string[];
   receipts: Map<string, ReconciliationReceipt>;
   mode: "ok" | "loseCommitted" | "loseUncommitted" | "stale";
-  currentFailure: boolean; lookupFailure: boolean; malformedReceipt: boolean;
+  currentFailure: boolean; lookupFailure: boolean; malformedReceipt: boolean; malformedCommandId: boolean; numericReceiptDate: boolean;
   hold: boolean; pending: Route | null; newerAfterCommit: boolean;
   historyFailure: boolean; historyPage?: (before: string | null) => unknown;
   scoped: { account: string; method: string; path: string }[];
 };
 
 async function setup(page: Page, options: { readOnly?: boolean; line?: Partial<BankLine>; saved?: string } = {}) {
-  const wire: Wire = { line: { ...initial(), ...options.line }, writes: [], lookups: [], legacy: [], currentReads: 0, historyReads: [], receipts: new Map(), mode: "ok", currentFailure: false, lookupFailure: false, malformedReceipt: false, hold: false, pending: null, newerAfterCommit: false, historyFailure: false, scoped: [] };
+  const wire: Wire = { line: { ...initial(), ...options.line }, writes: [], lookups: [], legacy: [], currentReads: 0, historyReads: [], receipts: new Map(), mode: "ok", currentFailure: false, lookupFailure: false, malformedReceipt: false, malformedCommandId: false, numericReceiptDate: false, hold: false, pending: null, newerAfterCommit: false, historyFailure: false, scoped: [] };
   await page.addInitScript(({ saved, slot }) => {
     if (!sessionStorage.getItem("synthetic-reconciliation-seeded")) {
       localStorage.setItem("invoiceiq_token", "synthetic-reconciliation-A");
@@ -38,6 +38,11 @@ async function setup(page: Page, options: { readOnly?: boolean; line?: Partial<B
       if (saved !== undefined) sessionStorage.setItem(slot, saved);
     }
   }, { saved: options.saved, slot: `invoiceiq:reconciliation-command:${USER}:${ORG}:${LINE}` });
+  const receiptResponse = (receipt: ReconciliationReceipt) => json({ ...receipt,
+    ...(wire.malformedReceipt ? { command_key: "wrong-reference" } : {}),
+    ...(wire.malformedCommandId ? { command_id: "" } : {}),
+    ...(wire.numericReceiptDate ? { recorded_at: 1 } : {}),
+  });
   const complete = async (route: Route) => {
     const payload = route.request().postDataJSON() as ReconciliationIntent;
     const key = route.request().headers()["idempotency-key"];
@@ -55,17 +60,17 @@ async function setup(page: Page, options: { readOnly?: boolean; line?: Partial<B
       ? { status: "matched" as const, matched_kind: payload.target!.kind, matched_id: payload.target!.id }
       : { status: payload.operation === "ignore" ? "ignored" as const : "unmatched" as const, matched_kind: null, matched_id: null };
     const receipt: ReconciliationReceipt = {
-      contract_version: 1, status: "committed", command_id: `synthetic-command-${wire.receipts.size + 1}`,
+      contract_version: 1, status: "committed", command_id: `20000000-0000-4000-8000-${String(wire.receipts.size + 1).padStart(12, "0")}`,
       command_key: key, org_id: ORG, actor_user_id: USER, line_id: LINE, operation: payload.operation,
       before_version: payload.expected_version, after_version: payload.expected_version + 1, before, after,
       line: { id: LINE, statement_id: STATEMENT, version: payload.expected_version + 1, ...after },
-      reason: payload.reason, recorded_at: "2026-11-06T02:00:00Z", payload_hash: "a".repeat(64), result_hash: "b".repeat(64),
+      reason: payload.reason?.replace(/^[\u001c-\u001f\u0085]+|[\u001c-\u001f\u0085]+$/g, "") ?? null, recorded_at: "2026-11-06T02:00:00Z", payload_hash: "a".repeat(64), result_hash: "b".repeat(64),
     };
     wire.receipts.set(key, receipt);
     wire.line = { ...wire.line, ...after, version: receipt.after_version };
     if (wire.newerAfterCommit) wire.line = { ...wire.line, ...EMPTY, version: receipt.after_version + 1 };
     if (wire.mode === "loseCommitted") return route.abort("failed");
-    return route.fulfill(json(wire.malformedReceipt ? { ...receipt, command_key: "wrong-reference" } : receipt));
+    return route.fulfill(receiptResponse(receipt));
   };
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request(), url = new URL(request.url());
@@ -90,7 +95,7 @@ async function setup(page: Page, options: { readOnly?: boolean; line?: Partial<B
       wire.lookups.push(key);
       if (wire.lookupFailure) return route.fulfill(json({ detail: "Synthetic outcome lookup unavailable" }, 503));
       const receipt = wire.receipts.get(key);
-      return route.fulfill(receipt ? json(wire.malformedReceipt ? { ...receipt, command_key: "wrong-reference" } : receipt) : json({ code: "reconciliation_command_not_found", detail: "Command not found" }, 404));
+      return route.fulfill(receipt ? receiptResponse(receipt) : json({ code: "reconciliation_command_not_found", detail: "Command not found" }, 404));
     }
     if (path === `/reconciliation/lines/${LINE}/commands`) {
       expect(method).toBe("POST");
@@ -269,7 +274,7 @@ test("history failure recovers by GET and earlier/newest pages keep the bounded 
   await row.getByRole("button", { name: "History", exact: true }).click();
   await expect(row.getByRole("alert")).toContainText("Couldn’t load command history");
   wire.historyFailure = false;
-  const historyEvent = (version: number) => ({ command_id: `history-${version}`, actor_user_id: USER,
+  const historyEvent = (version: number) => ({ command_id: `30000000-0000-4000-8000-${String(version).padStart(12, "0")}`, actor_user_id: USER,
     operation: version % 2 === 0 ? "ignore" : "restore", before_version: version - 1, after_version: version,
     before: { status: version % 2 === 0 ? "unmatched" : "ignored", matched_kind: null, matched_id: null },
     after: { status: version % 2 === 0 ? "ignored" : "unmatched", matched_kind: null, matched_id: null },
@@ -338,7 +343,7 @@ test("390px at 200% text preserves reason, request recovery and keyboard table a
 
 test("terminal version remains readable in history while further writes are disabled", async ({ page }) => {
   const { wire, row } = await setup(page, { line: { version: 2147483647, status: "ignored" } });
-  wire.historyPage = () => ({ events: [{ command_id: "terminal-history", actor_user_id: USER,
+  wire.historyPage = () => ({ events: [{ command_id: "30000000-0000-4000-8000-000000000001", actor_user_id: USER,
     operation: "ignore", before_version: 2147483646, after_version: 2147483647, before: EMPTY,
     after: { status: "ignored", matched_kind: null, matched_id: null }, reason: "Recorded terminal review", recorded_at: "2026-11-06T02:00:00Z" }], next_before_version: null });
   await expect(row.getByRole("button", { name: "Restore", exact: true })).toBeDisabled();
@@ -348,9 +353,12 @@ test("terminal version remains readable in history while further writes are disa
   expect(wire.writes).toEqual([]);
 });
 
-test("malformed history has a readable recovery instead of a misleading empty result", async ({ page }) => {
+for (const malformed of ["operation", "command identity", "numeric recorded date"]) test(`malformed history ${malformed} has a readable recovery instead of a misleading empty result`, async ({ page }) => {
   const { wire, row } = await setup(page);
-  wire.historyPage = () => ({ events: [{ operation: "unknown" }], next_before_version: null });
+  wire.historyPage = () => ({ events: [{ command_id: malformed === "command identity" ? "" : "50000000-0000-4000-8000-000000000001",
+    actor_user_id: USER, operation: malformed === "operation" ? "unknown" : "ignore", before_version: 1, after_version: 2,
+    before: EMPTY, after: { status: "ignored", matched_kind: null, matched_id: null }, reason: "Recorded review",
+    recorded_at: malformed === "numeric recorded date" ? 1 : "2026-11-06T02:00:00Z" }], next_before_version: null });
   await row.getByRole("button", { name: "History", exact: true }).click();
   await expect(row.getByRole("alert")).toContainText("Couldn’t load command history");
   await expect(row).not.toContainText("No command history recorded on this page");
@@ -360,10 +368,10 @@ test("malformed history has a readable recovery instead of a misleading empty re
   expect(wire.writes).toEqual([]);
 });
 
-test("incomplete current DTO cannot erase a confirmed request or turn unavailable money into zero", async ({ page }) => {
+for (const malformed of ["incomplete", "numeric date"]) test(`${malformed} current DTO cannot erase a confirmed request or turn unavailable money into zero`, async ({ page }) => {
   const { wire, row } = await setup(page);
   let complete = false;
-  await page.route(`**/api/v1/reconciliation/lines/${LINE}`, async (route) => route.fulfill(json(complete ? wire.line : {
+  await page.route(`**/api/v1/reconciliation/lines/${LINE}`, async (route) => route.fulfill(json(complete ? wire.line : malformed === "numeric date" ? { ...wire.line, line_date: 1 } : {
     id: LINE, statement_id: STATEMENT, version: 2, status: "ignored", matched_kind: null, matched_id: null,
   })));
   await ignore(page);
@@ -382,7 +390,7 @@ test("a reviewer who lost write permission can recover their own committed outco
   const after = { status: "ignored", matched_kind: null, matched_id: null } as const;
   const saved = JSON.stringify({ contract: 1, key, lineId: LINE, statementId: STATEMENT, payload });
   const { wire, row } = await setup(page, { readOnly: true, saved, line: { ...after, version: 2 } });
-  wire.receipts.set(key, { contract_version: 1, status: "committed", command_id: "previous-own-command", command_key: key,
+  wire.receipts.set(key, { contract_version: 1, status: "committed", command_id: "40000000-0000-4000-8000-000000000001", command_key: key,
     org_id: ORG, actor_user_id: USER, line_id: LINE, operation: "ignore", before_version: 1, after_version: 2,
     before: EMPTY, after, line: { id: LINE, statement_id: STATEMENT, version: 2, ...after }, reason: payload.reason,
     recorded_at: "2026-11-06T02:00:00Z", payload_hash: "a".repeat(64), result_hash: "b".repeat(64) });
@@ -391,4 +399,45 @@ test("a reviewer who lost write permission can recover their own committed outco
   await expect(row).toContainText("Ignore recorded at version 2. Current line: version 2, ignored.");
   expect(wire.lookups).toEqual([key]);
   expect(wire.writes).toEqual([]);
+});
+
+
+test("malformed committed command identity cannot acknowledge an outcome and GET recovery preserves the original request", async ({ page }) => {
+  const { wire, row } = await setup(page);
+  wire.malformedCommandId = true;
+  await ignore(page);
+  await expect(row.getByRole("alert")).toContainText("outcome could not be verified");
+  await expect(row).not.toContainText("Ignore recorded");
+  await expect(row).toContainText(wire.writes[0].key);
+  await expect(row.getByRole("button", { name: "Ignore", exact: true })).toBeDisabled();
+  wire.malformedCommandId = false;
+  await row.getByRole("button", { name: "Check saved outcome", exact: true }).click();
+  await expect(row).toContainText("Ignore recorded at version 2");
+  expect(wire.writes).toHaveLength(1);
+});
+
+
+for (const [label, space] of [["NEL", "\u0085"], ["information separators", "\u001c\u001d\u001e\u001f"]]) test(`server ${label} whitespace is blank and reason edges normalize before committing`, async ({ page }) => {
+  const { wire, row } = await setup(page);
+  await row.getByRole("button", { name: "Ignore", exact: true }).click();
+  await row.getByLabel("Reason for ignoring").fill(space);
+  await expect(row.getByRole("button", { name: "Confirm ignore", exact: true })).toBeDisabled();
+  await row.getByLabel("Reason for ignoring").fill(space + "Reviewed canonical reason" + space);
+  await row.getByRole("button", { name: "Confirm ignore", exact: true }).click();
+  await expect(row).toContainText("Ignore recorded at version 2");
+  expect(wire.writes[0].payload.reason).toBe("Reviewed canonical reason");
+  expect(wire.writes).toHaveLength(1);
+});
+
+test("numeric receipt recording time cannot be coerced into a confirmed outcome", async ({ page }) => {
+  const { wire, row } = await setup(page);
+  wire.numericReceiptDate = true;
+  await ignore(page);
+  await expect(row.getByRole("alert")).toContainText("outcome could not be verified");
+  await expect(row).not.toContainText("Ignore recorded");
+  await expect(row).toContainText(wire.writes[0].key);
+  wire.numericReceiptDate = false;
+  await row.getByRole("button", { name: "Check saved outcome", exact: true }).click();
+  await expect(row).toContainText("Ignore recorded at version 2");
+  expect(wire.writes).toHaveLength(1);
 });
