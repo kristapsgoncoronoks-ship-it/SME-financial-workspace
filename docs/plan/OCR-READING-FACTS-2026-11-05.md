@@ -138,3 +138,14 @@ hidden tenants, before mutation; it never erases evidence to permit rollback.
 An older image whose Alembic graph does not contain163 must not be assumed to
 start against that revision through its automatic migration entrypoint.
 No production migration, merge, deployment or external configuration is performed.
+
+### First CI registry correction — 6 November
+
+Initial PR111 source `f1cc51f` passed1,237 first-attempt browser and13 visual
+checks, but the PostgreSQL step correctly rejected its missing
+`TENANT_TABLES` declaration for the new observation table. The actual ENABLE/
+FORCE RLS and policy creation were already present. The correction declares
+exactly that table in the migration registry; the strict guard is unchanged.
+All other migration module AST, including DDL/rollback functions, is identical.
+25 targeted RLS/schema checks pass after preserving the local/hosted failure.
+App files and prior decoder behavior remain unchanged; fresh full CI is required.
