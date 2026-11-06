@@ -189,6 +189,9 @@ jobs:
           tests/test_expense_item_parent_migration_pg.py
           tests/test_expense_report_children_migration.py
           tests/test_partner_webhook_parent_migrations.py
+          tests/test_partner_webhook_parent_migration_pg.py
+          tests/test_optional_parent_migration_pg.py
+          tests/test_optional_parent_tenant_pg.py
           tests/test_capture_reading_migration.py
       - name: Development PostgreSQL bootstrap contracts
         env:
@@ -258,6 +261,7 @@ jobs:
           tests/test_expense_item_parent_tenant_pg.py
           tests/test_expense_report_children_tenant_pg.py
           tests/test_partner_webhook_parent_tenant_pg.py
+          tests/test_optional_parent_metadata_pg.py
           tests/transport/test_rebate_preview_pg.py
           tests/test_payment_run_cancel_export_guard.py
           tests/test_n1_supplier_iban_pg.py
