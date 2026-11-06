@@ -17,6 +17,7 @@ import hashlib
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -343,12 +344,27 @@ async def confirm_match(
     amounts agree within tolerance, and that the target is not already reconciled to
     another line (1:1). Commits.
 
-    Concurrency: the target row is SELECT-ed `FOR UPDATE`, so two confirms racing to
-    reconcile the SAME target onto different bank lines serialize on it — the second
-    only proceeds after the first commits, sees the now-matched line in the 1:1 check
-    below, and is rejected (on SQLite writes serialize anyway)."""
+    Lock and refresh the current bank line before inspecting it, then lock the
+    target. This serializes competing actions on one line as well as confirms of
+    one target onto different lines. A repeated exact association still validates
+    the target but does not write the line again. No client-version check is implied.
+    """
+    line = await _locked_line(db, org_id, line)
     if kind not in KINDS:
         raise ReconError("unknown match kind")
+    if line.status == "ignored":
+        raise ReconError("restore the ignored line before matching it")
+    same_target = line.matched_id == target_id
+    if line.status == "matched" and not same_target:
+        # PostgreSQL accepts UUID spellings such as uppercase but reads their
+        # canonical identity back; target lookup below still validates the input.
+        try:
+            same_target = UUID(line.matched_id or "") == UUID(target_id)
+        except ValueError:
+            pass
+    replay = line.status == "matched" and line.matched_kind == kind and same_target
+    if line.status != "unmatched" and not replay:
+        raise ReconError("unmatch the line before matching it to another item")
     # Checked here as well as in `suggest_matches`, because confirm takes a
     # caller-supplied target id and is reachable without ever asking for a
     # suggestion. A gate that only filters the suggestion list is decoration.
@@ -429,6 +445,9 @@ async def confirm_match(
     if other:
         raise ReconError("that item is already reconciled to another bank line")
 
+    if replay:
+        await db.commit()
+        return line
     line.status = "matched"
     line.matched_kind = kind
     line.matched_id = target_id
@@ -436,8 +455,24 @@ async def confirm_match(
     return line
 
 
+async def _locked_line(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
+    current = await db.scalar(
+        select(BankLine)
+        .where(BankLine.org_id == org_id, BankLine.id == line.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if current is None:
+        raise ReconError("bank line not found")
+    return current
+
+
 async def unmatch(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
     """Return a matched/ignored line to the unmatched pool. Commits."""
+    line = await _locked_line(db, org_id, line)
+    if line.status == "unmatched":
+        await db.commit()
+        return line
     line.status = "unmatched"
     line.matched_kind = None
     line.matched_id = None
@@ -448,8 +483,12 @@ async def unmatch(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
 async def set_ignored(db: AsyncSession, org_id: str, line: BankLine) -> BankLine:
     """Mark a line as intentionally unreconcilable (bank fees, interest). A matched
     line must be unmatched first. Commits."""
+    line = await _locked_line(db, org_id, line)
     if line.status == "matched":
         raise ReconError("unmatch the line before ignoring it")
+    if line.status == "ignored":
+        await db.commit()
+        return line
     line.status = "ignored"
     line.matched_kind = None
     line.matched_id = None
