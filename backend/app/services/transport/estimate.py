@@ -156,7 +156,7 @@ async def estimate(
     validate_ref_period(period)
 
     try:
-        parsed = fuel_card_parser.run(filename, content)
+        parsed = await fuel_card_parser.run_async(filename, content)
     except ValueError as exc:
         # The parser's own fail-closed network detection. Surfaced as the
         # sentence it wrote (it names the supported networks), not flattened.

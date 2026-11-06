@@ -319,7 +319,7 @@ async def ingest_statement(
     _validate_period(period)
 
     try:
-        parsed = fuel_card_parser.run(filename, content)
+        parsed = await fuel_card_parser.run_async(filename, content)
     except ValueError as exc:
         raise ValidationError(str(exc), code="unrecognized_fuel_card_statement") from exc
 

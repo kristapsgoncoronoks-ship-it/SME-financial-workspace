@@ -196,6 +196,10 @@ async def upload_statement(
             content=content,
             coversheet_total=total,
         )
+    except fuel_card_parser.StatementReadingBusy as busy:
+        # Vault-before-parse is deliberate. Admission failed before import
+        # work; the object exists, but no catalog/refusal/audit/DML follows.
+        raise fuel_card_parser.StatementReadingBusy(original_stored=True) from busy
     except statement_ingest.StatementRefused as refused:
         # WO-Z — a refusal used to leave nothing behind: the findings went into
         # a message string and the transaction was discarded. The rollback here
