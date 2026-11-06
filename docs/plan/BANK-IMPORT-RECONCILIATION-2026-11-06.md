@@ -1,13 +1,74 @@
-# Bank CSV imports and reconciliation — 6 November 2026
+# Bank imports and reconciliation — 6 November 2026
 
-The current delivery combines CSV row accounting and numeric validation
-`c1c822d` (including `53c996e`) with current-line reconciliation serialization
-`edf6d6e` on corrected PR111 source `df2c344`. RN03 and RN06 remain partial;
-RN07–RN09 durable intent, reason and versioned history remain open. Combined
-source qualification passes locally; fresh hosted CI remains pending. No completed-backlog,
-production-data repair or deployment claim follows from these changes.
+The initial CSV/current-line serialization delivery was published as PR112
+`ebf0a84`. Phase3 `c9e63dbfb889f75460a10e7eb53dcf48c6c0bbea` and legacy-read
+`f847e3dc09ae095c549784dc435dbed39d3b52d4` are now merged at
+`fee10422eacdd79a2858b58321af4bbaa1cd96cf`. Combined local checks pass as
+recorded below; fresh new-head hosted CI remains pending.
+RN03/RN06 remain partial; RN07–RN09 durable intent, reason and versioned history
+remain open. Safe legacy bank reads/actions/UI are delivered locally;
+historical remediation and source verification remain open. No production-data
+repair, deployment or completed-backlog claim follows from these changes.
 
-## Delivered behavior
+## Phase3 shared public parse validation
+
+Every supported-format public parse result now validates finite amount and
+optional balance against the current `Numeric(14,2)` storage boundary. Known
+`DecimalException` failures become the existing HTTP 422 before import writes.
+The guard leaves valid returned values, sign, currency, rounding and `_num`
+unchanged; it does not widen storage precision or alter CAMT's existing
+unparseable-amount omission policy.
+
+The [phase3 source receipt](/workspace/artifacts/backlog-bank-nonfinite-2026-11-06/phase3/TEST-RECEIPT.json)
+has SHA256 `578dd6cbb586a38f1846071551838c02f48e7332e1e95e9bf7b1d5ed827ab960`.
+Its **195 distinct passing cases** comprise 37 new portable, 11 new native,
+3 incumbent native and 144 incumbent portable cases. This is source-scoped
+qualification of phase3, not a new combined-head or hosted-CI result. New PDF
+checks use pure text or labelled extraction seams; they make no recognizer,
+native-capacity or broader PDF acceptance claim.
+
+## Safe legacy bank reads and matching
+
+`BankLineOut.amount` is now `Decimal | null` with `amount_status` of `valid` or
+`invalid`. Its balance is `Decimal | null` with `balance_status` of `valid`,
+`invalid` or `unprovided`. Valid money stays unchanged; unavailable money is
+not zero. Reads preserve stored facts.
+
+Suggestions and Confirm refuse invalid bank or cash-target money with existing
+HTTP 409 `{detail: string, code: string}` responses, using
+`bank_line_amount_invalid` or `reconciliation_target_amount_invalid`. These
+refusals write no stored facts. The UI explicitly marks unavailable amounts for
+manual review and offers no Match/Suggest for a bad amount. Ignore and Restore
+retain their existing command contracts. The page contains the recovery copy
+at 390px with a 32px root font; shared styles and visual baselines are unchanged.
+
+The [legacy source receipt](/workspace/artifacts/backlog-fourteenth-wave-2026-11-06/legacy-bank-read/receipt.json)
+has SHA256 `9715812caee9c580bede2d76e8faf44895ec09d11d7ed2d225c4720a855894a5`.
+It records 68 portable cases (19 new and 49 incumbent), 11 native cases and
+8 **mocked-data browser** cases (5 new and 3 incumbent currency checks).
+All nine legacy source hashes and all three phase3 hashes match after merge;
+the browser results apply to the unchanged frontend sources. They do not
+establish a live browser/API journey. These source cohorts overlap other
+receipts and are not added as unique combined coverage.
+
+OpenAPI retains 425 paths and changes only `BankLineOut`; models, migrations
+and ERD remain unchanged. There are 134 service modules.
+
+## Combined local qualification
+
+At merged source `fee1042`, the combined bank cohorts pass **230 portable
+cases (91.81s)** and **34 actual PostgreSQL cases (22.52s)**. The **51
+docs/generated/CI-discovery controls pass (14.60s)**. All three cohorts have
+zero failures, errors or skips. Full Ruff/format checks 986 files and Mypy
+checks 448 app files; frontend full lint and build pass. The four-asset bundle
+passes at 442.5 kB raw/129.8 kB gzip against the 460/135 kB budgets. The tree collects
+6,724 backend cases, which is a collection count rather than a full-suite pass.
+The eight source-scoped mocked-data browser checks above are reused because
+the merged frontend hashes match; no new live browser/API proof is claimed.
+Fresh new-head hosted CI remains pending.
+[Final follow-up receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/FINAL-RECEIPT.json).
+
+## Initial delivered behavior
 
 CSV imports report skipped date/no-nonzero-amount rows with exact aggregate
 counts and at most 20 safe row details, without returning raw source fields.
@@ -16,8 +77,8 @@ and selected amounts that cannot fit the existing `Numeric(14,2)` columns.
 The existing bank and expense import routes return HTTP 422 before import facts
 are written. Finite debit precedence and the existing Decimal rounding remain:
 `999999999999.994` rounds to the supported maximum `999999999999.99`, while
-`999999999999.995` is refused. Other formats and the shared number parser retain
-their existing contracts.
+`999999999999.995` is refused. Phase3 adds the shared public result validation
+described above while retaining the existing format parsers and number parser.
 
 Match, Ignore and Unmatch/Restore now refresh and lock the tenant-scoped bank
 line before reading its current state; Match then takes the existing target
@@ -43,7 +104,15 @@ committed no bank rows; nine finite controls returned POST 201/GET 200. All
 fixtures, retained in raw receipts before their scoped cleanup; they do not
 establish that production or other historical records contain NaN.
 
-Source-bound qualification is retained separately:
+The separate [16-case non-CSV baseline receipt](/workspace/artifacts/backlog-bank-nonfinite-2026-11-06/noncsv53c996e/TEST-RECEIPT.json)
+records actual CAMT/MT940 API behavior at the same frozen `53c996e` source;
+SHA256 `79608ae9a309bcd591ec47ad3eed05ee7bb1b425bd19084a6d117150c59af6c2`.
+CAMT quiet NaN returned POST 201, committed a bank line and then returned GET 500.
+No observed POST 500 committed a bank row. Its PDF evidence was pure text only,
+without a PDF API/decoder claim. This synthetic diagnosis does not establish
+production data or repair historical records.
+
+Initial source-bound qualification is retained separately:
 
 | Source slice | Passing evidence | Receipt |
 | --- | --- | --- |
@@ -53,14 +122,15 @@ Source-bound qualification is retained separately:
 These cohorts overlap and are not a combined unique-case total. Their database,
 role and schema162 labels describe those historical test runs, not a current
 schema baseline or production qualification. Native callers used ordinary
-non-superuser/non-bypass roles with tenant RLS retained. The combined portable
-union collects 163 distinct cases across nine modules: the prior CSV 133 and
-reconciliation 57 share 27 cases. The combined source passes these 163 portable
+non-superuser/non-bypass roles with tenant RLS retained. At initial delivery `ebf0a84` (PR112), the combined portable
+union collected 163 distinct cases across nine modules: the prior CSV 133 and
+reconciliation 57 share 27 cases. That initial source passed these 163 portable
 cases (64.91s) and all 12 native cases (5.33s, zero skips) on the dedicated
 schema163 PostgreSQL fixture. The 51 docs controls pass (11.67s), full Ruff/format
-checks 981 files and Mypy checks 447 app files. The current tree collects 6,646
+checks 981 files and Mypy checks 447 app files. That dated tree collected 6,646
 backend cases; collection is not a full-suite pass. Native CI registration is
-included; fresh hosted CI remains pending. [Combined delivery receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json).
+included in that initial delivery; those results do not qualify this follow-up
+head. [Initial combined delivery receipt](/workspace/artifacts/backlog-bank-delivery-2026-11-06/FINAL-RECEIPT.json).
 The unrelated runtime GUI profile implements none of this bank work.
 
 ## Remaining work
@@ -77,16 +147,25 @@ The unrelated runtime GUI profile implements none of this bank work.
   or ABA from clearing a newer association.
 - **RN09:** Restore still needs distinct replay-safe intent, versioned
   reason/history and recovery.
-- **BANK-LEGACY-NONFINITE-READ:** future CSV rejection does not repair historical
-  stored NaN or its read failure. Define a read/recovery contract and preserve
-  source/evidence before any authorized repair. First establish affected owned
-  records through bounded read-only inspection; do not infer production data,
-  coerce NaN to zero or claim that cleanup of synthetic fixtures repaired history.
+- **BANK-LEGACY-NONFINITE-READ (PARTIAL-LOCAL-CHECKS-CI-PENDING):** the safe
+  bank-read, matching-refusal and UI portion is delivered locally. Historical
+  remediation and source verification remain open. Preserve source/evidence
+  before any authorized repair and first establish affected owned records
+  through bounded read-only inspection; no amount rewrite, zero substitution,
+  production-data existence or historical repair is asserted.
+- **Separate expense candidate read:** actual legacy `ExpenseTransaction` NaN
+  still makes `GET /expenses/{report}/items/{item}/match-candidates` return 500.
+  The [source observation](/workspace/artifacts/backlog-fourteenth-wave-2026-11-06/legacy-bank-read/separate-expense-candidate.json)
+  (SHA256 `045d5f2872c0ad56e58ba281093388f8fedc866568516ee2cf1848057cdc6e2c`)
+  diagnoses a separate issue. This bank repair does not fix or qualify it, and
+  that observation is excluded from bank acceptance counts.
 
 The [execution ledger](BACKLOG-COMPLETION-2026-11-05.json) preserves the prior
 213 rows, including every ID, title, source reference and order. The separately
-appended READY finding makes **214 named rows: 197 original + 17 findings**.
+appended finding makes **214 named rows: 197 original + 17 findings**.
 Those differently sized items are not a completion percentage. Owner, legal,
 provider, corpus, hardware and release dependencies retain their individual
 boundaries. Docs preservation receipts are under
-`/workspace/artifacts/backlog-bank-delivery-2026-11-06/docs/`.
+`/workspace/artifacts/backlog-bank-delivery-2026-11-06/docs/`; follow-up
+preservation is under
+`/workspace/artifacts/backlog-bank-delivery-2026-11-06/followup-phase3-legacy/docs/`.

@@ -262,6 +262,8 @@ jobs:
           tests/test_payment_run_cancel_export_guard.py
           tests/test_n1_supplier_iban_pg.py
           tests/test_bank_csv_row_accounting_pg.py
+          tests/test_bank_numeric_boundary_pg.py
+          tests/test_reconciliation_legacy_amount_pg.py
           tests/test_reconciliation_line_concurrency_pg.py
           tests/test_transport_lock_concurrency.py
           tests/test_credit_note_lock_concurrency.py
