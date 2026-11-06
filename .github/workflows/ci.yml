@@ -690,6 +690,9 @@ jobs:
           trap 'exit 130' INT
           trap 'exit 143' TERM
           python scripts/image_audit.py
+      - name: Native PostgreSQL initialization, privilege drop and persistence checks
+        if: ${{ !cancelled() && steps.image_audit.conclusion == 'success' }}
+        run: python scripts/check_postgres_runtime.py bidit-ci-postgres:review > image-security/postgres-runtime-smoke.json
       - name: Native S3 initialization, persistence and refusal checks
         if: ${{ !cancelled() && steps.image_audit.conclusion == 'success' }}
         run: python scripts/check_s3_storage.py bidit-ci-backend:review > image-security/storage-smoke.json
