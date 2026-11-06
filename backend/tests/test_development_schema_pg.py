@@ -276,17 +276,29 @@ def test_schema_qualified_bootstrap_compares_without_writes_or_shared_mutation(b
 
     before = database(bootstrap_url, snapshot)
     original = metadata_signature(Base.metadata)
-    schema = "qualified_optional_" + uuid.uuid4().hex
+    # The disposable database is already unique. Keep the schema prefix short
+    # so generated index names do not share a randomized truncation namespace.
+    schema = "qualified"
 
     def exercise(connection):
         boundary = connection.begin_nested()
         try:
+            assert not connection.scalar(
+                text("SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=:schema)"),
+                {"schema": schema},
+            )
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
             metadata = MetaData(schema=schema, naming_convention=Base.metadata.naming_convention)
             for table in Base.metadata.sorted_tables:
                 table.to_metadata(metadata, schema=schema)
             source = metadata_signature(metadata)
             projected = development_metadata(metadata, connection.dialect)
+            index_names = [
+                connection.dialect.identifier_preparer.format_index(index)
+                for table in projected.tables.values()
+                for index in table.indexes
+            ]
+            assert len(index_names) == len(set(index_names))
             projected.create_all(connection)
             statements = []
 
