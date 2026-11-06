@@ -896,3 +896,145 @@ async def test_native_uppercase_line_and_target_uuid_replay_one_canonical_comman
     assert len(domain["commands"]) == len(domain["audit"]) == 1
     assert next(row for row in domain["lines"] if row["id"] == line)["matched_id"] == receipt
     assert await _facts(f) == cash
+
+
+async def test_native_aba_same_matched_association_refuses_the_original_unmatch_version(
+    native_commands,
+):
+    f = native_commands
+    writer = f["writers"][1]
+    line, target = f["lines"][0], {"kind": "receipt", "id": f["receipts"][0]}
+    cash = await _facts(f)
+    first_match = await _review(f, line, writer, "match", target=target)
+    first = await _send(f, writer, line, first_match, "aba-match-first")
+    assert first.status_code == 200, first.text
+    old_unmatch = await _review(f, line, writer, "unmatch")
+    assert old_unmatch["expected_version"] == 2
+    removed = await _send(f, writer, line, old_unmatch, "aba-real-unmatch")
+    assert removed.status_code == 200, removed.text
+    rematch = await _review(f, line, writer, "match", target=target)
+    latest = await _send(f, writer, line, rematch, "aba-match-later")
+    assert latest.status_code == 200, latest.text
+    assert latest.json()["line"]["version"] == 4
+    assert {
+        key: latest.json()["line"][key] for key in ("status", "matched_kind", "matched_id")
+    } == {key: first.json()["line"][key] for key in ("status", "matched_kind", "matched_id")}
+    before = await _domain(f)
+    # This reviewed key never committed. Replaying the real unmatch key would
+    # correctly acknowledge its old commit and would test a different contract.
+    delayed = await _send(f, writer, line, old_unmatch, "aba-delayed-unmatch")
+    assert delayed.status_code == 409, delayed.text
+    assert delayed.json()["code"] == "reconciliation_line_stale"
+    assert await _domain(f) == before
+    assert len(before["commands"]) == len(before["audit"]) == 3
+    assert await _facts(f) == cash
+
+
+async def test_native_aba_return_to_unmatched_refuses_the_original_match_version(native_commands):
+    f = native_commands
+    writer = f["writers"][0]
+    line = f["lines"][0]
+    cash = await _facts(f)
+    old_match = await _review(
+        f, line, writer, "match", target={"kind": "receipt", "id": f["receipts"][0]}
+    )
+    assert old_match["expected_version"] == 1
+    ignore = await _review(f, line, writer, "ignore", reason="First reviewed statement cycle")
+    ignored = await _send(f, writer, line, ignore, "aba-ignore")
+    assert ignored.status_code == 200, ignored.text
+    restore = await _review(f, line, writer, "restore")
+    restored = await _send(f, writer, line, restore, "aba-restore")
+    assert restored.status_code == 200, restored.text
+    assert restored.json()["line"]["version"] == 3
+    assert {
+        key: restored.json()["line"][key] for key in ("status", "matched_kind", "matched_id")
+    } == old_match["expected"]
+    before = await _domain(f)
+    delayed = await _send(f, writer, line, old_match, "aba-delayed-match")
+    assert delayed.status_code == 409, delayed.text
+    assert delayed.json()["code"] == "reconciliation_line_stale"
+    assert await _domain(f) == before
+    assert len(before["commands"]) == len(before["audit"]) == 2
+    assert (
+        before["commands"][0]["reason"] == "First reviewed statement cycle"
+        or before["commands"][1]["reason"] == "First reviewed statement cycle"
+    )
+    assert await _facts(f) == cash
+
+
+async def test_native_server_failure_after_pending_domain_sql_rolls_back_and_same_key_retries(
+    native_commands, monkeypatch, record_testsuite_property
+):
+    from sqlalchemy.exc import SQLAlchemyError
+
+    from app.services import audit
+
+    f = native_commands
+    writer, line = f["writers"][0], f["lines"][0]
+    body = await _review(f, line, writer, "ignore", reason="Reviewed native rollback source")
+    key = "failed-server-same-key"
+    before, cash = await _domain(f), await _facts(f)
+    original = audit.record
+    observed = {}
+
+    async def fail_after_real_flush(db, action, *args, **kwargs):
+        event = await original(db, action, *args, **kwargs)
+        if action == "reconciliation.command_committed" and not observed:
+            await db.flush()
+            observed["failed_session"] = db
+            observed["version_before_failure"] = await db.scalar(
+                text("SELECT version FROM bank_lines WHERE id=:id"), {"id": line}
+            )
+            observed["pending_commands"] = await db.scalar(
+                text(
+                    "SELECT count(*) FROM reconciliation_commands WHERE org_id=:org AND command_key=:key"
+                ),
+                {"org": f["org"], "key": key},
+            )
+            observed["pending_audit"] = await db.scalar(
+                text(
+                    "SELECT count(*) FROM audit_events WHERE org_id=:org AND action='reconciliation.command_committed'"
+                ),
+                {"org": f["org"]},
+            )
+            assert observed["version_before_failure"] == 2
+            assert observed["pending_commands"] == observed["pending_audit"] == 1
+            try:
+                # Actual server SQLSTATE22012 aborts this PostgreSQL transaction.
+                # The command must roll it back, not continue a failed session.
+                await db.execute(text("SELECT 1 / 0"))
+            except SQLAlchemyError as error:
+                observed["sqlstate"] = error.orig.sqlstate
+                assert observed["sqlstate"] == "22012"
+                raise
+            raise AssertionError("Native division by zero unexpectedly succeeded")
+        if action == "reconciliation.command_committed":
+            assert db is not observed["failed_session"]
+        return event
+
+    monkeypatch.setattr(audit, "record", fail_after_real_flush)
+    failed = await _send(f, writer, line, body, key)
+    assert failed.status_code == 503, failed.text
+    assert failed.json()["code"] == "reconciliation_command_unavailable"
+    assert observed["sqlstate"] == "22012"
+    assert await _domain(f) == before
+    assert await _facts(f) == cash
+    missing = await f["client"].get(
+        BASE + "/" + line + "/commands/" + key, headers=writer["headers"]
+    )
+    assert missing.status_code == 404, missing.text
+    assert missing.json()["code"] == "reconciliation_command_not_found"
+    healthy = await _send(f, writer, line, body, key)
+    assert healthy.status_code == 200, healthy.text
+    after = await _domain(f)
+    assert len(after["commands"]) == len(after["audit"]) == 1
+    assert after["commands"][0]["command_key"] == key
+    assert next(row for row in after["lines"] if row["id"] == line)["version"] == 2
+    assert await _facts(f) == cash
+    record_testsuite_property(
+        "native_failed_transaction",
+        json.dumps(
+            {key: value for key, value in observed.items() if key != "failed_session"},
+            sort_keys=True,
+        ),
+    )
