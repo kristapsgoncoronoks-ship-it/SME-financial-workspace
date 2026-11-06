@@ -12,7 +12,7 @@ zero-setup dev/test) · React 19 + Vite + TypeScript + Tailwind SPA · Docker.
 
 **Scale of the codebase (verified against this tree):** 122 database tables
 (166 Alembic revisions, single head), 70 model modules, 136 service modules,
-50 route modules, 69 SPA pages, 7553 collected backend tests, 10 CI jobs.
+50 route modules, 69 SPA pages, 7577 collected backend tests, 10 CI jobs.
 
 Direct non-production PostgreSQL startup creates eleven tenant-safe optional
 links (project/issuer, expense/partner/document and inbound/customer/correction) using dialect-specific
@@ -22,6 +22,8 @@ repair existing constraints; use Alembic for migrated environments.
 and [revision 164 scope](docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md).
 [Revision 166](docs/plan/RESIDUAL-TENANT-PARENTS-166-2026-11-06.md) also enforces the mandatory
 customer-contact tenant pair and records current qualification and remaining scope.
+
+[Storage reliability](docs/plan/STORAGE-RELIABILITY-2026-11-06.md) documents the supported integrity scope, safe project-download retry response and grouped ledger reads, with dated measurement limits.
 
 > **The specification lives in [`docs/`](./docs), not here.**
 > [`docs/architecture/adr/`](./docs/architecture/adr/README.md) (30 ADRs) and

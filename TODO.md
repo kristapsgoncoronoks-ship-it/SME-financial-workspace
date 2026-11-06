@@ -1,5 +1,11 @@
 # TODO — Task Board
 
+**Current reliability — 6 November:** [Integrity coverage, project-download recovery and grouped ledger reads](docs/plan/STORAGE-RELIABILITY-2026-11-06.md). Settings names the four supported current reference categories; empty results do not certify other files. Missing project originals return the existing safe 503 at the internal download boundary, preserving integrity/access errors. Two grouped ledger sums replace per-parent reads while keeping exact signed reports and the caller transaction.
+
+All eight component file hashes remain exact on reviewed revision 166 parent `cd226a1`. Source-bound 22 mocked-browser, 32 ASGI/SQLite and 33 portable cases retain their original scope; they are not one final-suite total. Four new ordinary-role native 166 cases pass in 4.48 s; the historical four 165 cases remain dated. Populated ledger sweeps use six business SELECTs plus one tenant setup command, empty sweeps four plus one. Rows, total work, memory and READ COMMITTED consistency are not newly bounded. Full Ruff/format checks 1,022 files; Mypy checks 452. Registered frontend lint/build and the 442.9/129.9 kB bundle checks pass. The tree collects 7,577 backend cases; OpenAPI 433 and ERD 122 are parent-identical. All 51 docs/generated/CI-discovery controls pass in 14.49 s; fresh delivered-source hosted CI remains pending.
+
+All 216 parent identities, states, provenance and DB-010 progress remain. Six existing rows gain only dated partial Facts `6ed908d`/schema 165 measurement evidence and next steps. Three distinct findings append as 217–219: 197 original plus 22 differently sized findings, with no completion percentage. Defaults, timeouts, audit locks, indexes, retention and gates stay unchanged. The calendar attempt/session actor proposal is a separate future architecture appendix, with no new finding, DB-010 row change or revision-167 implementation. Entries below retain their earlier source/date scope.
+
 **Current tenant integrity — 6 November:** [Four residual parent guards — revision 166](docs/plan/RESIDUAL-TENANT-PARENTS-166-2026-11-06.md)
 repairs customer contacts and three optional inbound/issued references while
 retaining original CASCADE/SET NULL behavior, organization IDs, legal snapshots
