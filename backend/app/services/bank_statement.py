@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, DecimalException
 
+from app.core import money
 from app.services import pdf_ocr
 
 _CENTS = Decimal("0.01")
@@ -511,7 +512,7 @@ def _parse_mt940(content: bytes, warnings: list[str]) -> list[Txn]:
 # --------------------------------------------------------------------------- #
 # Public API
 # --------------------------------------------------------------------------- #
-def parse(filename: str, content: bytes) -> StatementResult:
+def _parse(filename: str, content: bytes) -> StatementResult:
     warnings: list[str] = []
     lower = filename.lower()
     if lower.endswith(".csv"):
@@ -540,3 +541,36 @@ def parse(filename: str, content: bytes) -> StatementResult:
         "Unsupported file type. Upload a .pdf, .csv, camt.053 .xml, or MT940 "
         "(.940/.sta) bank statement."
     )
+
+
+_INVALID_MONEY = (
+    "Statement contains an invalid amount or balance; use finite values within the supported range."
+)
+
+
+def _validate_result(result: StatementResult) -> StatementResult:
+    """Check both consumers' Numeric(14,2) storage without changing parsed facts."""
+    for txn in result.transactions:
+        for value in (txn.amount, txn.balance):
+            if value is None:
+                continue
+            if not value.is_finite():
+                raise ValueError(_INVALID_MONEY)
+            # Reconciliation stores both amounts and balances with q2. This is
+            # only a representability check: retain the parser's original value,
+            # direction, currency and rounding for its callers.
+            rounded = money.q2(value)
+            if not rounded.is_finite() or rounded.copy_abs() > _CSV_MAX_AMOUNT:
+                raise ValueError(_INVALID_MONEY)
+    return result
+
+
+def parse(filename: str, content: bytes) -> StatementResult:
+    """Read a complete statement, refusing unsafe money before either import."""
+    try:
+        return _validate_result(_parse(filename, content))
+    except DecimalException:
+        # Known numeric context failures are invalid input. Other failures,
+        # including the existing OCR availability/timeout errors, keep their
+        # original behavior and are not hidden by a broad exception handler.
+        raise ValueError(_INVALID_MONEY) from None
