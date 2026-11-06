@@ -1,3 +1,4 @@
+import { CaptureReadingDetails } from "../components/CaptureReadingDetails";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -68,7 +69,7 @@ export default function EmailIntake() {
           <ErrorState title="Couldn’t load your inbound address" onRetry={() => settings.refetch()} />
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700">
+          <code className="max-w-full break-all rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700">
             {settings.data?.address ?? "…"}
           </code>
           <button className="btn-ghost" onClick={copy}>{copied ? "Copied!" : "Copy"}</button>
@@ -137,8 +138,8 @@ export default function EmailIntake() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-2">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="min-w-0 lg:col-span-2">
           <div className="card p-0">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <h2 className="text-sm font-semibold text-slate-600">Inbox</h2>
@@ -160,7 +161,7 @@ export default function EmailIntake() {
                 {inbox.data!.items.map((it) => (
                   <li key={it.id}>
                     <button
-                      className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 ${
+                      className={`flex w-full flex-wrap items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 ${
                         selected === it.id ? "bg-brand-50" : ""
                       }`}
                       onClick={() => setSelected(it.id)}
@@ -171,7 +172,7 @@ export default function EmailIntake() {
                           {it.from_addr || "unknown sender"} · {shortDate(it.received_at)}
                         </div>
                         {(it.status === "pending" || it.status === "confirmed") && it.method && it.method !== "unknown" && METHOD_STYLES[it.method] && (
-                          <span className={`badge mt-1 ${METHOD_STYLES[it.method]}`}>
+                          <span className={`badge mt-1 max-w-full whitespace-normal ${METHOD_STYLES[it.method]}`}>
                             {methodLabel(it.method)}
                           </span>
                         )}
@@ -185,7 +186,7 @@ export default function EmailIntake() {
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div className="min-w-0 lg:col-span-3">
           {selected ? (
             <InboundDetail id={selected} onDone={() => { setSelected(null); }} />
           ) : (
@@ -246,21 +247,23 @@ function InboundDetail({ id, onDone }: { id: string; onDone: () => void }) {
   return (
     <div className="card space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        <div className="min-w-0 max-w-full break-words">
           <h2 className="text-sm font-semibold text-slate-600">{row.filename}</h2>
           <p className="text-xs text-text-secondary">
             {row.subject || "(no subject)"} · from {row.from_addr || "unknown"} · {shortDate(row.received_at)}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
           {(row.status === "pending" || row.status === "confirmed") && row.method && METHOD_STYLES[row.method] && (
-            <span className={`badge ${METHOD_STYLES[row.method]}`}>
+            <span className={`badge max-w-full whitespace-normal ${METHOD_STYLES[row.method]}`}>
               {methodLabel(row.method)}
             </span>
           )}
           <span className={`badge ${STATUS_STYLES[row.status] ?? ""}`}>{row.status}</span>
         </div>
       </div>
+
+      <CaptureReadingDetails channel="inbound" ownerId={id} revision={`${row.status}:${row.reading_observation?.id ?? "unknown"}`} />
 
       {row.has_file && (
         <button className="text-sm text-brand-600 hover:underline" onClick={() => downloadFile(`/email/inbox/${id}/file`, row.filename)}>

@@ -1,6 +1,74 @@
 # TODO — Task Board
 
-**Current optional tenant parents — 6 November:** [Revision 164 tenant guards](docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md)
+**Current recorded reading inspection — 6 November:** [Full-document facts and bounded history](docs/plan/OCR-FACTS-INSPECTION-2026-11-06.md)
+adds read-only upload/email details with four GETs, canonical current authority
+and explicit historical source/attempt labels. Requested versus observed
+settings, unresolved defaults, installed packs and target DPI remain distinct
+from measured execution/geometry. Manual and region edits remain separate;
+no raw text, reader/profile/default or accuracy claim is added. Component42
+portable/63 mocked-browser evidence stays source-bound; new composed165 proof
+passes32 native inspection/cache/lease cases (20.34s), with ordinary-role/FORCE
+RLS and unchanged source/business facts. Two separate native input controls
+refuse malformed UUID paths safely. The tree collects7290 cases, not a full-suite
+pass; static/frontend checks and442.8/129.9kB bundle gate pass. OpenAPI has433
+paths, ERD122 tables/165 revisions unchanged. All215 ledger rows and unrelated
+states remain; fresh delivered-source CI, customer corpus and human acceptance
+are open. The earlier164 receipts retain their dated scope.
+
+**Current expense transaction money — 6 November:** [Unavailable historical amounts and safe consumption](docs/plan/EXPENSE-TRANSACTION-MONEY-2026-11-06.md)
+composes expense `9d9b5c6` and registration `ceccf36` with reviewed parent 165
+`3d06b9e` (PR114) at `68cd768`. Invalid amounts stay visible as null plus status;
+candidates skip them and financial consumption refuses typed HTTP 409 before
+writes. Finite signs/currency/precision, owner/currency/version precedence,
+raw as-of receipts and the authorized bin action remain unchanged. The original
+184 portable and 80 mocked-data browser cases remain source-bound; nine owned
+files are byte-exact, and shared types add only parent `BankLine.version`.
+The new revision-165 cohort passes 20 native expense/R010 cases (19.85s, zero
+failures/errors/skips), with 115 tenant-table snapshots. The tree collects 7,260
+backend cases; full Ruff/format (1,007 files), Mypy (452 app files), frontend
+lint/build and the 460/135 kB bundle gate pass at 442.7/129.9 kB. OpenAPI retains
+429 paths with only `ExpenseTransactionOut` changing; ERD is parent-identical.
+All 51 docs/generated/CI-discovery controls pass in 15.41s with zero
+failures/errors/skips; fresh new-head hosted CI remains pending.
+Collection is not a full-suite pass, and source cohorts are not added as unique
+coverage. The ledger appends one separate expense finding after all 214 complete
+parent rows: 197 original + 18 findings = 215. Source verification and authorized
+historical remediation remain open; no production prevalence, zero substitution,
+normalization or receipt rewrite is claimed. Prior records retain their source scope.
+
+**Current durable reconciliation — 6 November:** [Versioned actions, reasons and recoverable outcomes](docs/plan/DURABLE-RECONCILIATION-COMMANDS-2026-11-06.md)
+Ignore now requires an explanation. All four reconciliation actions use the
+reviewed line version, exact state and command key. Own receipts recover a past
+commit; current GET and bounded history remain separate. Existing history is not
+invented, and old unversioned write aliases return strict 428. The delivered UI
+uses the canonical command endpoint. Rollback keeps the additive schema and
+receipts, with old writers disabled.
+
+The source-scoped component inventory passes 220 distinct pytest nodes. Root's
+31-case graph cohort (28 pass, 3 explicit SQLite-only skips, all 12 native cases
+executed) and the 36 mocked-browser controls are overlapping evidence, not a
+larger unique total. Actual Chromium → HTTP → restricted PostgreSQL recovery
+made one command, one version advance and one new command audit; labelled
+transport faults caused no second POST. Financial rows and original bank
+fields stayed unchanged. The later saved-key type guard has separate mock and
+static proof.
+
+Composed checks pass 432 portable cases (254.58s, including all 110 tenant
+parity, 38 schema and 51 docs/generated/CI-discovery cases) and a 43-case RLS
+cohort (48.35s: 42 database cases plus one registry control). The latter executes
+all 20 command-native cases together. Full Ruff/format checks 1,004 files and
+Mypy checks 451 app files; frontend lint/build and the 460/135 kB bundle gate
+pass at 442.7 kB raw/129.9 kB gzip. Regenerated OpenAPI has 429 paths and the
+ERD has 122 application tables. These scopes overlap the component evidence;
+fresh delivered-source hosted CI remains pending.
+
+The current tree collects 7,214 backend cases and has 122 application tables,
+165 revisions, 70 model modules and 135 service modules. Collection is not a
+full-suite pass. All 214 ledger identities and unrelated progress remain;
+RN03/account attribution, historical remediation and owner acceptance are not
+closed. No settlement, production migration, main merge or deployment claim.
+
+**Preceding optional tenant parents — 6 November (source-scoped):** [Revision 164 tenant guards](docs/plan/OPTIONAL-TENANT-PARENTS-164-2026-11-06.md)
 adds the four remaining dated optional links after 163, retaining the original
 single-column SET NULL actions and physical names. PostgreSQL clears only the
 optional ID; SQLite retains its original single-column action with immediate
@@ -10,17 +78,17 @@ five separately identified current links and session/membership semantics remain
 open. Source-reviewed evidence covers 637 distinct applicable component cases,
 including 28 full-graph passes/3 explicit SQLite-only skips; all 12 native graph
 cases executed. The composed ordinary-RLS/Bank native cohort passes 37 cases
-(21.56s: 36 database cases plus one registry control); these overlapping scopes are not added as a new unique total. The
-current tree collects 7,102 backend cases; full Ruff/format (994 files), Mypy
+(21.56s: 36 database cases plus one registry control); these overlapping scopes are not added as a new unique total. That
+qualified tree collects 7,102 backend cases; full Ruff/format (994 files), Mypy
 (448 app files) and 51 docs/generated/CI-discovery controls (zero
 failures/errors/skips) pass. OpenAPI and ERD retain the qualified bank contracts. The CI
 split preserves existing paths and filters; fresh delivered-source hosted CI
 remains pending. Collection is not a full-suite pass. All 214 ledger identities
-and unrelated row statuses are preserved. The current source includes Bank `964b26b` and the bounded backend CI repairs.
+and unrelated row statuses are preserved. That qualified source includes Bank `964b26b` and the bounded backend CI repairs.
 Bank555 and prior records below
 retain their dated source scope.
 
-**Current bank import/reconciliation follow-up — 6 November:** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
+**Preceding bank import/reconciliation follow-up — 6 November (before 165):** [Shared parse validation and safe legacy bank reads](docs/plan/BANK-IMPORT-RECONCILIATION-2026-11-06.md)
 combines shared numeric validation, safe historical bank reads, line locking,
 the Projects layout/fixture correction and the backend CI repairs. Invalid
 imported amounts return 422 before writes; historical unavailable money remains

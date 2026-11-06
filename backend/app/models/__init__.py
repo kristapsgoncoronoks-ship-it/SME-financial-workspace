@@ -73,6 +73,7 @@ from app.models.project_assignment import ProjectAssignment
 from app.models.project_link import ProjectCostEntry, ProjectDocument
 from app.models.project_offer import InvoicingPlanRow, ProjectOffer
 from app.models.receipt import Receipt
+from app.models.reconciliation_command import ReconciliationCommand
 from app.models.recurring_invoice import RecurringInvoice
 from app.models.retention import LegalHold, RetentionPolicy
 from app.models.session import Session
@@ -135,6 +136,7 @@ __all__ = [
     "InvoiceAttachment",
     "BankStatement",
     "BankLine",
+    "ReconciliationCommand",
     "SupplierPayment",
     "PaymentRun",
     "DunningPolicy",

@@ -37,7 +37,11 @@ from app.models.organization import Organization
 from app.models.vendor import Vendor
 from app.schemas.ap_payment import SupplierPaymentOut, SupplierPaymentRecord
 from app.schemas.capture_pages import CapturePages
-from app.schemas.capture_reading import PROFILE_ID, ReadingObservationHistory
+from app.schemas.capture_reading import (
+    PROFILE_ID,
+    ReadingObservationFacts,
+    ReadingObservationHistory,
+)
 from app.schemas.image_reading import load_preparation
 from app.schemas.invoice import (
     BatchUploadAccepted,
@@ -940,12 +944,55 @@ async def capture_reading_history(
         run_id = str(UUID(run_id))
     except ValueError:
         raise HTTPException(404, "Capture not found") from None
-    run = await extraction.get_capture(db, current.org_id, run_id)
+    run = await capture_reading.inspection_owner(
+        db, current.org_id, run_id, channel="upload", include_current=False
+    )
     if run is None:
         raise HTTPException(404, "Capture not found")
     return await capture_reading.history(
         db, current.org_id, run_id, channel="upload", cursor=cursor
     )
+
+
+@router.get(
+    "/captures/{run_id}/reading-observations/current",
+    response_model=ReadingObservationFacts | None,
+)
+async def capture_current_reading(run_id: str, current: CurrentUser, db: DbSession):
+    try:
+        run_id = str(UUID(run_id))
+    except ValueError:
+        raise HTTPException(404, "Capture not found") from None
+    run = await capture_reading.inspection_owner(
+        db, current.org_id, run_id, channel="upload", include_current=True
+    )
+    if run is None:
+        raise HTTPException(404, "Capture not found")
+    return await capture_reading.current_observation(db, run, channel="upload")
+
+
+@router.get(
+    "/captures/{run_id}/reading-observations/{observation_id}",
+    response_model=ReadingObservationFacts,
+)
+async def capture_recorded_reading(
+    run_id: str, observation_id: str, current: CurrentUser, db: DbSession
+):
+    try:
+        run_id, observation_id = str(UUID(run_id)), str(UUID(observation_id))
+    except ValueError:
+        raise HTTPException(404, "Reading observation not found") from None
+    run = await capture_reading.inspection_owner(
+        db, current.org_id, run_id, channel="upload", include_current=False
+    )
+    if run is None:
+        raise HTTPException(404, "Reading observation not found")
+    facts = await capture_reading.observation(
+        db, current.org_id, run_id, observation_id, channel="upload"
+    )
+    if facts is None:
+        raise HTTPException(404, "Reading observation not found")
+    return facts
 
 
 @router.get("/captures/{run_id}/pages/{page_number}/doc")

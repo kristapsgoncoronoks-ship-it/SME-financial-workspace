@@ -79,6 +79,7 @@ from app.services import (
     expense_commands,
     expense_policy,
     expense_state,
+    expense_transaction_amounts,
     expenses,
     filesec,
     fx,
@@ -1154,13 +1155,13 @@ async def match_candidates(report_id: str, item_id: str, current: CurrentUser, d
         )
     )
     amt = Decimal(item.amount)
-    cands = [
-        t
-        for t in rows
-        if t.currency == r.currency
-        and abs(Decimal(t.amount) - amt) <= _MATCH_TOLERANCE
-        and (t.source != "bank_statement" or t.import_batch_id is not None)
-    ]
+    cands = []
+    for t in rows:
+        if t.currency != r.currency or (t.source == "bank_statement" and t.import_batch_id is None):
+            continue
+        amount = expense_transaction_amounts.read_amount(t.amount)
+        if amount is not None and abs(amount - amt) <= _MATCH_TOLERANCE:
+            cands.append(t)
     cands.sort(key=lambda t: abs((t.txn_date - item.spend_date).days))
     return [ExpenseTransactionOut.model_validate(t) for t in cands[:10]]
 
@@ -1181,7 +1182,8 @@ async def match_item(
     txns = await _load_available_txns(db, current.org_id, current.id, [body.transaction_id])
     txn = txns[0]
     expense_commands.require_report_currency(txn, r.currency)
-    if abs(Decimal(txn.amount) - Decimal(item.amount)) > _MATCH_TOLERANCE:
+    amount = expense_transaction_amounts.require_amount(txn)
+    if abs(amount - Decimal(item.amount)) > _MATCH_TOLERANCE:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"Amounts don't match: entry is {item.amount}, statement line is {txn.amount}.",

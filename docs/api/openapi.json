@@ -2169,6 +2169,32 @@
         "title": "AssignmentWriteOut",
         "type": "object"
       },
+      "Association": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "receipt",
+              "reimbursement",
+              "payment_run",
+              "issued_payment"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "Association",
+        "type": "object"
+      },
       "AuditEventOut": {
         "properties": {
           "action": {
@@ -2509,10 +2535,17 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
           "id",
+          "version",
           "statement_id",
           "line_date",
           "description",
@@ -6164,6 +6197,176 @@
         "title": "CombinedBenchmark",
         "type": "object"
       },
+      "CommandIntent": {
+        "additionalProperties": false,
+        "properties": {
+          "expected": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "expected_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "operation": {
+            "enum": [
+              "match",
+              "ignore",
+              "unmatch",
+              "restore"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Association"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "expected_version",
+          "expected"
+        ],
+        "title": "CommandIntent",
+        "type": "object"
+      },
+      "CommandReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_user_id": {
+            "format": "uuid",
+            "title": "Actor User Id",
+            "type": "string"
+          },
+          "after": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "after_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "After Version",
+            "type": "integer"
+          },
+          "before": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "before_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Before Version",
+            "type": "integer"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_key": {
+            "title": "Command Key",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Contract Version",
+            "type": "integer"
+          },
+          "line": {
+            "$ref": "#/components/schemas/FrozenLine"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "match",
+              "ignore",
+              "unmatch",
+              "restore"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "org_id": {
+            "format": "uuid",
+            "title": "Org Id",
+            "type": "string"
+          },
+          "payload_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "result_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Result Hash",
+            "type": "string"
+          },
+          "status": {
+            "const": "committed",
+            "default": "committed",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_key",
+          "org_id",
+          "actor_user_id",
+          "line_id",
+          "operation",
+          "payload_hash",
+          "before_version",
+          "after_version",
+          "before",
+          "after",
+          "line",
+          "reason",
+          "recorded_at",
+          "result_hash"
+        ],
+        "title": "CommandReceipt",
+        "type": "object"
+      },
       "CommentIn": {
         "properties": {
           "body": {
@@ -7032,6 +7235,127 @@
           "name"
         ],
         "title": "CurrencyCreate",
+        "type": "object"
+      },
+      "CurrentLine": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "amount_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Amount Status",
+            "type": "string"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance"
+          },
+          "balance_status": {
+            "enum": [
+              "valid",
+              "invalid",
+              "unprovided"
+            ],
+            "title": "Balance Status",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "line_date": {
+            "format": "date",
+            "title": "Line Date",
+            "type": "string"
+          },
+          "matched_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Id"
+          },
+          "matched_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Kind"
+          },
+          "statement_id": {
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "statement_id",
+          "line_date",
+          "description",
+          "amount",
+          "amount_status",
+          "direction",
+          "balance_status",
+          "status"
+        ],
+        "title": "CurrentLine",
         "type": "object"
       },
       "CustomerContactIn": {
@@ -11312,7 +11636,22 @@
       "ExpenseTransactionOut": {
         "properties": {
           "amount": {
-            "title": "Amount",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "amount_status": {
+            "enum": [
+              "valid",
+              "invalid"
+            ],
+            "title": "Amount Status",
             "type": "string"
           },
           "currency": {
@@ -11389,6 +11728,7 @@
           "description",
           "merchant",
           "amount",
+          "amount_status",
           "currency",
           "direction",
           "source",
@@ -12288,6 +12628,73 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "FrozenLine": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matched_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Id"
+          },
+          "matched_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "receipt",
+                  "reimbursement",
+                  "payment_run",
+                  "issued_payment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Kind"
+          },
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "unmatched",
+              "matched",
+              "ignored"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "id",
+          "statement_id",
+          "version"
+        ],
+        "title": "FrozenLine",
+        "type": "object"
+      },
       "FuelCardNetworkListOut": {
         "description": "What the intake screen can name as supported \u2014 read from the live parser\nregistry, so a network cannot appear here without a parser that actually\nhandles it, and a newly registered parser needs no second edit to show up.",
         "properties": {
@@ -12784,6 +13191,107 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistoryEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_user_id": {
+            "format": "uuid",
+            "title": "Actor User Id",
+            "type": "string"
+          },
+          "after": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "after_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "After Version",
+            "type": "integer"
+          },
+          "before": {
+            "$ref": "#/components/schemas/LineState"
+          },
+          "before_version": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Before Version",
+            "type": "integer"
+          },
+          "command_id": {
+            "format": "uuid",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "match",
+              "ignore",
+              "unmatch",
+              "restore"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "actor_user_id",
+          "operation",
+          "before_version",
+          "after_version",
+          "before",
+          "after",
+          "reason",
+          "recorded_at"
+        ],
+        "title": "HistoryEvent",
+        "type": "object"
+      },
+      "HistoryPage": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "next_before_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Version"
+          }
+        },
+        "required": [
+          "events",
+          "next_before_version"
+        ],
+        "title": "HistoryPage",
         "type": "object"
       },
       "HoldCreate": {
@@ -17654,6 +18162,54 @@
         "title": "LineItemOut",
         "type": "object"
       },
+      "LineState": {
+        "additionalProperties": false,
+        "properties": {
+          "matched_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Id"
+          },
+          "matched_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "receipt",
+                  "reimbursement",
+                  "payment_run",
+                  "issued_payment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Kind"
+          },
+          "status": {
+            "enum": [
+              "unmatched",
+              "matched",
+              "ignored"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LineState",
+        "type": "object"
+      },
       "LinesUpdate": {
         "properties": {
           "lines": {
@@ -17813,25 +18369,6 @@
           "score"
         ],
         "title": "MatchCandidateOut",
-        "type": "object"
-      },
-      "MatchRequest": {
-        "properties": {
-          "kind": {
-            "pattern": "^(receipt|reimbursement|payment_run|issued_payment)$",
-            "title": "Kind",
-            "type": "string"
-          },
-          "target_id": {
-            "title": "Target Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "target_id"
-        ],
-        "title": "MatchRequest",
         "type": "object"
       },
       "MatchTransaction": {
@@ -19870,6 +20407,285 @@
         "title": "PaymentUpdate",
         "type": "object"
       },
+      "PdfPageFact": {
+        "additionalProperties": false,
+        "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "enum": [
+                  "native_text_selected",
+                  "short_native_text",
+                  "engine_timeout",
+                  "supervisor_timeout",
+                  "classified_native_failure",
+                  "resource_or_native_exit",
+                  "result_incomplete",
+                  "processing_stopped",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause"
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms"
+          },
+          "native_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Bytes"
+          },
+          "native_chars": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Chars"
+          },
+          "native_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Sha256"
+          },
+          "ocr_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Bytes"
+          },
+          "ocr_chars": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Chars"
+          },
+          "ocr_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Sha256"
+          },
+          "page": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Page",
+            "type": "integer"
+          },
+          "raster_height": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raster Height"
+          },
+          "raster_width": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raster Width"
+          },
+          "render_dpi": {
+            "anyOf": [
+              {
+                "const": 300,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Dpi"
+          },
+          "render_scale": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Scale"
+          },
+          "selected_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Bytes"
+          },
+          "selected_chars": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Chars"
+          },
+          "selected_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "native",
+                  "ocr"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Kind"
+          },
+          "selected_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Sha256"
+          },
+          "source_height": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Height"
+          },
+          "source_unit": {
+            "anyOf": [
+              {
+                "const": "points",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Unit"
+          },
+          "source_width": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Width"
+          },
+          "status": {
+            "enum": [
+              "native",
+              "ocr_complete",
+              "timed_out",
+              "failed",
+              "outcome_unknown",
+              "not_attempted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page",
+          "status"
+        ],
+        "title": "PdfPageFact",
+        "type": "object"
+      },
       "PenaltyLineOut": {
         "properties": {
           "days_overdue": {
@@ -21070,6 +21886,211 @@
         "title": "ReadinessOut",
         "type": "object"
       },
+      "ReadingObservationFacts": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_seq": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Seq"
+          },
+          "channel": {
+            "enum": [
+              "upload",
+              "inbound"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unsupported_format",
+                  "malformed_document",
+                  "unreadable_scan",
+                  "image_processing_limit",
+                  "image_reading_busy",
+                  "capture_unavailable",
+                  "stored_file_missing",
+                  "stored_file_too_large",
+                  "stored_file_changed",
+                  "security_rejected",
+                  "processing_timeout",
+                  "internal_error",
+                  "unknown_failure"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "observation_id": {
+            "format": "uuid",
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "failure"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "page_observation_state": {
+            "default": "not_observed",
+            "enum": [
+              "observed",
+              "not_observed",
+              "not_applicable"
+            ],
+            "title": "Page Observation State",
+            "type": "string"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PdfPageFact"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadingProfileFacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requested_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Profile Id"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "selected_stream_bytes": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Stream Bytes"
+          },
+          "selected_stream_complete": {
+            "default": false,
+            "title": "Selected Stream Complete",
+            "type": "boolean"
+          },
+          "selected_stream_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Stream Sha256"
+          },
+          "source_failure_seq": {
+            "anyOf": [
+              {
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Failure Seq"
+          },
+          "source_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Sha256"
+          }
+        },
+        "required": [
+          "observation_id",
+          "channel",
+          "owner_id",
+          "outcome",
+          "created_at"
+        ],
+        "title": "ReadingObservationFacts",
+        "type": "object"
+      },
       "ReadingObservationHistory": {
         "additionalProperties": false,
         "properties": {
@@ -21292,6 +22313,301 @@
           "facts_sha256"
         ],
         "title": "ReadingObservationSummary",
+        "type": "object"
+      },
+      "ReadingPolicyFact": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "enum": [
+              "tesseract_timeout",
+              "pdf_wall",
+              "pdf_cpu",
+              "pdf_address_space",
+              "pdf_pages",
+              "pdf_render",
+              "pdf_render_edge",
+              "pdf_render_dpi",
+              "decoded_text",
+              "child_output",
+              "image_source",
+              "image_source_edge",
+              "image_raster",
+              "image_raster_edge",
+              "image_address_space",
+              "image_file",
+              "image_text",
+              "image_output",
+              "image_wall",
+              "image_cpu",
+              "image_preparation_grace"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "per_tesseract_invocation",
+              "per_pdf_operation",
+              "per_native_process",
+              "per_page_raster",
+              "selected_text_aggregate",
+              "per_image_source",
+              "per_image_raster",
+              "per_file",
+              "per_image_operation",
+              "per_image_preparation"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "seconds",
+              "bytes",
+              "pages",
+              "pixels",
+              "dpi"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "unit",
+          "scope"
+        ],
+        "title": "ReadingPolicyFact",
+        "type": "object"
+      },
+      "ReadingProfileFacts": {
+        "additionalProperties": false,
+        "properties": {
+          "adapter": {
+            "enum": [
+              "pdf",
+              "image"
+            ],
+            "title": "Adapter",
+            "type": "string"
+          },
+          "effective_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Profile Id"
+          },
+          "engine_name": {
+            "anyOf": [
+              {
+                "const": "tesseract",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Name"
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "installed_languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Languages"
+          },
+          "inventory_status": {
+            "default": "not_probed",
+            "enum": [
+              "not_probed",
+              "available",
+              "truncated",
+              "unavailable",
+              "unknown"
+            ],
+            "title": "Inventory Status",
+            "type": "string"
+          },
+          "language_mode": {
+            "default": "engine-default",
+            "enum": [
+              "engine-default",
+              "explicit",
+              "unknown"
+            ],
+            "title": "Language Mode",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "ocr_state": {
+            "enum": [
+              "used",
+              "not_needed",
+              "unknown"
+            ],
+            "title": "Ocr State",
+            "type": "string"
+          },
+          "oem_mode": {
+            "default": "engine-default",
+            "enum": [
+              "engine-default",
+              "explicit",
+              "unknown"
+            ],
+            "title": "Oem Mode",
+            "type": "string"
+          },
+          "policies": {
+            "items": {
+              "$ref": "#/components/schemas/ReadingPolicyFact"
+            },
+            "maxItems": 32,
+            "title": "Policies",
+            "type": "array"
+          },
+          "preprocessing_version": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[\\x20-\\x7e]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preprocessing Version"
+          },
+          "psm_mode": {
+            "default": "engine-default",
+            "enum": [
+              "engine-default",
+              "explicit",
+              "unknown"
+            ],
+            "title": "Psm Mode",
+            "type": "string"
+          },
+          "reader_source_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reader Source Sha256"
+          },
+          "requested_profile_id": {
+            "anyOf": [
+              {
+                "const": "builtin-local-default-v1",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Profile Id"
+          },
+          "resolved_language": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Language"
+          },
+          "resolved_oem": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Oem"
+          },
+          "resolved_psm": {
+            "anyOf": [
+              {
+                "maximum": 13.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Psm"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "adapter",
+          "ocr_state"
+        ],
+        "title": "ReadingProfileFacts",
         "type": "object"
       },
       "RebateAllocationOut": {
@@ -35025,6 +36341,117 @@
         ]
       }
     },
+    "/api/v1/email/inbox/{inbound_id}/reading-observations/current": {
+      "get": {
+        "operationId": "inbound_current_reading_api_v1_email_inbox__inbound_id__reading_observations_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "inbound_id",
+            "required": true,
+            "schema": {
+              "title": "Inbound Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReadingObservationFacts"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Inbound Current Reading Api V1 Email Inbox  Inbound Id  Reading Observations Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inbound Current Reading",
+        "tags": [
+          "email intake"
+        ]
+      }
+    },
+    "/api/v1/email/inbox/{inbound_id}/reading-observations/{observation_id}": {
+      "get": {
+        "operationId": "inbound_recorded_reading_api_v1_email_inbox__inbound_id__reading_observations__observation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "inbound_id",
+            "required": true,
+            "schema": {
+              "title": "Inbound Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "title": "Observation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingObservationFacts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inbound Recorded Reading",
+        "tags": [
+          "email intake"
+        ]
+      }
+    },
     "/api/v1/email/settings": {
       "get": {
         "operationId": "get_settings_api_v1_email_settings_get",
@@ -38347,6 +39774,117 @@
           }
         ],
         "summary": "Capture Reading History",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/captures/{run_id}/reading-observations/current": {
+      "get": {
+        "operationId": "capture_current_reading_api_v1_invoices_captures__run_id__reading_observations_current_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReadingObservationFacts"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Capture Current Reading Api V1 Invoices Captures  Run Id  Reading Observations Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capture Current Reading",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/captures/{run_id}/reading-observations/{observation_id}": {
+      "get": {
+        "operationId": "capture_recorded_reading_api_v1_invoices_captures__run_id__reading_observations__observation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "title": "Observation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingObservationFacts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Capture Recorded Reading",
         "tags": [
           "invoices"
         ]
@@ -47783,6 +49321,54 @@
         ]
       }
     },
+    "/api/v1/reconciliation/lines/{line_id}": {
+      "get": {
+        "operationId": "get_current_line_api_v1_reconciliation_lines__line_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentLine"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Current Line",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
     "/api/v1/reconciliation/lines/{line_id}/candidates": {
       "get": {
         "operationId": "match_candidates_api_v1_reconciliation_lines__line_id__candidates_get",
@@ -47834,8 +49420,218 @@
         ]
       }
     },
+    "/api/v1/reconciliation/lines/{line_id}/commands": {
+      "post": {
+        "operationId": "command_api_v1_reconciliation_lines__line_id__commands_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandIntent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Command",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/v1/reconciliation/lines/{line_id}/commands/{key}": {
+      "get": {
+        "operationId": "own_command_api_v1_reconciliation_lines__line_id__commands__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Own Command",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/v1/reconciliation/lines/{line_id}/history": {
+      "get": {
+        "operationId": "line_history_api_v1_reconciliation_lines__line_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Line History",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
     "/api/v1/reconciliation/lines/{line_id}/ignore": {
       "post": {
+        "deprecated": true,
         "operationId": "ignore_line_api_v1_reconciliation_lines__line_id__ignore_post",
         "parameters": [
           {
@@ -47852,9 +49648,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankLineOut"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -47868,6 +49662,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "description": "Use a versioned command with an Idempotency-Key."
           }
         },
         "security": [
@@ -47883,6 +49680,7 @@
     },
     "/api/v1/reconciliation/lines/{line_id}/match": {
       "delete": {
+        "deprecated": true,
         "operationId": "unmatch_line_api_v1_reconciliation_lines__line_id__match_delete",
         "parameters": [
           {
@@ -47899,9 +49697,7 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankLineOut"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -47915,6 +49711,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "description": "Use a versioned command with an Idempotency-Key."
           }
         },
         "security": [
@@ -47928,6 +49727,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "match_line_api_v1_reconciliation_lines__line_id__match_post",
         "parameters": [
           {
@@ -47940,23 +49740,11 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MatchRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankLineOut"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -47970,6 +49758,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "428": {
+            "description": "Use a versioned command with an Idempotency-Key."
           }
         },
         "security": [
