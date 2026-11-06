@@ -86,6 +86,7 @@ async function open(page: Page, opts: { onUpload?: (kind: string | null, body: s
       return route.fulfill({ status: response?.status ?? 200, contentType: "image/png", body: response?.body ?? Buffer.from(PNG_B64, "base64") });
     }
     if (p === "/masters/projects/proj-1/cost-entries") return route.fulfill(json([]));
+    if (p === "/masters/projects-pnl-summary") return route.fulfill(json([]));
     if (p === "/masters/projects/proj-1/offers") return route.fulfill(json([]));
     if (p === "/masters/projects/proj-1/invoicing-plan")
       return route.fulfill(
@@ -260,7 +261,14 @@ for (const [width, fontSize] of [[390, 16], [390, 32], [1280, 16]]) {
     await page.locator('[data-photo-id="photo-29"]').scrollIntoViewIfNeeded();
     await expect(page.getByRole("img", { name: "Synthetic evidence 29.png", exact: true })).toBeVisible();
     await expect.poll(() => page.evaluate(() => (window as unknown as { photoUrlCounts: { revoked: number } }).photoUrlCounts.revoked)).toBeGreaterThan(0);
+    const projectsSummary = page.waitForResponse(response => new URL(response.url()).pathname === "/api/v1/masters/projects-pnl-summary" && response.status() === 200);
     await page.getByRole("link", { name: "All projects", exact: true }).click();
+    await projectsSummary;
+    await expect(page).toHaveURL(/\/cost-objects\?kind=projects$/);
+    await expect(page.getByRole("heading", { name: "Cost objects", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Projects", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("link", { name: "JOB-7", exact: true })).toBeVisible();
+    await expect(page.getByText("This page hit an error", { exact: true })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => (window as unknown as { photoUrls: Set<string> }).photoUrls.size)).toBe(0);
     await testInfo.attach("photo-request-bytes", { body: JSON.stringify({ viewport: width, fontSize, reads, urls: await page.evaluate(() => (window as unknown as { photoUrlCounts: unknown }).photoUrlCounts), scope: "Synthetic PNG derivative is 70 bytes; original is the same PNG plus 512000 trailing bytes. Counts/bytes qualify this fixture only, not real-image savings or physical devices." }), contentType: "application/json" });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
