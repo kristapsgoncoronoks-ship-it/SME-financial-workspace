@@ -1,6 +1,6 @@
 # Developer + CI tooling, pinned for reproducibility. Runtime deps (incl. the
 # pytest that ships in the app image for the in-container smoke) live in
 # requirements.txt. Install both locally:  pip install -r requirements.txt -r requirements-dev.txt
-ruff==0.17.0
-mypy==2.4.0
+ruff==0.17.3
+mypy==2.4.1
 pre-commit==4.7.0
