@@ -1,32 +1,32 @@
-fastapi==0.143.0
+fastapi==0.162.0
 uvicorn[standard]==0.54.0
-sqlalchemy[asyncio]==2.1.4
+sqlalchemy[asyncio]==2.1.6
 asyncpg==0.32.0
 aiosqlite==0.22.1
-alembic==1.20.0
-pydantic==2.14.1
-pydantic-settings==2.15.0
+alembic==1.20.1
+pydantic==2.14.2
+pydantic-settings==2.16.2
 PyJWT[crypto]==2.15.1
 # Password hashing calls bcrypt directly (see app/core/security.py). passlib was
 # dropped: 1.7.4 is unmaintained and incompatible with bcrypt >= 5 (its backend
 # probe trips bcrypt 5's hard 72-byte limit). bcrypt's "$2b$" output is unchanged,
 # so hashes created under the old passlib path still verify.
 bcrypt==5.0.0
-python-multipart==0.0.32
+python-multipart==0.0.33
 email-validator==2.3.0
 
 # Object storage for document bytes (ADR-0008). Imported lazily and only when
 # STORAGE_BACKEND=s3; the default local/memory backends need nothing extra.
-boto3==1.43.112
+boto3==1.43.123
 
 # PDF ingestion + OCR. Text-layer extraction needs only pdfplumber; the OCR
 # fallback also needs the system `tesseract-ocr` binary on PATH (see Dockerfile).
 pdfplumber==0.11.10
-pypdf==6.21.0  # V01a: fixes the eight observed PDF DoS advisories; see docs/security/V01A-PYPDF-UPGRADE-2026-10-16.md
+pypdf==6.21.4  # V01a: fixes the eight observed PDF DoS advisories; see docs/security/V01A-PYPDF-UPGRADE-2026-10-16.md
 pypdfium2==5.14.0
 pytesseract==0.3.13
 pillow==12.3.0
-reportlab==5.0.1
+reportlab==5.1.0
 # Structured e-invoice XML (UBL 2.1 / UN-CEFACT CII, incl. Factur-X/ZUGFeRD).
 # defusedxml hardens parsing of attacker-supplied XML (XXE / billion-laughs).
 defusedxml==0.7.1
@@ -49,7 +49,7 @@ openpyxl==3.1.5
 # pyyaml: tests/test_ops_deploy_hygiene.py reads the compose files and the CI
 # workflow as YAML (audit 2026-09-05). Pure Python; the only YAML reader here.
 pyyaml==6.0.3
-pytest==9.1.1
-pytest-asyncio==1.4.0
+pytest==9.2.0
+pytest-asyncio==1.4.1.post1
 httpx==0.28.1
 prometheus-client==0.26.0
