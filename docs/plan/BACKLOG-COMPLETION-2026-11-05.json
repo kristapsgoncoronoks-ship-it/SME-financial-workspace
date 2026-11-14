@@ -5054,62 +5054,118 @@
           "scope": "No repeated focused/native/frontend/full suite or TCP experiment by delivery owner; fresh corrected-head CI pending"
         }
       }
+    },
+    {
+      "id": "SEC-IMAGE-20261114",
+      "status": "LOCAL-CHECKS-CI-PENDING-HUMAN-REVIEW",
+      "inventory_status": "NEW-SOURCE-BACKED",
+      "title": "Supported image security maintenance with complete provider-rating evidence",
+      "sources": [
+        "docs/security/IMAGE-SECURITY-MAINTENANCE-2026-11-14.md",
+        "frontend/Dockerfile",
+        "deploy/postgres/Dockerfile",
+        "deploy/pgbouncer/Dockerfile",
+        "deploy/postgres/verify-gosu-buildinfo.awk",
+        "scripts/install_ci_typescript.py",
+        "backend/tests/test_image_audit.py",
+        "docker-compose.yml"
+      ],
+      "next": "Fresh PR126 CI43634702510 on bacc497 retained ten image identities and twenty reports: 174 selected HIGH package/advisory rows across four roles, covering 57 IDs. Apply authenticated Alpine libxslt/krb5/libpq/PostgreSQL18-client floors, supported Go1.27.4 rebuilds, Node zlib1.4 and official PostgreSQL16.16. Current 153 image-admission and 120 Go/guard cases pass; 7,780 cases collect and full Ruff1026/Mypy452 pass. Actual synthetic PG16.15-to-16.16 clone/write/restart and helper graph pass. Final composed images, all ratings and full CI remain required. RustFS 1.0.5 development pin is selected after first-attempt fresh seven-group and separate old-to-new/restart fixtures plus an exact-image scan: zero selected HIGH/CRITICAL rows and zero full provider objects across detected OS packages. Native crate/exhaustive coverage is unproven; full ten-image CI and human acceptance remain required. Production activation and legacy-data protection are unchanged. Preserve raw alternate ratings, unscored objects, npm residuals and release/operator caveats. No waiver, incompatible major or production action.",
+      "dependencies": [
+        "Final source/image and complete-rating qualification",
+        "Human/Lead review before merge/release",
+        "Production PostgreSQL extension/index and backup/restore assessment"
+      ],
+      "denominator_provenance": {
+        "original_rows": 197,
+        "prior_rows_preserved": 221,
+        "prior_appended_findings": 24,
+        "appended_finding_ordinal": 25,
+        "current_rows": 222
+      },
+      "qualification": {
+        "base": "bacc497e83c9515bec91df81264727aeeb59e3f2",
+        "components": [
+          "5bc855eb6301b96fc5d4063b44665c13f77347ba",
+          "b1d17aaf583eb6137a771d08c3452edfd105097d",
+          "7192381ef1abed2d36c025c42914d5602b150dc8",
+          "1cb68c847262b4d0770a1e6f23350657651b592a",
+          "8290deab8badaf20c86a840cc5eb82ca9aa5936c"
+        ],
+        "source_review_sha256": "8373cf0c1d6cb50c55e306379a7a5dd9c324fba9084846a83b3209423cbfffa5",
+        "postgres_native_receipt_sha256": "a94e7bdc23791b0127f23d170fc7c90e422c03f40e4cd11a7ec88825bc7c674b",
+        "scope": "Local development components; final images/CI and human acceptance remain open. Parent 7,731-case CI does not qualify the new 7,780-case composition.",
+        "rustfs_runtime_receipt_sha256": "d12dcc620e31245d40b4064d2ebd05a96473869328f18676675ea50a2441ebc3",
+        "rustfs_single_image_receipt_sha256": "075f311c45b5f0f9501728b9704795bb51c26f6f477bef6680eb0de65a536af1",
+        "pgbouncer_local_scope": "Actual 1.26.1/psql18.7/strict libpq+client18.7-r0, ordinary exact numeric transaction, wrong-credential refusal and valid reconnect pass; owned resources removed. First failed inventory-format fixture remains preserved."
+      }
     }
   ],
   "inventory_provenance": {
     "original_rows": 197,
-    "prior_rows_preserved": 216,
-    "prior_appended_findings": 19,
-    "new_appended_findings": [
-      "STORAGE-INTEGRITY-COVERAGE-TRUTH",
-      "PROJECT-DOCUMENT-DOWNLOAD-AVAILABILITY",
-      "INTEGRITY-LEDGER-GROUPED-SUMS"
-    ],
-    "appended_findings": 22,
-    "current_rows": 219,
-    "preservation": "All216 parent IDs/order/titles/sources/statuses/inventory_status and DB-010 progress remain. Six existing rows gain dated qualification/next additions only;210 unrelated complete rows are exact. The prior provenance object is retained verbatim below.197 original+22 differently sized findings is not a completion percentage.",
+    "prior_rows_preserved": 221,
+    "prior_appended_findings": 24,
+    "new_appended_finding": "SEC-IMAGE-20261114",
+    "appended_findings": 25,
+    "current_rows": 222,
+    "preservation": "All 221 complete parent row objects, identity order, statuses, titles, sources and inventory classifications remain exact. One distinct current image-maintenance finding appends. 197 original plus 25 differently sized findings is not a completion percentage.",
     "previous_history": [
       {
         "original_rows": 197,
-        "prior_rows_preserved": 215,
-        "prior_appended_findings": 18,
-        "new_appended_finding": "EXPLORE-MONEY-CURRENCY-BASIS",
-        "appended_findings": 19,
-        "current_rows": 216,
-        "preservation": "All215 incoming IDs/order/titles/inventory_status and all212 unrelated complete row objects remain exact, including ARCH-006 Perf progress. Only BE-018/PERF-010/FE-016 intended bounded progress changes; prior evidence is retained.197 original +19 differently sized findings is not a completion percentage.",
+        "prior_rows_preserved": 216,
+        "prior_appended_findings": 19,
+        "new_appended_findings": [
+          "STORAGE-INTEGRITY-COVERAGE-TRUTH",
+          "PROJECT-DOCUMENT-DOWNLOAD-AVAILABILITY",
+          "INTEGRITY-LEDGER-GROUPED-SUMS"
+        ],
+        "appended_findings": 22,
+        "current_rows": 219,
+        "preservation": "All216 parent IDs/order/titles/sources/statuses/inventory_status and DB-010 progress remain. Six existing rows gain dated qualification/next additions only;210 unrelated complete rows are exact. The prior provenance object is retained verbatim below.197 original+22 differently sized findings is not a completion percentage.",
         "previous_history": [
           {
             "original_rows": 197,
-            "prior_rows_preserved": 214,
-            "prior_appended_findings": 17,
-            "new_appended_finding": "EXPENSE-LEGACY-NONFINITE-READ",
-            "appended_findings": 18,
-            "current_rows": 215,
-            "preservation": "All 214 prior complete row values, statuses and order, including IDs, titles, sources and inventory_status, are preserved with the original baseline/date. The 197 original + 18 findings denominator is not a completion percentage. Earlier provenance is retained verbatim in previous_history.",
+            "prior_rows_preserved": 215,
+            "prior_appended_findings": 18,
+            "new_appended_finding": "EXPLORE-MONEY-CURRENCY-BASIS",
+            "appended_findings": 19,
+            "current_rows": 216,
+            "preservation": "All215 incoming IDs/order/titles/inventory_status and all212 unrelated complete row objects remain exact, including ARCH-006 Perf progress. Only BE-018/PERF-010/FE-016 intended bounded progress changes; prior evidence is retained.197 original +19 differently sized findings is not a completion percentage.",
             "previous_history": [
               {
                 "original_rows": 197,
-                "prior_rows_preserved": 213,
-                "prior_appended_findings": 16,
-                "new_appended_finding": "BANK-LEGACY-NONFINITE-READ",
-                "appended_findings": 17,
-                "current_rows": 214,
-                "preservation": "All prior213 rows retain their IDs, order, titles, sources and original inventory_status. Original baseline and differently sized-item denominator provenance remain; no completion percentage is inferred."
+                "prior_rows_preserved": 214,
+                "prior_appended_findings": 17,
+                "new_appended_finding": "EXPENSE-LEGACY-NONFINITE-READ",
+                "appended_findings": 18,
+                "current_rows": 215,
+                "preservation": "All 214 prior complete row values, statuses and order, including IDs, titles, sources and inventory_status, are preserved with the original baseline/date. The 197 original + 18 findings denominator is not a completion percentage. Earlier provenance is retained verbatim in previous_history.",
+                "previous_history": [
+                  {
+                    "original_rows": 197,
+                    "prior_rows_preserved": 213,
+                    "prior_appended_findings": 16,
+                    "new_appended_finding": "BANK-LEGACY-NONFINITE-READ",
+                    "appended_findings": 17,
+                    "current_rows": 214,
+                    "preservation": "All prior213 rows retain their IDs, order, titles, sources and original inventory_status. Original baseline and differently sized-item denominator provenance remain; no completion percentage is inferred."
+                  }
+                ]
               }
-            ]
+            ],
+            "residual166_composition": {
+              "parent": "ae3925e1a98cd9d05c7c79ea8f29b156433eea1a",
+              "rows_before": 216,
+              "rows_after": 216,
+              "preserved_ID_order_titles_inventory_status": true,
+              "unrelated_complete_rows_preserved": 215,
+              "only_progress_row": "DB-010",
+              "new_findings": 0,
+              "prior_provenance_fields_preserved": true,
+              "denominator": "197 original plus19 prior findings is not a completion percentage."
+            }
           }
-        ],
-        "residual166_composition": {
-          "parent": "ae3925e1a98cd9d05c7c79ea8f29b156433eea1a",
-          "rows_before": 216,
-          "rows_after": 216,
-          "preserved_ID_order_titles_inventory_status": true,
-          "unrelated_complete_rows_preserved": 215,
-          "only_progress_row": "DB-010",
-          "new_findings": 0,
-          "prior_provenance_fields_preserved": true,
-          "denominator": "197 original plus19 prior findings is not a completion percentage."
-        }
+        ]
       }
     ]
   },
