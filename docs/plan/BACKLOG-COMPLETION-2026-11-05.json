@@ -64,7 +64,7 @@
         "frontend/Dockerfile",
         " frontend/scripts/verify-npm-toolchain.mjs"
       ],
-      "next": "Official npm12.2.2 ip-address/retained undici fixes pass all13 source37b826b contexts. Fresh compatible parent review finds no supported fixed glob/minimatch; preserve bothIDs/all current and alternate/historical ratings. No forced incompatible major or waiver.",
+      "next": "Official npm12.2.2 ip-address/retained undici fixes pass all13 source37b826b contexts. Fresh compatible parent review finds no supported fixed glob/minimatch; preserve bothIDs/all current and alternate/historical ratings. No forced incompatible major or waiver. 14 November compatible maintenance: official npm12.2.2 is still latest; apply authenticated official glob13.0.7 legacy leaf within all five declared ranges before app installation. Preserve all1923 non-glob parent files, exact notices, public/raw entries and ownership.71 Node guard controls and paired actual-package development proof pass locally; actual Node22/Alpine and fresh delivered-head CI/images remain pending. Official GHSA/CVE range still includes13.0.7 and minimatch10.2.5 is unchanged; retain all scanner objects/ratings, no waiver or forced major. See docs/security/NPM-GLOB-LEGACY-MAINTENANCE-2026-11-14.md.",
       "dependencies": []
     },
     {
