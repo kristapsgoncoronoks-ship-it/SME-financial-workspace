@@ -169,7 +169,7 @@ def _admit_source(text):
             "build",
         ),
         (
-            "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+            "postgres:16.16-alpine3.24@sha256:0adbf25a9e96d38823bb813f3ac0ed41fadb665c88f1df7fe6dbfb060cbdc106",
             "runtime",
         ),
     ]

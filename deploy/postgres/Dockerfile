@@ -1,6 +1,8 @@
 # Rebuild gosu 1.20 with the patched compiler and a pinned downstream manifest.
 # The official PG16 base currently embeds Go1.24.6 in its privilege-drop helper.
-# No PostgreSQL binary, init script, auth default, UID/GID or PGDATA is changed.
+# Pin the PostgreSQL 16.16 security release separately, retaining the PG16 init
+# script, auth defaults, UID/GID and PGDATA contract. Upstream extension/index
+# release guidance remains an operator prerequisite before any production change.
 # Upstream source: https://github.com/tianon/gosu/tree/29b939aa5bd4dc588af765b8248f6e39150d2565
 # gosu: Apache-2.0; upstream module checksums/dependencies are verified by Go.
 # Match upstream's release-metadata process with the pinned fake-git helper.
@@ -65,7 +67,7 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
     rm /tmp/gosu.tar.gz /tmp/fake-git.tar.gz
 
 # Inherit ENTRYPOINT/CMD, SIGINT, port5432, UID/GID70 and the PG16 data volume.
-FROM postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea AS runtime
+FROM postgres:16.16-alpine3.24@sha256:0adbf25a9e96d38823bb813f3ac0ed41fadb665c88f1df7fe6dbfb060cbdc106 AS runtime
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
     apk add --no-cache --upgrade \
         'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
