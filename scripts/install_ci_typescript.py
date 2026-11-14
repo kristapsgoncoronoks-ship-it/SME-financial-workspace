@@ -21,7 +21,7 @@ import uuid
 from pathlib import Path
 
 VERSION = "7.0.2"
-GO_VERSION = "go1.27.3"
+GO_VERSION = "go1.27.4"
 TEXT_VERSION = "v0.41.0"
 SOURCE = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
 ARCHIVE_SHA256 = "5ccb47dbb3f68cd0da58b71e6f445eee36a50bd3e9f9f330cc23a97b88500119"

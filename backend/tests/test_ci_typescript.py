@@ -148,6 +148,33 @@ def test_bad_provenance_never_executes_or_replaces_existing_compiler(
     assert calls == []
 
 
+@pytest.mark.parametrize("old_toolchain", ["go1.27.3", "go1.27.2", "go1.28.0"])
+def test_unqualified_toolchain_refuses_before_execution_or_installation(
+    output, frontend, monkeypatch, old_toolchain
+):
+    root, target = frontend
+    metadata = output / "provenance/compiler-build.txt"
+    assert metadata.read_text().startswith("/out/tsc: go1.27.4\n")
+    metadata.write_text(metadata.read_text().replace("go1.27.4", old_toolchain, 1))
+    calls = fake_launcher(monkeypatch, target)
+    before = target.read_bytes()
+    with pytest.raises(ValueError, match="unexpected Go toolchain"):
+        compiler.install(output, root)
+    assert target.read_bytes() == before
+    assert calls == []
+    assert not (root / "node_modules/.bidit-typescript-provenance").exists()
+
+
+def test_synthetic_current_toolchain_output_is_admitted_with_all_notices(output):
+    # Parser protocol evidence only; output contains no actual compiler binary.
+    assert compiler.GO_VERSION == "go1.27.4"
+    assert (output / "provenance/compiler-build.txt").read_text().startswith("/out/tsc: go1.27.4\n")
+    assert (
+        compiler.validate_output(output)
+        == hashlib.sha256((output / "tsc").read_bytes()).hexdigest()
+    )
+
+
 def test_npm_version_skew_is_refused_without_resolving_launcher(output, frontend, monkeypatch):
     root, target = frontend
     (root / "node_modules/typescript/package.json").write_text('{"version":"unqualified"}')

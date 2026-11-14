@@ -1,9 +1,10 @@
 """Exercise the actual overlay verifier and checksum/copy admission seam.
 
-BuildInfo fixtures are actual task-local Go1.27.3 prototype output, with ONLY
-its binary-path header normalized to /out/gosu. They do not claim an image
-build. Shell controls execute only the extracted four-check/two-copy seam in
-an isolated temporary tree: no downloads, Go compiler or Docker operation.
+Historical fixture files are actual task-local Go1.27.3 prototype output, with
+ONLY their binary-path headers normalized to /out/gosu. Current protocol controls
+derive a synthetic Go1.27.4 header; they do not claim a new binary or image build.
+Shell controls execute only the extracted four-check/two-copy seam in an isolated
+temporary tree: no downloads, Go compiler or Docker operation.
 """
 
 import re
@@ -18,7 +19,8 @@ CONTEXT = ROOT / "deploy/postgres"
 GUARD = CONTEXT / "verify-gosu-buildinfo.awk"
 DOCKERFILE = CONTEXT / "Dockerfile"
 FIXTURES = Path(__file__).parent / "fixtures"
-CANDIDATE = (FIXTURES / "gosu_xsys_candidate_buildinfo.txt").read_text()
+HISTORICAL_CANDIDATE = (FIXTURES / "gosu_xsys_candidate_buildinfo.txt").read_text()
+CANDIDATE = HISTORICAL_CANDIDATE.replace("/out/gosu: go1.27.3\n", "/out/gosu: go1.27.4\n", 1)
 BASELINE = (FIXTURES / "gosu_xsys_baseline_buildinfo.txt").read_text()
 RECORDS = {
     "header": "/out/gosu:",
@@ -62,7 +64,7 @@ def check(metadata, expected_goarch="amd64"):
 
 
 @pytest.mark.parametrize("reordered", [False, True])
-def test_actual_modified_candidate_is_admitted(reordered):
+def test_synthetic_current_toolchain_modified_candidate_is_admitted(reordered):
     metadata = CANDIDATE
     if reordered:
         lines = metadata.splitlines()
@@ -75,6 +77,14 @@ def test_actual_modified_candidate_is_admitted(reordered):
 
 def test_actual_unmodified_old_dependency_build_is_refused():
     result = check(BASELINE)
+    assert result.returncode == 1, result.stderr
+    assert result.stdout == result.stderr == ""
+
+
+def test_historical_correct_overlay_with_previous_toolchain_is_refused():
+    assert HISTORICAL_CANDIDATE.startswith("/out/gosu: go1.27.3\n")
+    assert CANDIDATE.startswith("/out/gosu: go1.27.4\n")
+    result = check(HISTORICAL_CANDIDATE)
     assert result.returncode == 1, result.stderr
     assert result.stdout == result.stderr == ""
 
@@ -98,7 +108,8 @@ def test_every_required_record_is_single_and_present(record, mutation):
 @pytest.mark.parametrize(
     "old,new",
     [
-        ("go1.27.3", "go1.27.2"),
+        ("go1.27.4", "go1.27.3"),
+        ("go1.27.4", "go1.27.2"),
         ("v1.20.0+dirty", "v1.20.0"),
         ("vcs.modified=true", "vcs.modified=false"),
         ("GOARCH=amd64", "GOARCH=arm64"),

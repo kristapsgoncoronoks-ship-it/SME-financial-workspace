@@ -1,6 +1,8 @@
 # Rebuild gosu 1.20 with the patched compiler and a pinned downstream manifest.
 # The official PG16 base currently embeds Go1.24.6 in its privilege-drop helper.
-# No PostgreSQL binary, init script, auth default, UID/GID or PGDATA is changed.
+# Pin the PostgreSQL 16.16 security release separately, retaining the PG16 init
+# script, auth defaults, UID/GID and PGDATA contract. Upstream extension/index
+# release guidance remains an operator prerequisite before any production change.
 # Upstream source: https://github.com/tianon/gosu/tree/29b939aa5bd4dc588af765b8248f6e39150d2565
 # gosu: Apache-2.0; upstream module checksums/dependencies are verified by Go.
 # Match upstream's release-metadata process with the pinned fake-git helper.
@@ -8,7 +10,7 @@
 # The exact source SHA is pinned above; the source commit timestamp is stamped below.
 # Only go.mod/go.sum change: official x/sys 0.49.0 requires root Go 1.26.0.
 # The real BuildInfo must say v1.20.0+dirty and identify the exact module overlay.
-FROM golang:1.27.3-alpine3.24@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS build
+FROM golang:1.27.4-alpine3.24@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS build
 ARG TARGETARCH
 COPY --chmod=0644 verify-gosu-buildinfo.awk /usr/local/share/gosu/verify-buildinfo.awk
 COPY --chmod=0644 gosu-go.mod /tmp/gosu-go.mod
@@ -65,10 +67,11 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
     rm /tmp/gosu.tar.gz /tmp/fake-git.tar.gz
 
 # Inherit ENTRYPOINT/CMD, SIGINT, port5432, UID/GID70 and the PG16 data volume.
-FROM postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea AS runtime
+FROM postgres:16.16-alpine3.24@sha256:0adbf25a9e96d38823bb813f3ac0ed41fadb665c88f1df7fe6dbfb060cbdc106 AS runtime
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
     apk add --no-cache --upgrade \
-        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1'
+        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
+        'krb5-libs>=1.22.3-r0' 'libxslt>=1.1.43-r4'
 COPY --from=build --chmod=0755 /out/gosu /usr/local/bin/gosu
 COPY --from=build /out/licenses/ /usr/share/licenses/gosu/
 RUN gosu --version && gosu postgres id && su-exec nobody true && postgres --version

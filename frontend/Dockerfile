@@ -1,7 +1,7 @@
 # Rebuild the current compiler release with its supported, patched Go toolchain.
 # The npm release embeds an older Go runtime; keep the compiler source/version
 # unchanged and update its vulnerable Unicode dependency through Go modules.
-FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS typescript-compiler
+FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS typescript-compiler
 WORKDIR /src
 ENV GOTOOLCHAIN=local
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
@@ -48,6 +48,10 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
 # --- build stage ---
 FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS build
 WORKDIR /app
+# Keep the Node builder's installed zlib on the supported Alpine security floor
+# before npm processes package archives. The optional public CA remains a secret.
+RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
+    apk add --no-cache --upgrade 'zlib>=1.4-r0'
 COPY package*.json ./
 COPY scripts/verify-npm-toolchain.mjs /tmp/bidit-verify-npm-toolchain.mjs
 # Optional public CA bundle for corporate build proxies; never stored in the image.
@@ -95,6 +99,7 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
     apk add --no-cache --upgrade \
         'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'libxpm>=3.5.20-r0' \
         'libexpat>=2.10.0-r0' 'libx11>=1.8.14-r0' 'brotli-libs>=1.2.1-r0' 'curl>=8.23.0-r0' 'libcurl>=8.23.0-r0' \
+        'libxslt>=1.1.43-r4' \
     && sed -i -e 's|^[[:space:]]*pid[[:space:]][^;]*;|pid /tmp/nginx.pid;|' -e '/^user /d' /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /var/cache/nginx
 USER nginx

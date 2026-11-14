@@ -20,7 +20,7 @@ spec.loader.exec_module(audit)
 
 BUILT = {role: "bidit-ci-" + role + ":review" for role in audit.ROLES}
 OBJECT_STORE = (
-    "rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2"
+    "rustfs/rustfs:1.0.5@sha256:b81d16a90ee25bd9511280127ca1471788c6e874cf0f0da759645f46b2dc1d74"
 )
 
 
@@ -955,3 +955,197 @@ def test_alpine_admission_accepts_equivalent_layout_and_stronger_fixed_floors(in
 def test_alpine_admission_treats_copied_files_and_cmd_as_metadata_not_native_execution():
     text = _maintenance_dockerfile(before='COPY requirements.txt .\nCMD ["uv", "pip", "install"]\n')
     _assert_alpine_admission(text, "backend-build")
+
+
+# Independently checked Alpine v3.24 publisher floors for the four outputs in
+# CI43634702510's 14 November package inventory. These strengthen source admission;
+# they do not claim a CVE reproduction, runtime compatibility or scanner waiver.
+ALPINE_NOV14_MAINTENANCE = {
+    "frontend": {"libxslt": "1.1.43-r4"},
+    "postgres": {"krb5-libs": "1.22.3-r0", "libxslt": "1.1.43-r4"},
+    "pgbouncer-build": {"libpq": "18.7-r0", "postgresql18-client": "18.7-r0"},
+    "pgbouncer": {"libpq": "18.7-r0", "postgresql18-client": "18.7-r0"},
+}
+ALPINE_NOV14_PRIOR = {
+    "libxslt": "1.1.43-r3",
+    "krb5-libs": "1.22.2-r1",
+    "libpq": "18.6-r99",
+    "postgresql18-client": "18.6-r99",
+}
+ALPINE_NOV14_TARGETS = [
+    (role, package) for role, packages in ALPINE_NOV14_MAINTENANCE.items() for package in packages
+]
+
+
+def _nov14_apk_version(version):
+    # PostgreSQL maintenance is x.y-rN; the reviewed libraries use x.y.z-rN.
+    # Keep the incumbent parser untouched and scope this extension to these tests.
+    match = re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?-r(\d+)", version)
+    assert match, f"unsupported reviewed Alpine maintenance version: {version}"
+    major, minor, patch, revision = match.groups()
+    return int(major), int(minor), int(patch or 0), int(revision)
+
+
+def _assert_nov14_alpine_admission(text, role, monkeypatch):
+    with monkeypatch.context() as scoped:
+        scoped.setitem(
+            ALPINE_MAINTENANCE,
+            role,
+            {**ALPINE_MAINTENANCE[role], **ALPINE_NOV14_MAINTENANCE[role]},
+        )
+        scoped.setattr(sys.modules[__name__], "_stable_apk_version", _nov14_apk_version)
+        _assert_alpine_admission(text, role)
+
+
+def _nov14_maintenance_dockerfile(role):
+    stage = audit.BUILD_OUTPUTS[role][1]
+    packages = {**ALPINE_MAINTENANCE[role], **ALPINE_NOV14_MAINTENANCE[role]}
+    constraints = " ".join(f"'{name}>={floor}'" for name, floor in packages.items())
+    text = f"FROM synthetic AS {stage}\nRUN apk add --no-cache --upgrade {constraints}\n"
+    if role == "postgres":
+        text += "RUN gosu postgres id\n"
+    elif role == "pgbouncer-build":
+        text += "RUN curl --fail https://example.test/source\n"
+    return text
+
+
+@pytest.mark.parametrize("role", ALPINE_NOV14_MAINTENANCE)
+def test_nov14_affected_alpine_stages_require_fixed_packages_before_use(role, monkeypatch):
+    relative, _, _ = audit.BUILD_OUTPUTS[role]
+    _assert_nov14_alpine_admission((ROOT / relative).read_text(), role, monkeypatch)
+
+
+@pytest.mark.parametrize(("role", "package"), ALPINE_NOV14_TARGETS)
+@pytest.mark.parametrize("mutation", ["missing", "unversioned", "older-maintenance"])
+def test_nov14_admission_refuses_missing_or_vulnerable_constraints(
+    role, package, mutation, monkeypatch
+):
+    text = _nov14_maintenance_dockerfile(role)
+    _assert_nov14_alpine_admission(text, role, monkeypatch)
+    token = f"'{package}>={ALPINE_NOV14_MAINTENANCE[role][package]}'"
+    replacement = {
+        "missing": "",
+        "unversioned": package,
+        "older-maintenance": f"'{package}>={ALPINE_NOV14_PRIOR[package]}'",
+    }[mutation]
+    with pytest.raises(AssertionError, match=re.escape(f"require {package}>=")):
+        _assert_nov14_alpine_admission(text.replace(token, replacement), role, monkeypatch)
+
+
+@pytest.mark.parametrize("role", ALPINE_NOV14_MAINTENANCE)
+def test_nov14_admission_refuses_fixed_packages_in_an_unrelated_stage(role, monkeypatch):
+    stage = audit.BUILD_OUTPUTS[role][1]
+    old = " ".join(f"'{package}>={floor}'" for package, floor in ALPINE_MAINTENANCE[role].items())
+    fixed = " ".join(
+        f"'{package}>={floor}'" for package, floor in ALPINE_NOV14_MAINTENANCE[role].items()
+    )
+    text = f"FROM synthetic AS {stage}\nRUN apk add --no-cache --upgrade {old}\n"
+    if role == "postgres":
+        text += "RUN gosu postgres id\n"
+    elif role == "pgbouncer-build":
+        text += "RUN curl --fail https://example.test/source\n"
+    text += f"FROM synthetic AS unrelated\nRUN apk add --no-cache --upgrade {fixed}\n"
+    first_package = next(iter(ALPINE_NOV14_MAINTENANCE[role]))
+    with pytest.raises(AssertionError, match=re.escape(f"require {first_package}>=")):
+        _assert_nov14_alpine_admission(text, role, monkeypatch)
+
+
+@pytest.mark.parametrize("role", ["postgres", "pgbouncer-build"])
+def test_nov14_admission_refuses_fixed_packages_after_source_or_runtime_use(role, monkeypatch):
+    stage = audit.BUILD_OUTPUTS[role][1]
+    old = " ".join(f"'{package}>={floor}'" for package, floor in ALPINE_MAINTENANCE[role].items())
+    fixed = " ".join(
+        f"'{package}>={floor}'" for package, floor in ALPINE_NOV14_MAINTENANCE[role].items()
+    )
+    use = "gosu postgres id" if role == "postgres" else "curl --fail https://example.test/source"
+    text = (
+        f"FROM synthetic AS {stage}\nRUN apk add --no-cache --upgrade {old}\n"
+        f"RUN {use}\nRUN apk add --no-cache --upgrade {fixed}\n"
+    )
+    first_package = next(iter(ALPINE_NOV14_MAINTENANCE[role]))
+    with pytest.raises(AssertionError, match=re.escape(f"require {first_package}>=")):
+        _assert_nov14_alpine_admission(text, role, monkeypatch)
+
+
+@pytest.mark.parametrize("role", ALPINE_NOV14_MAINTENANCE)
+def test_nov14_admission_accepts_later_maintenance_revisions(role, monkeypatch):
+    text = _nov14_maintenance_dockerfile(role)
+    for package, floor in ALPINE_NOV14_MAINTENANCE[role].items():
+        release, revision = floor.rsplit("-r", 1)
+        text = text.replace(f"'{package}>={floor}'", f'"{package}>={release}-r{int(revision) + 1}"')
+    _assert_nov14_alpine_admission(text, role, monkeypatch)
+
+
+def _assert_node_build_zlib_admission(text, monkeypatch):
+    # The independent publisher receipt authenticates zlib1.4-r0 in Alpine3.24.
+    # This is an added build-tooling boundary, not a changed legacy stage policy.
+    commands = _stage_shell_commands(text, "build")
+    uses = [
+        index
+        for index, (parts, position) in enumerate(commands)
+        if parts[position][0][:1] == ["npm"]
+    ]
+    assert uses, "Node builder must retain a direct npm first-use boundary"
+    prefix = commands[: min(uses) + 1]
+
+    def before_first_npm(candidate_text, stage):
+        assert candidate_text == text and stage == "build"
+        # Later shell assignments and quoted codegen programs cannot satisfy a
+        # before-first-use floor. Their grammar need not enter legacy normalization.
+        return prefix
+
+    with monkeypatch.context() as scoped:
+        scoped.setitem(ALPINE_MAINTENANCE, "frontend-build", {"zlib": "1.4-r0"})
+        scoped.setitem(ALPINE_FIRST_USE, "frontend-build", ("npm",))
+        scoped.setattr(sys.modules[__name__], "_stable_apk_version", _nov14_apk_version)
+        scoped.setattr(sys.modules[__name__], "_stage_shell_commands", before_first_npm)
+        _assert_alpine_admission(text, "frontend-build")
+
+
+def _node_build_zlib_dockerfile(install="apk add --no-cache --upgrade 'zlib>=1.4-r0'"):
+    return (
+        "FROM synthetic AS build\n"
+        f"RUN --mount=type=secret,id=build_ca {install}\n"
+        "RUN npm pack --ignore-scripts npm@12.2.2\n"
+    )
+
+
+def test_node_build_requires_fixed_zlib_before_first_npm_use(monkeypatch):
+    relative, _, _ = audit.BUILD_OUTPUTS["frontend-build"]
+    _assert_node_build_zlib_admission((ROOT / relative).read_text(), monkeypatch)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "unversioned", "older-maintenance"])
+def test_node_build_zlib_refuses_missing_or_older_constraints(mutation, monkeypatch):
+    text = _node_build_zlib_dockerfile()
+    _assert_node_build_zlib_admission(text, monkeypatch)
+    replacement = {
+        "missing": "",
+        "unversioned": "zlib",
+        "older-maintenance": "'zlib>=1.3.2-r99'",
+    }[mutation]
+    with pytest.raises(AssertionError, match="require zlib>=1.4-r0"):
+        _assert_node_build_zlib_admission(text.replace("'zlib>=1.4-r0'", replacement), monkeypatch)
+
+
+def test_node_build_zlib_refuses_runtime_only_floor(monkeypatch):
+    text = (
+        "FROM synthetic AS build\nRUN npm pack --ignore-scripts npm@12.2.2\n"
+        "FROM synthetic AS runtime\nRUN apk add --no-cache --upgrade 'zlib>=1.4-r0'\n"
+    )
+    with pytest.raises(AssertionError, match="require zlib>=1.4-r0"):
+        _assert_node_build_zlib_admission(text, monkeypatch)
+
+
+def test_node_build_zlib_refuses_floor_after_first_npm_use(monkeypatch):
+    text = _node_build_zlib_dockerfile().replace(
+        "FROM synthetic AS build\n",
+        "FROM synthetic AS build\nRUN npm pack --ignore-scripts npm@12.2.2\n",
+    )
+    with pytest.raises(AssertionError, match="require zlib>=1.4-r0"):
+        _assert_node_build_zlib_admission(text, monkeypatch)
+
+
+def test_node_build_zlib_accepts_later_reviewed_revision(monkeypatch):
+    text = _node_build_zlib_dockerfile('apk add --no-cache --upgrade "zlib>=1.4-r1"')
+    _assert_node_build_zlib_admission(text, monkeypatch)
