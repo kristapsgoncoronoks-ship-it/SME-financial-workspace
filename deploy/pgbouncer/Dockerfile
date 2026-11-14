@@ -14,6 +14,7 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
         'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' \
         'libexpat>=2.10.0-r0' \
         'brotli-libs>=1.2.1-r0' 'curl>=8.23.0-r0' 'libcurl>=8.23.0-r0' \
+        'libpq>=18.7-r0' 'postgresql18-client>=18.7-r0' \
         libevent-dev openssl-dev pkgconf \
     && curl --fail --show-error --location --proto '=https' --tlsv1.2 \
         https://www.pgbouncer.org/downloads/files/1.26.1/pgbouncer-1.26.1.tar.gz \
@@ -37,7 +38,8 @@ USER root
 # vendor's Alpine release and all entrypoint/client-library contracts.
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
     apk add --no-cache --upgrade libcrypto3 libssl3 \
-        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1'
+        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
+        'libpq>=18.7-r0' 'postgresql18-client>=18.7-r0'
 COPY --from=build /src/pgbouncer-1.26.1/pgbouncer /usr/bin/pgbouncer
 COPY --from=build /src/pgbouncer-1.26.1/COPYRIGHT /usr/share/licenses/pgbouncer/COPYRIGHT
 COPY --from=build /src/pgbouncer-1.26.1/lib/COPYRIGHT /usr/share/licenses/pgbouncer/libusual-COPYRIGHT

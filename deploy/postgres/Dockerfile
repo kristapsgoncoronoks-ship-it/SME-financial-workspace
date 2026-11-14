@@ -68,7 +68,8 @@ RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mo
 FROM postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea AS runtime
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \
     apk add --no-cache --upgrade \
-        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1'
+        'musl>=1.2.6-r3' 'musl-utils>=1.2.6-r3' 'zlib>=1.3.2-r1' \
+        'krb5-libs>=1.22.3-r0' 'libxslt>=1.1.43-r4'
 COPY --from=build --chmod=0755 /out/gosu /usr/local/bin/gosu
 COPY --from=build /out/licenses/ /usr/share/licenses/gosu/
 RUN gosu --version && gosu postgres id && su-exec nobody true && postgres --version
