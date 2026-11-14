@@ -17,7 +17,7 @@ function record(key, valid) {
 }
 $1 ~ /:$/ {
     record("header", NR == 1 && NF == 2 && $1 == "/out/gosu:" &&
-           $2 == "go1.27.3")
+           $2 == "go1.27.4")
     next
 }
 $1 == "path" {

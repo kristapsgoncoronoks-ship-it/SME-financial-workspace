@@ -1,7 +1,7 @@
 # Rebuild the current compiler release with its supported, patched Go toolchain.
 # The npm release embeds an older Go runtime; keep the compiler source/version
 # unchanged and update its vulnerable Unicode dependency through Go modules.
-FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS typescript-compiler
+FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS typescript-compiler
 WORKDIR /src
 ENV GOTOOLCHAIN=local
 RUN --mount=type=secret,id=build_ca,target=/etc/ssl/certs/ca-certificates.crt,mode=0444 \

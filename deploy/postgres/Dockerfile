@@ -8,7 +8,7 @@
 # The exact source SHA is pinned above; the source commit timestamp is stamped below.
 # Only go.mod/go.sum change: official x/sys 0.49.0 requires root Go 1.26.0.
 # The real BuildInfo must say v1.20.0+dirty and identify the exact module overlay.
-FROM golang:1.27.3-alpine3.24@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS build
+FROM golang:1.27.4-alpine3.24@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS build
 ARG TARGETARCH
 COPY --chmod=0644 verify-gosu-buildinfo.awk /usr/local/share/gosu/verify-buildinfo.awk
 COPY --chmod=0644 gosu-go.mod /tmp/gosu-go.mod

@@ -32,10 +32,11 @@ PUBLISHED_BUILDINFO = (
     "\tbuild\tvcs.time=2026-10-25T09:43:55Z\n"
     "\tbuild\tvcs.modified=false\n"
 )
-# Explicit current-fixture transition: the published clean release remains
-# negative evidence; only this pinned, truthfully modified overlay is admitted.
+# Synthetic current-toolchain protocol control: the historical header above
+# remains negative evidence. This derived Go1.27.4 header is not an actual build.
 VALID_BUILDINFO = (
     PUBLISHED_BUILDINFO.replace("\tv1.20.0\t", "\tv1.20.0+dirty\t")
+    .replace("/out/gosu: go1.27.3\n", "/out/gosu: go1.27.4\n", 1)
     .replace(
         "v0.1.0\th1:kunALQeHf1/185U1i0GOB/fy1IPRDDpuoOOqRReG57U=",
         "v0.49.0\th1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=",
@@ -84,6 +85,7 @@ def test_buildinfo_guard_accepts_expected_linked_module_and_build_records(guard,
     "metadata",
     [
         PUBLISHED_BUILDINFO,
+        VALID_BUILDINFO.replace("go1.27.4", "go1.27.3", 1),
         VALID_BUILDINFO.replace("v0.4.1", "v0.1.0"),
         VALID_BUILDINFO.replace(MOBY, ""),
         VALID_BUILDINFO + MOBY,
@@ -109,6 +111,7 @@ def test_buildinfo_guard_accepts_expected_linked_module_and_build_records(guard,
     ],
     ids=[
         "published-clean-release-is-not-overlay",
+        "previous-toolchain-with-correct-overlay-is-not-current",
         "old-linked-dependency-with-new-main-version",
         "missing-linked-dependency",
         "duplicate-linked-dependency",
@@ -162,7 +165,7 @@ def _metadata_fragment(text):
 def _admit_source(text):
     assert re.findall(r"^FROM (\S+) AS (\S+)$", text, re.M) == [
         (
-            "golang:1.27.3-alpine3.24@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd",
+            "golang:1.27.4-alpine3.24@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf",
             "build",
         ),
         (
