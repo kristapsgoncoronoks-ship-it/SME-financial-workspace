@@ -53,7 +53,8 @@ COPY scripts/verify-npm-toolchain.mjs /tmp/bidit-verify-npm-toolchain.mjs
 # Optional public CA bundle for corporate build proxies; never stored in the image.
 # The official npm 12.2.2 parent fixes ip-address and includes the existing
 # undici 6.29.1 repair. Pin its archive, then verify owner/path/resolution and
-# exact bundled package bytes/notices before installing application packages.
+# exact parent bytes/notices. Apply the official compatible glob legacy patch
+# separately; advisory metadata still includes it, so scanner findings stay visible.
 RUN --mount=type=secret,id=build_ca \
     set -eu; \
     if [ -f /run/secrets/build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/build_ca; fi; \
@@ -62,9 +63,11 @@ RUN --mount=type=secret,id=build_ca \
     npm install --global --ignore-scripts --no-audit --no-fund /tmp/npm-12.2.2.tgz; \
     bidit_npm_root="$(npm root --global)"; \
     test "$bidit_npm_root" = /usr/local/lib/node_modules; \
+    npm pack --ignore-scripts --pack-destination /tmp glob@13.0.7; \
+    node /tmp/bidit-verify-npm-toolchain.mjs overlay "$bidit_npm_root" /tmp/glob-13.0.7.tgz; \
     node /tmp/bidit-verify-npm-toolchain.mjs installed "$bidit_npm_root" /usr/local/share/bidit-npm; \
     test "$(npm --version)" = 12.2.2; \
-    rm /tmp/npm-12.2.2.tgz /tmp/bidit-verify-npm-toolchain.mjs; \
+    rm /tmp/npm-12.2.2.tgz /tmp/glob-13.0.7.tgz /tmp/bidit-verify-npm-toolchain.mjs; \
     npm ci; \
     npm cache clean --force
 COPY --from=typescript-compiler /out/tsc /tmp/bidit-tsc
