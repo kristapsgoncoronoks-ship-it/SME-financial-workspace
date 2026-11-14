@@ -1074,3 +1074,78 @@ def test_nov14_admission_accepts_later_maintenance_revisions(role, monkeypatch):
         release, revision = floor.rsplit("-r", 1)
         text = text.replace(f"'{package}>={floor}'", f'"{package}>={release}-r{int(revision) + 1}"')
     _assert_nov14_alpine_admission(text, role, monkeypatch)
+
+
+def _assert_node_build_zlib_admission(text, monkeypatch):
+    # The independent publisher receipt authenticates zlib1.4-r0 in Alpine3.24.
+    # This is an added build-tooling boundary, not a changed legacy stage policy.
+    commands = _stage_shell_commands(text, "build")
+    uses = [
+        index
+        for index, (parts, position) in enumerate(commands)
+        if parts[position][0][:1] == ["npm"]
+    ]
+    assert uses, "Node builder must retain a direct npm first-use boundary"
+    prefix = commands[: min(uses) + 1]
+
+    def before_first_npm(candidate_text, stage):
+        assert candidate_text == text and stage == "build"
+        # Later shell assignments and quoted codegen programs cannot satisfy a
+        # before-first-use floor. Their grammar need not enter legacy normalization.
+        return prefix
+
+    with monkeypatch.context() as scoped:
+        scoped.setitem(ALPINE_MAINTENANCE, "frontend-build", {"zlib": "1.4-r0"})
+        scoped.setitem(ALPINE_FIRST_USE, "frontend-build", ("npm",))
+        scoped.setattr(sys.modules[__name__], "_stable_apk_version", _nov14_apk_version)
+        scoped.setattr(sys.modules[__name__], "_stage_shell_commands", before_first_npm)
+        _assert_alpine_admission(text, "frontend-build")
+
+
+def _node_build_zlib_dockerfile(install="apk add --no-cache --upgrade 'zlib>=1.4-r0'"):
+    return (
+        "FROM synthetic AS build\n"
+        f"RUN --mount=type=secret,id=build_ca {install}\n"
+        "RUN npm pack --ignore-scripts npm@12.2.2\n"
+    )
+
+
+def test_node_build_requires_fixed_zlib_before_first_npm_use(monkeypatch):
+    relative, _, _ = audit.BUILD_OUTPUTS["frontend-build"]
+    _assert_node_build_zlib_admission((ROOT / relative).read_text(), monkeypatch)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "unversioned", "older-maintenance"])
+def test_node_build_zlib_refuses_missing_or_older_constraints(mutation, monkeypatch):
+    text = _node_build_zlib_dockerfile()
+    _assert_node_build_zlib_admission(text, monkeypatch)
+    replacement = {
+        "missing": "",
+        "unversioned": "zlib",
+        "older-maintenance": "'zlib>=1.3.2-r99'",
+    }[mutation]
+    with pytest.raises(AssertionError, match="require zlib>=1.4-r0"):
+        _assert_node_build_zlib_admission(text.replace("'zlib>=1.4-r0'", replacement), monkeypatch)
+
+
+def test_node_build_zlib_refuses_runtime_only_floor(monkeypatch):
+    text = (
+        "FROM synthetic AS build\nRUN npm pack --ignore-scripts npm@12.2.2\n"
+        "FROM synthetic AS runtime\nRUN apk add --no-cache --upgrade 'zlib>=1.4-r0'\n"
+    )
+    with pytest.raises(AssertionError, match="require zlib>=1.4-r0"):
+        _assert_node_build_zlib_admission(text, monkeypatch)
+
+
+def test_node_build_zlib_refuses_floor_after_first_npm_use(monkeypatch):
+    text = _node_build_zlib_dockerfile().replace(
+        "FROM synthetic AS build\n",
+        "FROM synthetic AS build\nRUN npm pack --ignore-scripts npm@12.2.2\n",
+    )
+    with pytest.raises(AssertionError, match="require zlib>=1.4-r0"):
+        _assert_node_build_zlib_admission(text, monkeypatch)
+
+
+def test_node_build_zlib_accepts_later_reviewed_revision(monkeypatch):
+    text = _node_build_zlib_dockerfile('apk add --no-cache --upgrade "zlib>=1.4-r1"')
+    _assert_node_build_zlib_admission(text, monkeypatch)
